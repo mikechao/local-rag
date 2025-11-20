@@ -7,6 +7,14 @@ import {
 
 import { ExternalLink } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Button } from './ui/button'
 
 type Status =
@@ -55,7 +63,6 @@ export function ModelDownload() {
     }
     return false
   }, [MODEL_ID])
-
 
   // Recreate the model when cache is cleared (modelVersion increments).
   useEffect(() => {
@@ -156,49 +163,64 @@ export function ModelDownload() {
 
   const percent = progress != null ? Math.round(progress * 100) : null
 
+  const showStatusMessage =
+    status === 'unsupported' || status === 'unavailable' || (status === 'error' && errorMessage)
+
   return (
-    <div className="bg-secondary-background border-2 border-border rounded-[var(--radius-base)] p-6 shadow-[var(--shadow-shadow)] text-foreground">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-semibold">Download embedding model</h2>
-            <p className="text-sm text-foreground/80 mt-1">
-              Get{' '}
-              <code className="inline-block bg-background border border-border px-1.5 py-0.5 rounded-[var(--radius-base)]">
-                {MODEL_ID}
-              </code>{' '}
-              ready for offline embeddings. Cached locally after first download.
-            </p>
-            <a
-              href="https://huggingface.co/onnx-community/embeddinggemma-300m-ONNX"
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-sm text-main underline underline-offset-4"
-            >
-              View on Hugging Face <ExternalLink size={16} strokeWidth={1.75} />
-            </a>
-          </div>
+    <Card className="w-full gap-0">
+      <CardHeader className="border-b border-border">
+        <div className="flex flex-col gap-2">
+          <CardTitle className="text-2xl">Download embedding model</CardTitle>
+          <CardDescription className="text-foreground/80">
+            Get{' '}
+            <code className="inline-block bg-background border border-border px-1.5 py-0.5 rounded-[var(--radius-base)]">
+              {MODEL_ID}
+            </code>{' '}
+            ready for offline embeddings. Cached locally after first download.
+          </CardDescription>
+          <a
+            href="https://huggingface.co/onnx-community/embeddinggemma-300m-ONNX"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-main underline underline-offset-4"
+          >
+            View on Hugging Face <ExternalLink size={16} strokeWidth={1.75} />
+          </a>
+          <a
+            href="https://ai.google.dev/gemma/docs/embeddinggemma"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-sm text-main underline underline-offset-4"
+          >
+            Google Model Card <ExternalLink size={16} strokeWidth={1.75} />
+          </a>
         </div>
+      </CardHeader>
 
-        {status === 'unsupported' && (
-          <div className="rounded-[var(--radius-base)] border-2 border-border bg-background px-3 py-2 text-sm">
-            Transformers.js not supported in this browser. Try a WebGPU/WebAssembly-enabled browser.
-          </div>
-        )}
+      {showStatusMessage && (
+        <CardContent className="flex flex-col gap-3 py-4">
+          {status === 'unsupported' && (
+            <div className="rounded-[var(--radius-base)] border-2 border-border bg-background px-3 py-2 text-sm">
+              Transformers.js not supported in this browser. Try a WebGPU/WebAssembly-enabled browser.
+            </div>
+          )}
 
-        {status === 'unavailable' && (
-          <div className="rounded-[var(--radius-base)] border-2 border-border bg-background px-3 py-2 text-sm">
-            Model not available to download in this environment. Please try another device or browser.
-          </div>
-        )}
+          {status === 'unavailable' && (
+            <div className="rounded-[var(--radius-base)] border-2 border-border bg-background px-3 py-2 text-sm">
+              Model not available to download in this environment. Please try another device or browser.
+            </div>
+          )}
 
-        {status === 'error' && errorMessage && (
-          <div className="rounded-[var(--radius-base)] border-2 border-border bg-background px-3 py-2 text-sm">
-            {errorMessage}
-          </div>
-        )}
+          {status === 'error' && errorMessage && (
+            <div className="rounded-[var(--radius-base)] border-2 border-border bg-background px-3 py-2 text-sm">
+              {errorMessage}
+            </div>
+          )}
+        </CardContent>
+      )}
 
-        <div className="flex flex-wrap items-center gap-3">
+      <CardFooter className="flex w-full flex-col items-start gap-3 border-t border-border py-4">
+        <div className="flex w-full flex-wrap items-center gap-3">
           <Button onClick={startDownload} disabled={disableButton}>
             {buttonLabel}
           </Button>
@@ -218,7 +240,7 @@ export function ModelDownload() {
         </div>
 
         {(status === 'downloading' || percent !== null) && (
-          <div className="space-y-1">
+          <div className="w-full space-y-1">
             <div className="flex items-center justify-between text-sm text-foreground">
               <span>{status === 'downloading' ? 'Downloading model...' : 'Download complete'}</span>
               {percent !== null && <span>{percent}%</span>}
@@ -226,7 +248,7 @@ export function ModelDownload() {
             <Progress value={percent ?? 100} />
           </div>
         )}
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   )
 }
