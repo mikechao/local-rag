@@ -20,6 +20,9 @@
 - Prefer functional React components with TypeScript, strict mode enabled. Keep route components lean and lift reusable UI into `src/components`.
 - Use Tailwind utility classes; `cn` helper merges class lists. Name components in PascalCase, hooks in `useX` form, test files as `*.test.ts(x)`. Avoid touching generated files.
 
+# ExecPlans
+- When writing complex features or significant refactors, use an ExecPlan (as described in .agent/PLANS.md) from design to implementation.
+
 ## Testing Guidelines
 - Use Vitest + Testing Library for React behavior. Place tests beside components or under `src/__tests__`.
 - Mock network calls when possible; use jsdom for DOM tests. Run `pnpm test -- --coverage` before PRs when adding logic-heavy code.
