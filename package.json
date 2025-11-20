@@ -16,6 +16,8 @@
     "@built-in-ai/core": "^2.0.1",
     "@built-in-ai/transformers-js": "^0.3.3",
     "@cloudflare/vite-plugin": "^1.13.8",
+    "@radix-ui/react-progress": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",
     "@tanstack/react-router": "^1.132.0",
