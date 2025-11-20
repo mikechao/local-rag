@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router"
-import { Bot, BookText, MessageSquareQuote } from "lucide-react"
+import { Bot, BookText, MessageSquareQuote, PanelLeftIcon } from "lucide-react"
 import type React from "react"
 
 import {
@@ -8,10 +8,12 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarGroupAction,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 type NavItem = {
@@ -28,14 +30,26 @@ const navItems: NavItem[] = [
 
 export function SidebarNav() {
   const { location } = useRouterState()
+  const { toggleSidebar } = useSidebar()
 
   return (
-    <Sidebar side="left">
+    <Sidebar side="left" collapsible="icon">
       <SidebarRail />
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
+          <div className="flex items-center justify-between pr-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:pr-0 group-data-[collapsible=icon]:pb-1">
+            <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:m-0">
+              Navigation
+            </SidebarGroupLabel>
+            <SidebarGroupAction
+              aria-label="Toggle sidebar"
+              onClick={toggleSidebar}
+              className="static ml-auto size-8 items-center justify-center text-foreground/70 hover:text-main-foreground group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:mt-1"
+            >
+              <PanelLeftIcon />
+            </SidebarGroupAction>
+          </div>
+          <SidebarGroupContent className="pt-1">
             <SidebarMenu>
               {navItems.map((item) => {
                 const isActive =
@@ -45,7 +59,7 @@ export function SidebarNav() {
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                      <Link to={item.to} preload="intent">
+                      <Link to={item.to} preload="intent" aria-current={isActive ? "page" : undefined}>
                         <item.icon />
                         <span>{item.label}</span>
                       </Link>

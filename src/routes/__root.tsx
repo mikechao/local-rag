@@ -42,13 +42,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <SidebarProvider>
           <div className="flex min-h-svh">
             <SidebarNav />
-            <SidebarInset className="w-full">
-              <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-background/90 px-4 py-3 backdrop-blur md:hidden">
-                <SidebarTrigger />
-                <span className="text-sm font-medium text-foreground/80">Menu</span>
-              </div>
-              <div className="min-h-svh bg-background px-4 py-10 md:px-8">{children}</div>
-            </SidebarInset>
+            <div className="flex min-h-svh w-full flex-col">
+              <SidebarInset className="w-full">
+                <div className="min-h-svh bg-background px-4 py-10 md:px-8">{children}</div>
+              </SidebarInset>
+            </div>
           </div>
         </SidebarProvider>
         <TanStackDevtools
