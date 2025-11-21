@@ -20,7 +20,7 @@ let initPromise: Promise<DownloadableEmbeddingModel> | null = null;
 export function getModel(): DownloadableEmbeddingModel {
 	if (!modelSingleton) {
 		modelSingleton = transformersJS.textEmbedding(MODEL_ID, {
-			device: MODEL_DEVICE,
+			device: "webgpu",
 		}) as DownloadableEmbeddingModel;
 	}
 	return modelSingleton;
