@@ -80,15 +80,17 @@ export function SidebarNav() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="mt-auto border-t-2 border-border px-2 py-3">
+      <SidebarFooter className="mt-auto border-t-2 border-border px-2 py-3 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2">
         <Button
           variant="neutral"
           size="sm"
-          className="w-full justify-start gap-2"
+          className="w-full justify-start gap-2 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:min-w-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:self-center"
           onClick={handleToggleTheme}
         >
           {theme === "dark" ? <Sun /> : <Moon />}
-          <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+          <span className="group-data-[collapsible=icon]:sr-only">
+            {theme === "dark" ? "Light mode" : "Dark mode"}
+          </span>
         </Button>
       </SidebarFooter>
     </Sidebar>
