@@ -40,7 +40,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			</head>
 			<body className="bg-background text-foreground">
 				<SidebarProvider>
-					<div className="flex min-h-svh">
+					<div className="flex min-h-svh w-full">
 						<SidebarNav />
 						<div className="flex min-h-svh w-full flex-col">
 							<SidebarInset className="w-full">

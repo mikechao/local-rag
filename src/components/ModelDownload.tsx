@@ -20,7 +20,7 @@ import {
 	hasCachedWeights,
 	isModelReadyFlag,
 	MODEL_ID,
-  getModel
+	getModel,
 } from "@/lib/embeddingModel";
 
 type Status =
@@ -131,19 +131,20 @@ export function ModelDownload() {
 		<Card className="w-full gap-0">
 			<CardHeader className="border-b border-border">
 				<div className="flex flex-col gap-2">
-					<CardTitle className="text-2xl">Download embedding model</CardTitle>
-					<CardDescription className="text-foreground/80">
-						Get{" "}
-						<code className="inline-block bg-background border border-border px-1.5 py-0.5 rounded-[var(--radius-base)]">
-							{MODEL_ID}
-						</code>{" "}
-						ready for offline embeddings. Cached locally after first download.
-					</CardDescription>
+					<CardTitle className="text-2xl">EmbeddingGemma</CardTitle>
+				<CardDescription className="text-foreground/80">
+					Download{" "}
+					<code className="inline-block bg-background border border-border px-1.5 py-0.5 rounded-[var(--radius-base)]">
+						{MODEL_ID}
+					</code>{" "}
+					for offline embeddings. Cached locally after first download.
+				</CardDescription>
+				<div className="flex flex-wrap items-center gap-4 text-sm">
 					<a
 						href="https://huggingface.co/onnx-community/embeddinggemma-300m-ONNX"
 						target="_blank"
 						rel="noreferrer"
-						className="inline-flex items-center gap-1 text-sm text-main underline underline-offset-4"
+						className="inline-flex items-center gap-1 text-main underline underline-offset-4"
 					>
 						View on Hugging Face <ExternalLink size={16} strokeWidth={1.75} />
 					</a>
@@ -151,12 +152,13 @@ export function ModelDownload() {
 						href="https://ai.google.dev/gemma/docs/embeddinggemma"
 						target="_blank"
 						rel="noreferrer"
-						className="inline-flex items-center gap-1 text-sm text-main underline underline-offset-4"
+						className="inline-flex items-center gap-1 text-main underline underline-offset-4"
 					>
 						Google Model Card <ExternalLink size={16} strokeWidth={1.75} />
 					</a>
 				</div>
-			</CardHeader>
+			</div>
+		</CardHeader>
 
 			{showStatusMessage && (
 				<CardContent className="flex flex-col gap-3 py-4">
@@ -196,10 +198,6 @@ export function ModelDownload() {
 					>
 						Clear cached model
 					</button>
-
-					<span className="text-xs text-foreground/70">
-						Device: auto; cached locally after first download.
-					</span>
 				</div>
 
 				{(status === "downloading" || percent !== null) && (

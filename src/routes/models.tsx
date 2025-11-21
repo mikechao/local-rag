@@ -6,7 +6,7 @@ export const Route = createFileRoute("/models")({ component: ModelsPage })
 
 function ModelsPage() {
   return (
-    <div className="mx-auto flex max-w-5xl items-center justify-center">
+    <div className="mx-auto flex w-full max-w-6xl items-center justify-center px-4">
       <ModelDownload />
     </div>
   )
