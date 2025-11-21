@@ -22,6 +22,15 @@ import {
 	MODEL_ID,
 	getModel,
 } from "@/lib/embeddingModel";
+import {
+	Drawer,
+	DrawerClose,
+	DrawerContent,
+	DrawerDescription,
+	DrawerFooter,
+	DrawerHeader,
+	DrawerTitle,
+} from "./ui/drawer";
 
 type Status =
 	| "checking"
@@ -37,6 +46,7 @@ export function EmbeddingGemmaDownload() {
 	const [progress, setProgress] = useState<number | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isClient, setIsClient] = useState(false);
+	const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 	// Use ONNX-converted weights that include `onnx/model_quantized.onnx`
 	// to avoid missing-file errors from the original repository.
 
@@ -102,6 +112,11 @@ export function EmbeddingGemmaDownload() {
 			await refreshStatus();
 		}
 	}, [isClient, refreshStatus]);
+
+	const confirmClearCache = useCallback(async () => {
+		await clearCache();
+		setIsConfirmOpen(false);
+	}, [clearCache]);
 
 	const buttonLabel = (() => {
 		if (status === "checking") return "Checking...";
@@ -192,13 +207,30 @@ export function EmbeddingGemmaDownload() {
 
 					<button
 						type="button"
-						className="text-sm text-foreground/80 underline underline-offset-4 disabled:text-foreground/40"
-						onClick={clearCache}
-						disabled={status === "downloading"}
-					>
-						Clear cached model
-					</button>
-				</div>
+					className="text-sm text-foreground/80 underline underline-offset-4 disabled:text-foreground/40 hover:cursor-pointer"
+					onClick={() => setIsConfirmOpen(true)}
+					disabled={status === "downloading"}
+				>
+					Clear cached model
+				</button>
+			</div>
+
+			<Drawer open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+				<DrawerContent>
+					<DrawerHeader className="items-center text-center sm:text-center">
+						<DrawerTitle>Are you sure?</DrawerTitle>
+						<DrawerDescription className="text-sm text-foreground/80 text-center sm:text-center">
+							Clearing the cache will disable adding new documents
+						</DrawerDescription>
+					</DrawerHeader>
+					<DrawerFooter className="flex-row justify-center gap-3">
+						<Button onClick={confirmClearCache}>Yes</Button>
+						<DrawerClose asChild>
+							<Button variant="neutral">No</Button>
+						</DrawerClose>
+					</DrawerFooter>
+				</DrawerContent>
+			</Drawer>
 
 				{(status === "downloading" || percent !== null) && (
 					<div className="w-full space-y-1">
