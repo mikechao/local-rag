@@ -1,10 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router"
-import { Bot, BookText, MessageSquareQuote, PanelLeftIcon } from "lucide-react"
+import { Bot, BookText, MessageSquareQuote, Moon, PanelLeftIcon, Sun } from "lucide-react"
 import type React from "react"
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -15,6 +16,8 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { Button } from "./ui/button"
+import { useTheme } from "@/providers/theme"
 
 type NavItem = {
   label: string
@@ -30,7 +33,13 @@ const navItems: NavItem[] = [
 
 export function SidebarNav() {
   const { location } = useRouterState()
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, isMobile, setOpenMobile } = useSidebar()
+  const { theme, toggleTheme } = useTheme()
+
+  const handleToggleTheme = () => {
+    toggleTheme()
+    if (isMobile) setOpenMobile(false)
+  }
 
   return (
     <Sidebar side="left" collapsible="icon">
@@ -71,6 +80,17 @@ export function SidebarNav() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="mt-auto border-t-2 border-border px-2 py-3">
+        <Button
+          variant="neutral"
+          size="sm"
+          className="w-full justify-start gap-2"
+          onClick={handleToggleTheme}
+        >
+          {theme === "dark" ? <Sun /> : <Moon />}
+          <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   )
 }
