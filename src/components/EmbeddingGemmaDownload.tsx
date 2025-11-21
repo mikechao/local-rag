@@ -32,7 +32,7 @@ type Status =
 	| "ready"
 	| "error";
 
-export function ModelDownload() {
+export function EmbeddingGemmaDownload() {
 	const [status, setStatus] = useState<Status>("checking");
 	const [progress, setProgress] = useState<number | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
