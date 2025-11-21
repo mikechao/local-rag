@@ -16,6 +16,7 @@
     "@built-in-ai/core": "^2.0.1",
     "@built-in-ai/transformers-js": "^0.3.3",
     "@cloudflare/vite-plugin": "^1.13.8",
+    "@electric-sql/pglite": "^0.3.14",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-progress": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
