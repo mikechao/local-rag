@@ -24,6 +24,7 @@ import {
 
 import { cn } from "@/lib/utils"
 
+const SIDEBAR_STORAGE_KEY = "sidebar_state"
 const SIDEBAR_WIDTH = "12rem"
 const SIDEBAR_WIDTH_MOBILE = "16rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
@@ -68,7 +69,13 @@ function SidebarProvider({
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen)
+  const [_open, _setOpen] = React.useState(() => {
+    if (typeof window === "undefined") return defaultOpen
+    const stored = window.localStorage.getItem(SIDEBAR_STORAGE_KEY)
+    if (stored === "true") return true
+    if (stored === "false") return false
+    return defaultOpen
+  })
   const open = openProp ?? _open
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
@@ -77,6 +84,10 @@ function SidebarProvider({
         setOpenProp(openState)
       } else {
         _setOpen(openState)
+      }
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(openState))
       }
 
     },
