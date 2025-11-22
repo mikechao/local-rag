@@ -4,6 +4,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/SidebarNav";
+import { useDbReady } from "@/hooks/use-db-ready";
 import { ThemeProvider } from "@/providers/theme";
 
 import appCss from "../styles.css?url";
@@ -36,6 +37,14 @@ export const Route = createRootRoute({
 function RootDocument({ children }: { children: React.ReactNode }) {
 	const themeScript = `(() => { try { const key = 'theme'; const stored = localStorage.getItem(key); const prefers = window.matchMedia('(prefers-color-scheme: dark)').matches; const theme = stored === 'light' || stored === 'dark' ? stored : (prefers ? 'dark' : 'light'); const root = document.documentElement; root.classList.remove('dark'); if (theme === 'dark') root.classList.add('dark'); root.dataset.theme = theme; } catch (_) {} })();`;
 
+	const { status, error } = useDbReady();
+	const dbErrorBanner =
+		status === "error" && error ? (
+			<div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+				Database failed to initialize. Reload or clear storage and try again.
+			</div>
+		) : null;
+
 	return (
 		<html lang="en">
 			<head>
@@ -53,6 +62,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 							<div className="flex min-h-svh w-full flex-col">
 								<SidebarInset className="w-full">
 									<div className="min-h-svh bg-background px-4 py-10 md:px-8">
+										{dbErrorBanner}
 										{children}
 									</div>
 								</SidebarInset>

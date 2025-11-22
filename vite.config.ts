@@ -18,6 +18,10 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
   ],
+  assetsInclude: [/pglite\.wasm$/, /pglite\.data$/],
+  optimizeDeps: {
+    exclude: ['@electric-sql/pglite'],
+  },
 })
 
 export default config

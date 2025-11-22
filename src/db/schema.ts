@@ -1,5 +1,4 @@
 import {
-	bytea,
 	integer,
 	jsonb,
 	pgTable,
@@ -7,7 +6,20 @@ import {
 	text,
 	timestamp,
 	vector,
+	customType,
 } from "drizzle-orm/pg-core"
+
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
+	dataType() {
+		return "bytea"
+	},
+	toDriver(value) {
+		return value
+	},
+	fromDriver(value) {
+		return value instanceof Uint8Array ? value : new Uint8Array(value as ArrayBuffer)
+	},
+})
 
 export const documents = pgTable("documents", {
 	id: text("id").primaryKey(),
