@@ -6,6 +6,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/SidebarNav";
 import { useDbReady } from "@/hooks/use-db-ready";
 import { ThemeProvider } from "@/providers/theme";
+import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
 
@@ -64,6 +65,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 							</div>
 						</div>
 					</SidebarProvider>
+					<Toaster />
 				</ThemeProvider>
 				<TanStackDevtools
 					config={{

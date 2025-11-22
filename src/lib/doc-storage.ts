@@ -46,10 +46,16 @@ export async function saveDocument(params: {
 	file: File
 	pageTexts?: string[]
 	clock?: () => Date
+	signal?: AbortSignal
+	onChunkProgress?: (written: number, total: number) => void
 }) {
 	const quota = await checkStorageQuota(params.file.size)
 	if (!quota.ok) {
 		throw new QuotaExceededError("Not enough storage space available", quota)
+	}
+
+	if (params.signal?.aborted) {
+		throw new DOMException("Upload aborted", "AbortError")
 	}
 
 	await ensureDbReady()
@@ -59,6 +65,8 @@ export async function saveDocument(params: {
 	const id = crypto.randomUUID()
 	const now = params.clock ? params.clock() : new Date()
 	const pageTexts = params.pageTexts ?? []
+	const total = fileBytes.length
+	let written = 0
 
 	await db.transaction(async (tx) => {
 		await tx.insert(documents).values({
@@ -72,11 +80,16 @@ export async function saveDocument(params: {
 
 		const chunks = chunkBuffer(fileBytes)
 		for (let i = 0; i < chunks.length; i += 1) {
+			if (params.signal?.aborted) {
+				throw new DOMException("Upload aborted", "AbortError")
+			}
 			await tx.insert(docChunks).values({
 				docId: id,
 				chunkNo: i,
 				data: chunks[i],
 			})
+			written += chunks[i].length
+			params.onChunkProgress?.(written, total)
 		}
 
 		if (pageTexts.length > 0) {
