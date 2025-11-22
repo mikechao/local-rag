@@ -1,3 +1,4 @@
+import React from "react";
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
@@ -37,6 +38,14 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	const { status, error } = useDbReady();
+	const [hydrated, setHydrated] = React.useState(false);
+	const clientTheme =
+		typeof document !== "undefined" ? document.documentElement.dataset.theme : undefined;
+
+	React.useEffect(() => {
+		setHydrated(true);
+	}, []);
+
 	const dbErrorBanner =
 		status === "error" && error ? (
 			<div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -45,27 +54,31 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 		) : null;
 
 	return (
-		<html lang="en">
+		<html lang="en" data-theme={clientTheme} suppressHydrationWarning>
 			<head>
 				<script src="/theme-init.js" />
 				<HeadContent />
 			</head>
 			<body className="bg-background text-foreground">
 				<ThemeProvider>
-					<SidebarProvider>
-						<div className="flex min-h-svh w-full">
-							<SidebarNav />
-							<div className="flex min-h-svh w-full flex-col">
-								<SidebarInset className="w-full">
-									<div className="min-h-svh bg-background px-4 py-10 md:px-8">
-										{dbErrorBanner}
-										{children}
+					{hydrated ? (
+						<>
+							<SidebarProvider>
+								<div className="flex min-h-svh w-full">
+									<SidebarNav />
+									<div className="flex min-h-svh w-full flex-col">
+										<SidebarInset className="w-full">
+											<div className="min-h-svh bg-background px-4 py-10 md:px-8">
+												{dbErrorBanner}
+												{children}
+											</div>
+										</SidebarInset>
 									</div>
-								</SidebarInset>
-							</div>
-						</div>
-					</SidebarProvider>
-					<Toaster />
+								</div>
+							</SidebarProvider>
+							<Toaster />
+						</>
+					) : null}
 				</ThemeProvider>
 				<TanStackDevtools
 					config={{
