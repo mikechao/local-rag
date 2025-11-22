@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router"
-import { Bot, BookText, MessageSquareQuote, Moon, PanelLeftIcon, Sun } from "lucide-react"
+import { Bot, BookText, Database, MessageSquareQuote, Moon, PanelLeftIcon, Sun } from "lucide-react"
 import type React from "react"
 
 import {
@@ -29,6 +29,7 @@ const navItems: NavItem[] = [
   { label: "Chat", to: "/chat", icon: MessageSquareQuote },
   { label: "Documents", to: "/documents", icon: BookText },
   { label: "Models", to: "/models", icon: Bot },
+  { label: "Database", to: "/database", icon: Database },
 ]
 
 export function SidebarNav() {
