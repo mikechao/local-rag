@@ -35,7 +35,6 @@ export function useDbReady() {
 export function useDbReadySuspense() {
 	const promise = React.useMemo(() => ensureDbReady(), [])
 	// React 19's use() will suspend until the promise settles.
-	// @ts-expect-error React.use is available in 19.x
 	React.use(promise)
 	return { status: "ready" as const }
 }

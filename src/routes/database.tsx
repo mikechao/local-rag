@@ -49,10 +49,7 @@ function DatabasePage() {
 				<CardHeader>
 					<div className="flex items-center gap-3">
 						<CardTitle>Interactive SQL Console</CardTitle>
-						<Badge
-							variant={status === "ready" ? "success" : status === "loading" ? "secondary" : "destructive"}
-							className="flex items-center gap-1"
-						>
+						<Badge variant={status === "ready" ? "default" : status === "loading" ? "neutral" : "destructive"} className="flex items-center gap-1">
 							<span className="inline-block h-2 w-2 rounded-full bg-current" />
 							{status === "ready" ? "DB ready" : status === "loading" ? "Starting…" : "Error"}
 						</Badge>

@@ -4,11 +4,14 @@ import { drizzle } from "drizzle-orm/pglite"
 import { applyMigrations } from "@/lib/migrations"
 
 const DB_NAME = "local-rag"
-const VECTOR_DIMENSIONS = 768
 
 let clientPromise: Promise<PGlite> | null = null
 let readyPromise: Promise<void> | null = null
-let dbPromise: ReturnType<typeof getDb> | null = null
+let dbPromise: ReturnType<typeof buildDbPromise> | null = null
+
+function buildDbPromise() {
+	return (async () => drizzle(await getClient()))()
+}
 
 export function getClient() {
 	if (!clientPromise) {
@@ -27,7 +30,7 @@ export function getClient() {
 
 export async function getDb() {
 	if (!dbPromise) {
-		dbPromise = (async () => drizzle(await getClient()))()
+		dbPromise = buildDbPromise()
 	}
 
 	return dbPromise

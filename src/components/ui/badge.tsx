@@ -1,7 +1,7 @@
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import * as React from "react"
+import type * as React from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -12,6 +12,7 @@ const badgeVariants = cva(
       variant: {
         default: "bg-main text-main-foreground",
         neutral: "bg-secondary-background text-foreground",
+        destructive: "bg-destructive text-destructive-foreground border-destructive/60",
       },
     },
     defaultVariants: {

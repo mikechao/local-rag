@@ -1,5 +1,5 @@
 import { asc, eq } from "drizzle-orm"
-import { dbChunks, documents, docText } from "@/db/schema"
+import { docChunks, documents, docText } from "@/db/schema"
 import { ensureDbReady, getDb } from "@/lib/db"
 
 const FALLBACK_CHUNK_MB = 1
@@ -34,7 +34,7 @@ export async function checkStorageQuota(requiredBytes: number): Promise<QuotaEst
 	}
 }
 
-function chunkBuffer(bytes: Uint8Array, chunkSize = CHUNK_BYTES) {
+function chunkBuffer(bytes: Uint8Array, chunkSize = CHUNK_BYTES): Uint8Array[] {
 	const chunks: Uint8Array[] = []
 	for (let offset = 0; offset < bytes.length; offset += chunkSize) {
 		chunks.push(bytes.slice(offset, Math.min(offset + chunkSize, bytes.length)))
@@ -72,7 +72,7 @@ export async function saveDocument(params: {
 
 		const chunks = chunkBuffer(fileBytes)
 		for (let i = 0; i < chunks.length; i += 1) {
-			await tx.insert(dbChunks).values({
+			await tx.insert(docChunks).values({
 				docId: id,
 				chunkNo: i,
 				data: chunks[i],
@@ -111,17 +111,17 @@ export async function getDocumentBlob(docId: string) {
 
 	const chunks = await db
 		.select({
-			data: dbChunks.data,
+			data: docChunks.data,
 		})
-		.from(dbChunks)
-		.where(eq(dbChunks.docId, docId))
-		.orderBy(asc(dbChunks.chunkNo))
+		.from(docChunks)
+		.where(eq(docChunks.docId, docId))
+		.orderBy(asc(docChunks.chunkNo))
 
 	const totalLength = chunks.reduce((acc, chunk) => acc + chunk.data.length, 0)
 	const combined = new Uint8Array(totalLength)
 	let offset = 0
 	for (const chunk of chunks) {
-	combined.set(chunk.data, offset)
+		combined.set(chunk.data, offset)
 		offset += chunk.data.length
 	}
 
