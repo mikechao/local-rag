@@ -11,7 +11,8 @@
     "lint": "biome lint",
     "check": "biome check",
     "deploy": "wrangler deploy",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@built-in-ai/core": "^2.0.1",
