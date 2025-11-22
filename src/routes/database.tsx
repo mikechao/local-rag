@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useDbReady } from "@/hooks/use-db-ready"
 import { getClient } from "@/lib/db"
 import { useTheme } from "@/providers/theme"
+import { Badge } from "@/components/ui/badge"
 
 export const Route = createFileRoute("/database")({
 	component: DatabasePage,
@@ -46,7 +47,21 @@ function DatabasePage() {
 		<div className="mx-auto max-w-5xl space-y-6">
 			<Card>
 				<CardHeader>
-					<CardTitle>Database REPL</CardTitle>
+					<div className="flex items-center gap-3">
+						<CardTitle>Interactive SQL Console</CardTitle>
+						<Badge
+							variant={status === "ready" ? "success" : status === "loading" ? "secondary" : "destructive"}
+							className="flex items-center gap-1"
+						>
+							<span className="inline-block h-2 w-2 rounded-full bg-current" />
+							{status === "ready" ? "DB ready" : status === "loading" ? "Starting…" : "Error"}
+						</Badge>
+					</div>
+					<p className="text-sm text-foreground/70">
+						PGlite runs Postgres in WebAssembly, right in your browser. Query tables, inspect schemas, and
+						experiment safely—no server required. Try commands like <code className="rounded bg-muted px-1 py-0.5 text-xs">\dt</code> to list
+						tables.
+					</p>
 				</CardHeader>
 				<CardContent className="h-[70vh] min-h-[400px]">
 					<Repl pg={client} theme={theme} border />
