@@ -8,6 +8,7 @@ import { SidebarNav } from "@/components/SidebarNav";
 import { useDbReady } from "@/hooks/use-db-ready";
 import { ThemeProvider } from "@/providers/theme";
 import { Toaster } from "@/components/ui/sonner";
+import { DocumentUploadProvider } from "@/providers/document-upload";
 
 import appCss from "../styles.css?url";
 
@@ -61,24 +62,26 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			</head>
 			<body className="bg-background text-foreground">
 				<ThemeProvider>
-					{hydrated ? (
-						<>
-							<SidebarProvider>
-								<div className="flex min-h-svh w-full">
-									<SidebarNav />
-									<div className="flex min-h-svh w-full flex-col">
-										<SidebarInset className="w-full">
-											<div className="min-h-svh bg-background px-4 py-10 md:px-8">
-												{dbErrorBanner}
-												{children}
-											</div>
-										</SidebarInset>
+					<DocumentUploadProvider>
+						{hydrated ? (
+							<>
+								<SidebarProvider>
+									<div className="flex min-h-svh w-full">
+										<SidebarNav />
+										<div className="flex min-h-svh w-full flex-col">
+											<SidebarInset className="w-full">
+												<div className="min-h-svh bg-background px-4 py-10 md:px-8">
+													{dbErrorBanner}
+													{children}
+												</div>
+											</SidebarInset>
+										</div>
 									</div>
-								</div>
-							</SidebarProvider>
-							<Toaster />
-						</>
-					) : null}
+								</SidebarProvider>
+								<Toaster />
+							</>
+						) : null}
+					</DocumentUploadProvider>
 				</ThemeProvider>
 				<TanStackDevtools
 					config={{
