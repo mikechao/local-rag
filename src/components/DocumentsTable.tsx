@@ -103,7 +103,7 @@ export function DocumentsTable({ data }: DocumentsTableProps) {
 				open={!!selectedDoc}
 				onOpenChange={(open) => !open && setSelectedDoc(null)}
 			>
-				<DialogContent className="max-w-4xl">
+				<DialogContent className="sm:max-w-[90vw]">
 					<DialogHeader>
 						<DialogTitle>{selectedDoc?.filename}</DialogTitle>
 					</DialogHeader>
