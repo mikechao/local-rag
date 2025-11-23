@@ -19,6 +19,7 @@ import {
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
+	DialogDescription,
 } from "@/components/ui/dialog";
 import { DocumentView } from "./DocumentView";
 
@@ -85,15 +86,15 @@ export function DocumentsTable({ data }: DocumentsTableProps) {
 			<TableProvider columns={columns} data={data}>
 				<TableHeader>
 					{({ headerGroup }) => (
-						<TableHeaderGroup headerGroup={headerGroup}>
-							{({ header }) => <TableHead header={header} />}
+						<TableHeaderGroup key={headerGroup.id} headerGroup={headerGroup}>
+							{({ header }) => <TableHead key={header.id} header={header} />}
 						</TableHeaderGroup>
 					)}
 				</TableHeader>
 				<TableBody>
 					{({ row }) => (
-						<TableRow row={row}>
-							{({ cell }) => <TableCell cell={cell} />}
+						<TableRow key={row.id} row={row}>
+							{({ cell }) => <TableCell key={cell.id} cell={cell} />}
 						</TableRow>
 					)}
 				</TableBody>
@@ -106,6 +107,9 @@ export function DocumentsTable({ data }: DocumentsTableProps) {
 				<DialogContent className="sm:max-w-[90vw]">
 					<DialogHeader>
 						<DialogTitle>{selectedDoc?.filename}</DialogTitle>
+						<DialogDescription className="sr-only">
+							Document Preview
+						</DialogDescription>
 					</DialogHeader>
 					{selectedDoc && <DocumentView docId={selectedDoc.id} />}
 				</DialogContent>
