@@ -10,6 +10,11 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 	import.meta.url,
 ).toString();
 
+const pdfOptions = {
+	cMapUrl: "/cmaps/",
+	cMapPacked: true,
+};
+
 interface PdfViewProps {
 	url: string;
 }
@@ -22,12 +27,20 @@ export function PdfView({ url }: PdfViewProps) {
 		setNumPages(numPages);
 	}
 
+	function onDocumentLoadError(error: Error) {
+		console.error("Error loading PDF:", error);
+	}
+
 	return (
 		<div className="flex flex-col items-center gap-4 p-4">
 			<Document
 				file={url}
+				options={pdfOptions}
 				onLoadSuccess={onDocumentLoadSuccess}
+				onLoadError={onDocumentLoadError}
 				className="max-w-full"
+				loading={<div className="p-4">Loading PDF...</div>}
+				error={<div className="p-4 text-red-500">Failed to load PDF.</div>}
 			>
 				<Page
 					pageNumber={pageNumber}
