@@ -1,4 +1,5 @@
 import { PGliteWorker } from "@electric-sql/pglite/worker"
+import type { PGlite } from "@electric-sql/pglite"
 import { drizzle } from "drizzle-orm/pglite"
 import { applyMigrations } from "@/lib/migrations"
 
@@ -7,7 +8,7 @@ let readyPromise: Promise<void> | null = null
 let dbPromise: ReturnType<typeof buildDbPromise> | null = null
 
 function buildDbPromise() {
-	return (async () => drizzle((await getClient()) as any))()
+	return (async () => drizzle((await getClient()) as unknown as PGlite))()
 }
 
 export function getClient() {
@@ -35,7 +36,7 @@ export async function getDb() {
 async function runBootstrap(pg: PGliteWorker) {
 	// Ensure pgvector exists before applying migrations that rely on it.
 	await pg.query("create extension if not exists vector;")
-	await applyMigrations(pg as any)
+	await applyMigrations(pg as unknown as PGlite)
 }
 
 export function ensureDbReady() {

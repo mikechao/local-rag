@@ -113,7 +113,7 @@ export function useDocumentUpload() {
 		} finally {
 			abortRef.current = null
 		}
-	}, [renderToast])
+	}, [])
 
 	useEffect(() => {
 		return () => {
