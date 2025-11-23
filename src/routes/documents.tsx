@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { useDocumentUpload } from "@/hooks/use-document-upload";
-import { DocumentsTable, columns } from "@/components/DocumentsTable";
+import { DocumentsTable } from "@/components/DocumentsTable";
 import { useDocuments } from "@/hooks/use-documents";
 
 export const Route = createFileRoute("/documents")({
@@ -66,7 +66,7 @@ function DocumentsPage() {
 			<Separator />
 			<div className="space-y-4">
 				<h2 className="text-lg font-semibold">Uploaded Documents</h2>
-				<DocumentsTable columns={columns} data={documents} />
+				<DocumentsTable data={documents} />
 			</div>
 		</div>
 	);
