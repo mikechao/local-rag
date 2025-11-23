@@ -22,6 +22,9 @@ const config = defineConfig({
   optimizeDeps: {
     exclude: ['@electric-sql/pglite'],
   },
+  worker: {
+    format: 'es',
+  },
 })
 
 export default config

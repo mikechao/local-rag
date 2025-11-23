@@ -115,6 +115,12 @@ export function useDocumentUpload() {
 		}
 	}, [renderToast])
 
+	useEffect(() => {
+		return () => {
+			abortRef.current?.abort()
+		}
+	}, [])
+
 	return {
 		upload,
 		status,

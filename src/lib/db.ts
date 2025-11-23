@@ -1,27 +1,23 @@
-import { IdbFs, PGlite } from "@electric-sql/pglite"
-import { vector } from "@electric-sql/pglite/vector"
+import { PGliteWorker } from "@electric-sql/pglite/worker"
 import { drizzle } from "drizzle-orm/pglite"
 import { applyMigrations } from "@/lib/migrations"
 
-const DB_NAME = "local-rag"
-
-let clientPromise: Promise<PGlite> | null = null
+let clientPromise: Promise<PGliteWorker> | null = null
 let readyPromise: Promise<void> | null = null
 let dbPromise: ReturnType<typeof buildDbPromise> | null = null
 
 function buildDbPromise() {
-	return (async () => drizzle(await getClient()))()
+	return (async () => drizzle((await getClient()) as any))()
 }
 
 export function getClient() {
 	if (!clientPromise) {
 		clientPromise = (async () => {
-			const pg = new PGlite({
-				fs: new IdbFs(DB_NAME),
-				extensions: { vector },
-				relaxedDurability: true,
-			})
-			return pg
+			return new PGliteWorker(
+				new Worker(new URL("../workers/db.worker.ts", import.meta.url), {
+					type: "module",
+				}),
+			)
 		})()
 	}
 
@@ -36,10 +32,10 @@ export async function getDb() {
 	return dbPromise
 }
 
-async function runBootstrap(pg: PGlite) {
+async function runBootstrap(pg: PGliteWorker) {
 	// Ensure pgvector exists before applying migrations that rely on it.
 	await pg.query("create extension if not exists vector;")
-	await applyMigrations(pg)
+	await applyMigrations(pg as any)
 }
 
 export function ensureDbReady() {
@@ -56,4 +52,14 @@ export function ensureDbReady() {
 export function resetDbCacheForDev() {
 	clientPromise = null
 	readyPromise = null
+}
+
+export async function closeDb() {
+	if (clientPromise) {
+		const pg = await clientPromise
+		await pg.close()
+		clientPromise = null
+		readyPromise = null
+		dbPromise = null
+	}
 }
