@@ -36,23 +36,23 @@ function DocumentsPage() {
 							Manage source files for retrieval: add markdown, PDFs, and more. Document ingestion UI is coming soon.
 						</p>
 					</div>
-					<div className="flex items-center gap-2">
-						<input
-							ref={fileInputRef}
-							type="file"
-							accept=".md,.markdown,.pdf,application/pdf,text/markdown"
-							className="hidden"
-							onChange={handleFileChange}
-						/>
-						<Button onClick={handlePickFile} disabled={status === "uploading"}>
-							<Upload className="h-4 w-4" />
-							Upload
-						</Button>
-					</div>
 				</div>
 				<p className="text-foreground/80">
 					Uploads currently support Markdown (.md) and PDF files. Progress and cancel controls will appear in a toast.
 				</p>
+			</div>
+			<div className="flex items-center gap-3">
+				<input
+					ref={fileInputRef}
+					type="file"
+					accept=".md,.markdown,.pdf,application/pdf,text/markdown"
+					className="hidden"
+					onChange={handleFileChange}
+				/>
+				<Button onClick={handlePickFile} disabled={status === "uploading"}>
+					<Upload className="h-4 w-4" />
+					Upload
+				</Button>
 			</div>
 			<Separator />
 		</div>

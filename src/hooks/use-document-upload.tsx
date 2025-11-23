@@ -16,10 +16,10 @@ export function useDocumentUpload() {
 	const errorRef = useRef<string | null>(null)
 
 	const renderToast = useCallback(() => {
-		if (!currentFile) return
-		const id = toast.custom(
-			() => (
-				<div className="w-full max-w-sm rounded-base border border-border bg-background px-3 py-3 shadow-md">
+		if (!currentFile || !toastIdRef.current) return
+		toast.custom(
+			(t) => (
+				<div className="w-full">
 					<div className="flex items-center justify-between gap-2 text-sm font-semibold">
 						<span className="truncate" title={currentFile.name}>
 							{currentFile.name}
@@ -29,16 +29,16 @@ export function useDocumentUpload() {
 								variant="neutral"
 								size="icon"
 								className="h-7 w-7"
-								onClick={() => toast.dismiss(toastIdRef.current)}
+								onClick={() => toast.dismiss(t)}
 							>
 								<X className="h-4 w-4" />
 							</Button>
 						) : null}
 					</div>
-					<div className="mt-2 space-y-2">
+					<div className="mt-2 gap-2 flex flex-col w-full">
 						<Progress value={progress} />
 						{status === "uploading" ? (
-							<div className="flex items-center justify-between text-xs text-foreground/70">
+							<div className="flex items-center justify-between w-full text-xs text-foreground/70">
 								<span>{progress}%</span>
 								<Button
 									variant="neutral"
@@ -51,13 +51,6 @@ export function useDocumentUpload() {
 						) : status === "success" ? (
 							<div className="flex items-center justify-between text-xs text-foreground/70">
 								<span className="flex items-center gap-1">Upload complete</span>
-								<Button
-									variant="neutral"
-									size="sm"
-									onClick={() => toast.dismiss(toastIdRef.current)}
-								>
-									<X className="h-4 w-4" />
-								</Button>
 							</div>
 						) : status === "error" ? (
 							<div className="flex items-center justify-between text-xs text-destructive">
@@ -65,7 +58,7 @@ export function useDocumentUpload() {
 								<Button
 									variant="neutral"
 									size="sm"
-									onClick={() => toast.dismiss(toastIdRef.current)}
+									onClick={() => toast.dismiss(t)}
 								>
 									<X className="h-4 w-4" />
 								</Button>
@@ -74,23 +67,31 @@ export function useDocumentUpload() {
 					</div>
 				</div>
 			),
-			{ id: toastIdRef.current },
+			{ id: toastIdRef.current, duration: Infinity, className: "!block" },
 		)
-		toastIdRef.current = id
 	}, [currentFile, progress, status])
+
+	useEffect(() => {
+		return () => {
+			if (toastIdRef.current) {
+				toast.dismiss(toastIdRef.current)
+			}
+		}
+	}, [])
 
 	useEffect(() => {
 		renderToast()
 	}, [renderToast])
 
 	const upload = useCallback(async (file: File) => {
+		const toastId = `upload-${Date.now()}`
+		toastIdRef.current = toastId
 		setStatus("uploading")
 		setProgress(0)
 		setCurrentFile(file)
 		const controller = new AbortController()
 		abortRef.current = controller
 		errorRef.current = null
-		renderToast()
 
 		try {
 			await saveDocument({
