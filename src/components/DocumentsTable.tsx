@@ -9,6 +9,8 @@ import {
 	TableRow,
 } from "@/components/ui/shadcn-io/table";
 import type { ColumnDef } from "@tanstack/react-table";
+import { Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { Document } from "@/db/schema";
 import { formatBytes } from "@/lib/utils";
 
@@ -40,6 +42,15 @@ export const columns: ColumnDef<Document>[] = [
 			const date = new Date(row.getValue("createdAt"));
 			return date.toLocaleString();
 		},
+	},
+	{
+		id: "actions",
+		cell: () => (
+			<Button variant="neutral" size="sm">
+				<Eye className="h-4 w-4" />
+				View
+			</Button>
+		),
 	},
 ];
 
