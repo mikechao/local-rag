@@ -19,6 +19,22 @@
   --chart-4: #05E17A;
   --chart-5: #7A83FF;
   --chart-active-dot: #000;
+
+  --popover: var(--background);
+  --popover-foreground: var(--foreground);
+  --card: var(--secondary-background);
+  --card-foreground: var(--foreground);
+  --primary: var(--main);
+  --primary-foreground: var(--main-foreground);
+  --secondary: var(--secondary-background);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(96% 0 0);
+  --muted-foreground: oklch(55% 0 0);
+  --accent: oklch(96% 0 0);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(57.7% 0.245 27.325);
+  --destructive-foreground: oklch(100% 0 0);
+  --input: var(--border);
 }
 
 .dark {
@@ -36,6 +52,22 @@
   --chart-4: #04C86D;
   --chart-5: #7A83FF;
   --chart-active-dot: #fff;
+
+  --popover: var(--background);
+  --popover-foreground: var(--foreground);
+  --card: var(--secondary-background);
+  --card-foreground: var(--foreground);
+  --primary: var(--main);
+  --primary-foreground: var(--main-foreground);
+  --secondary: var(--secondary-background);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(26.9% 0 0);
+  --muted-foreground: oklch(70.8% 0 0);
+  --accent: oklch(26.9% 0 0);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(39.6% 0.141 25.723);
+  --destructive-foreground: oklch(63.7% 0.237 25.331);
+  --input: var(--border);
 }
 
 @theme inline {
@@ -52,6 +84,22 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
 
   --spacing-boxShadowX: 4px;
   --spacing-boxShadowY: 4px;

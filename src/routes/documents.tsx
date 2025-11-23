@@ -2,8 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useDocumentUpload } from "@/hooks/use-document-upload";
+import { DocumentsTable, columns } from "@/components/DocumentsTable";
+import { useDocuments } from "@/hooks/use-documents";
 
 export const Route = createFileRoute("/documents")({
 	component: DocumentsPage,
@@ -12,6 +14,13 @@ export const Route = createFileRoute("/documents")({
 function DocumentsPage() {
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const { upload, status } = useDocumentUpload();
+	const { data: documents, refresh } = useDocuments();
+
+	useEffect(() => {
+		if (status === "success") {
+			refresh();
+		}
+	}, [status, refresh]);
 
 	const handlePickFile = () => {
 		fileInputRef.current?.click();
@@ -55,6 +64,10 @@ function DocumentsPage() {
 				</Button>
 			</div>
 			<Separator />
+			<div className="space-y-4">
+				<h2 className="text-lg font-semibold">Uploaded Documents</h2>
+				<DocumentsTable columns={columns} data={documents} />
+			</div>
 		</div>
 	);
 }
