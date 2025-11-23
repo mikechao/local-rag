@@ -3,18 +3,23 @@ import { vector } from "@electric-sql/pglite/vector"
 import { IdbFs } from "@electric-sql/pglite"
 import { drizzle } from "drizzle-orm/pglite"
 import { eq, asc } from "drizzle-orm"
-import { documents, docChunks } from "@/db/schema"
+import { documents, docChunks } from "../db/schema"
 
 let db: ReturnType<typeof drizzle> | null = null
 
 async function getDb() {
 	if (!db) {
+		const wasmUrl = "/pglite.wasm"
+		const wasmResponse = await fetch(wasmUrl)
+		const wasmBuffer = await wasmResponse.arrayBuffer()
+		const wasmModule = await WebAssembly.compile(wasmBuffer)
+
 		const client = new PGlite({
 			fs: new IdbFs("local-rag"),
 			extensions: { vector },
 			relaxedDurability: true,
+			wasmModule,
 		})
-		// Wait for ready? PGlite constructor starts it.
 		await client.waitReady
 		db = drizzle(client)
 	}

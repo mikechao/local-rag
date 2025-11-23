@@ -13,6 +13,9 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 const require = createRequire(import.meta.url);
 const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
 const cMapsDir = normalizePath(path.join(pdfjsDistPath, 'cmaps'));
+const pgliteDistPath = path.dirname(require.resolve('@electric-sql/pglite'));
+const pgliteWasmPath = normalizePath(path.join(pgliteDistPath, 'pglite.wasm'));
+const pgliteDataPath = normalizePath(path.join(pgliteDistPath, 'pglite.data'));
 
 const config = defineConfig({
   plugins: [
@@ -20,6 +23,14 @@ const config = defineConfig({
       targets: [
         {
           src: cMapsDir,
+          dest: '',
+        },
+        {
+          src: pgliteWasmPath,
+          dest: '',
+        },
+        {
+          src: pgliteDataPath,
           dest: '',
         },
       ],
