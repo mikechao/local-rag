@@ -10,18 +10,7 @@ import {
 } from "@/components/ui/shadcn-io/table";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Document } from "@/db/schema";
-
-function formatBytes(bytes: number, decimals = 2) {
-	if (!+bytes) return "0 Bytes";
-
-	const k = 1024;
-	const dm = decimals < 0 ? 0 : decimals;
-	const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-	return `${parseFloat((bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
-}
+import { formatBytes } from "@/lib/utils";
 
 export const columns: ColumnDef<Document>[] = [
 	{
