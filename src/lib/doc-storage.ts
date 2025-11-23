@@ -1,4 +1,3 @@
-import { asc, eq } from "drizzle-orm"
 import { docChunks, documents, docText } from "@/db/schema"
 import { ensureDbReady, getDb } from "@/lib/db"
 
@@ -106,40 +105,36 @@ export async function saveDocument(params: {
 	return { id }
 }
 
-export async function getDocumentBlob(docId: string) {
-	await ensureDbReady()
-	const db = await getDb()
+let blobWorker: Worker | null = null
 
-	const doc = await db
-		.select()
-		.from(documents)
-		.where(eq(documents.id, docId))
-		.limit(1)
-
-	const docRow = doc[0]
-
-	if (!docRow) {
-		throw new Error("Document not found")
-	}
-
-	const chunks = await db
-		.select({
-			data: docChunks.data,
+function getBlobWorker() {
+	if (!blobWorker) {
+		blobWorker = new Worker(new URL("../workers/blob.worker.ts", import.meta.url), {
+			type: "module",
 		})
-		.from(docChunks)
-		.where(eq(docChunks.docId, docId))
-		.orderBy(asc(docChunks.chunkNo))
-
-	const totalLength = chunks.reduce((acc, chunk) => acc + chunk.data.length, 0)
-	const combined = new Uint8Array(totalLength)
-	let offset = 0
-	for (const chunk of chunks) {
-		combined.set(chunk.data, offset)
-		offset += chunk.data.length
 	}
+	return blobWorker
+}
 
-	const blob = new Blob([combined], { type: docRow.mime })
-	return { blob, filename: docRow.filename, mime: docRow.mime }
+export async function getDocumentBlob(
+	docId: string,
+): Promise<{ blob: Blob; filename: string; mime: string }> {
+	const worker = getBlobWorker()
+	return new Promise((resolve, reject) => {
+		const id = crypto.randomUUID()
+		const handler = (e: MessageEvent) => {
+			if (e.data.id === id) {
+				worker.removeEventListener("message", handler)
+				if (e.data.type === "BLOB_ERROR") {
+					reject(new Error(e.data.error))
+				} else if (e.data.type === "BLOB_RESULT") {
+					resolve(e.data.payload)
+				}
+			}
+		}
+		worker.addEventListener("message", handler)
+		worker.postMessage({ type: "GET_BLOB", docId, id })
+	})
 }
 
 export async function getDocumentObjectUrl(docId: string) {
