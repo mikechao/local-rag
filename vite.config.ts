@@ -21,6 +21,7 @@ const config = defineConfig({
   assetsInclude: [/pglite\.wasm$/, /pglite\.data$/],
   optimizeDeps: {
     exclude: ['@electric-sql/pglite'],
+    include: ['drizzle-orm/pglite'],
   },
   worker: {
     format: 'es',
