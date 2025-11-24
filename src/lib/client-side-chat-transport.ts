@@ -37,7 +37,7 @@ export class ClientSideChatTransport
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
-    const { chatId, messages, abortSignal } = options;
+    const { messages, abortSignal } = options;
 
     const systemPrompt = this.getSystemPrompt?.()?.trim();
 
@@ -62,7 +62,7 @@ export class ClientSideChatTransport
   }
 
   async reconnectToStream(
-    options: {
+    _options: {
       chatId: string;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk> | null> {
