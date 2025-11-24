@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 
 import { EmbeddingGemmaDownload } from "@/components/EmbeddingGemmaDownload"
+import { GeminiNanoDownload } from "@/components/GeminiNanoDownload"
 import { PageContainer } from "@/components/PageContainer"
 
 export const Route = createFileRoute("/models")({ component: ModelsPage })
@@ -12,8 +13,9 @@ function ModelsPage() {
       title="Local Models"
       description="Manage various local AI Models used for embedding and LLM tasks."
     >
-      <div className="mx-auto flex w-full items-center justify-center">
+      <div className="mx-auto flex w-full flex-col gap-4 items-center justify-center">
         <EmbeddingGemmaDownload />
+        <GeminiNanoDownload />
       </div>
     </PageContainer>
   )
