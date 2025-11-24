@@ -1,10 +1,10 @@
 import {
-  ChatTransport,
-  UIMessageChunk,
+  type ChatTransport,
+  type UIMessageChunk,
   streamText,
   convertToModelMessages,
-  ChatRequestOptions,
-  UIMessage,
+  type ChatRequestOptions,
+  type UIMessage,
 } from "ai";
 import { builtInAI } from "@built-in-ai/core";
 
