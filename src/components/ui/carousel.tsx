@@ -118,6 +118,7 @@ function Carousel({
         canScrollNext,
       }}
     >
+      {/* biome-ignore lint/a11y/useSemanticElements: div wrapper required for shared carousel layout/scroll logic */}
       <div
         onKeyDownCapture={handleKeyDown}
         className={cn("relative", className)}
@@ -157,6 +158,7 @@ function CarouselItem({ className, ...props }: React.ComponentProps<"div">) {
   const { orientation } = useCarousel()
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: this is a group container
     <div
       role="group"
       aria-roledescription="slide"

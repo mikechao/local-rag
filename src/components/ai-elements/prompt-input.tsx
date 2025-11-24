@@ -698,7 +698,7 @@ export const PromptInput = ({
     // Convert blob URLs to data URLs asynchronously
     Promise.all(
       files.map(async ({ id, ...item }) => {
-        if (item.url && item.url.startsWith("blob:")) {
+        if (item.url?.startsWith("blob:")) {
           return {
             ...item,
             url: await convertBlobUrlToDataUrl(item.url),
@@ -729,7 +729,7 @@ export const PromptInput = ({
             controller.textInput.clear();
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // Don't clear on error - user may want to retry
       }
     });
@@ -1025,12 +1025,16 @@ interface SpeechRecognition extends EventTarget {
   lang: string;
   start(): void;
   stop(): void;
+  // biome-ignore lint/suspicious/noExplicitAny: this is 3rd-party typing, do not refactor
   onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  // biome-ignore lint/suspicious/noExplicitAny: this is 3rd-party typing, do not refactor
   onend: ((this: SpeechRecognition, ev: Event) => any) | null;
   onresult:
+  // biome-ignore lint/suspicious/noExplicitAny: this is 3rd-party typing, do not refactor
     | ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any)
     | null;
   onerror:
+  // biome-ignore lint/suspicious/noExplicitAny: this is 3rd-party typing, do not refactor
     | ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any)
     | null;
 }

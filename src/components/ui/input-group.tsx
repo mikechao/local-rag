@@ -1,6 +1,5 @@
 "use client"
-
-import * as React from "react"
+import type * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -10,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: div wrapper is required for styling/layout
     <div
       data-slot="input-group"
       role="group"
@@ -63,8 +63,9 @@ function InputGroupAddon({
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: click focuses sibling input when no button is hit
+    // biome-ignore lint/a11y/noStaticElementInteractions: 3rd-party button handling
     <div
-      role="group"
       data-slot="input-group-addon"
       data-align={align}
       className={cn(inputGroupAddonVariants({ align }), className)}
