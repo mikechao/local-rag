@@ -1,0 +1,32 @@
+{
+  "name": "built-in-ai",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "build:ci": "turbo run build:test",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,md}\"",
+    "check-types": "turbo run check-types",
+    "test": "turbo run test",
+    "test:ci": "turbo run test:run",
+    "changeset": "changeset",
+    "ci:version": "changeset version",
+    "ci:release": "turbo clean && turbo build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.5",
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.4",
+    "typescript": "5.8.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "npm@10.7.0",
+  "workspaces": [
+    "examples/*",
+    "packages/*"
+  ]
+}
