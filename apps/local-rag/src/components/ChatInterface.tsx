@@ -31,9 +31,26 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Paperclip } from "lucide-react";
+import {
+  ModelSelector,
+  ModelSelectorContent,
+  ModelSelectorEmpty,
+  ModelSelectorGroup,
+  ModelSelectorInput,
+  ModelSelectorItem,
+  ModelSelectorList,
+  ModelSelectorLogo,
+  ModelSelectorName,
+  ModelSelectorTrigger,
+} from "@/components/ai-elements/model-selector";
+import { CheckIcon } from "lucide-react";
+import { hasCachedQwenWeights, isQwenModelReadyFlag } from "@/lib/qwenModel";
 
 export function ChatInterface() {
   const [isModelAvailable, setIsModelAvailable] = useState<boolean | null>(null);
+  const [isQwenAvailable, setIsQwenAvailable] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>("gemini-nano");
+  const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
 
   useEffect(() => {
     const checkAvailability = async () => {
@@ -47,7 +64,39 @@ export function ChatInterface() {
       }
     };
     checkAvailability();
+
+    const checkQwen = async () => {
+      const cached = await hasCachedQwenWeights();
+      const ready = isQwenModelReadyFlag();
+      setIsQwenAvailable(cached || ready);
+    };
+    checkQwen();
   }, []);
+
+  const availableModels = [
+    {
+      id: "gemini-nano",
+      name: "Gemini Nano",
+      chef: "Google",
+      chefSlug: "google",
+      providers: ["google"],
+    },
+    ...(isQwenAvailable
+      ? [
+          {
+            id: "qwen3-0.6b",
+            name: "Qwen3-0.6B",
+            chef: "Alibaba",
+            chefSlug: "alibaba",
+            providers: ["alibaba"],
+          },
+        ]
+      : []),
+  ];
+
+  const selectedModelData =
+    availableModels.find((m) => m.id === selectedModel) || availableModels[0];
+  const chefs = Array.from(new Set(availableModels.map((model) => model.chef)));
 
   const [input, setInput] = useState("");
   
@@ -179,6 +228,59 @@ export function ChatInterface() {
                   <PromptInputActionAddAttachments label="Attach Photos"/>
                 </PromptInputActionMenuContent>
               </PromptInputActionMenu>
+              <ModelSelector
+                open={isModelSelectorOpen}
+                onOpenChange={setIsModelSelectorOpen}
+              >
+                <ModelSelectorTrigger asChild>
+                  <Button
+                    className="gap-2 pl-2 pr-2 h-8"
+                    variant="ghost"
+                    size="sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      {selectedModelData?.chefSlug && (
+                        <ModelSelectorLogo provider={selectedModelData.chefSlug} />
+                      )}
+                      {selectedModelData?.name && (
+                        <ModelSelectorName>
+                          {selectedModelData.name}
+                        </ModelSelectorName>
+                      )}
+                    </div>
+                  </Button>
+                </ModelSelectorTrigger>
+                <ModelSelectorContent className="mb-2">
+                  <ModelSelectorInput placeholder="Search models..." />
+                  <ModelSelectorList>
+                    <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
+                    {chefs.map((chef) => (
+                      <ModelSelectorGroup heading={chef} key={chef}>
+                        {availableModels
+                          .filter((model) => model.chef === chef)
+                          .map((model) => (
+                            <ModelSelectorItem
+                              key={model.id}
+                              onSelect={() => {
+                                setSelectedModel(model.id);
+                                setIsModelSelectorOpen(false);
+                              }}
+                              value={model.id}
+                            >
+                              <ModelSelectorLogo provider={model.chefSlug} />
+                              <ModelSelectorName>{model.name}</ModelSelectorName>
+                              {selectedModel === model.id ? (
+                                <CheckIcon className="ml-auto size-4" />
+                              ) : (
+                                <div className="ml-auto size-4" />
+                              )}
+                            </ModelSelectorItem>
+                          ))}
+                      </ModelSelectorGroup>
+                    ))}
+                  </ModelSelectorList>
+                </ModelSelectorContent>
+              </ModelSelector>
             </PromptInputTools>
             <PromptInputSubmit />
           </PromptInputFooter>
