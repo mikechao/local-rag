@@ -116,9 +116,9 @@ export function ChatInterface() {
             const parts = [
               { type: 'text', text: message.text },
               ...message.files.map((file) => ({
-                type: "image",
-                image: file.url,
-                mimeType: file.mediaType,
+                type: "file",
+                data: file.url.toString().split(",")[1],
+                mediaType: file.mediaType,
               })),
             ];
 

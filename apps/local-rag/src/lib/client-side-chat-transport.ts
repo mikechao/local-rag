@@ -2,7 +2,6 @@ import {
   ChatTransport,
   UIMessageChunk,
   streamText,
-  convertToModelMessages,
   ChatRequestOptions,
 } from "ai";
 import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
@@ -28,9 +27,37 @@ export class ClientSideChatTransport
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal } = options;
 
-    const prompt = convertToModelMessages(messages);
-    const model = builtInAI();
+    console.log("ClientSideChatTransport sendMessages called with messages:", messages);
 
+    // Manually convert messages to preserve data in file parts
+    // convertToModelMessages from ai SDK might strip data from file parts
+    const prompt = messages.map((m) => ({
+      role: m.role,
+      content: m.parts.map((p) => {
+        if (p.type === "file") {
+          const filePart = p as any;
+          const mediaType = filePart.mimeType || filePart.mediaType;
+
+          if (mediaType?.startsWith("image/")) {
+            return {
+              type: "image",
+              image: filePart.data,
+              mimeType: mediaType,
+            };
+          }
+
+          return {
+            type: "file",
+            data: filePart.data,
+            mimeType: mediaType,
+          };
+        }
+        return p;
+      }),
+    })) as any;
+
+    const model = builtInAI();
+    console.log('Converted messages for model:', prompt);
     // Check if model is available
     const availability = await model.availability();
     if (availability !== "available") {
