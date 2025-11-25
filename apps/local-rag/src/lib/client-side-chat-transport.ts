@@ -5,6 +5,7 @@ import {
   ChatRequestOptions,
 } from "ai";
 import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
+import { getQwenModel } from "./qwenModel";
 
 /**
  * Client-side chat transport AI SDK implementation that handles AI model communication
@@ -25,9 +26,7 @@ export class ClientSideChatTransport
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
-    const { messages, abortSignal } = options;
-
-    console.log("ClientSideChatTransport sendMessages called with messages:", messages);
+    const { messages, abortSignal, body } = options;
 
     // Manually convert messages to preserve data in file parts
     // convertToModelMessages from ai SDK might strip data from file parts
@@ -56,8 +55,17 @@ export class ClientSideChatTransport
       }),
     })) as any;
 
-    const model = builtInAI();
-    console.log('Converted messages for model:', prompt);
+    const modelId = (body as any)?.modelId;
+    console.log('Selected model ID:', modelId);
+    let model;
+
+    if (modelId === "qwen3-0.6b") {
+      model = getQwenModel();
+    } else {
+      // Default to Gemini Nano
+      model = builtInAI();
+    }
+
     // Check if model is available
     const availability = await model.availability();
     if (availability !== "available") {

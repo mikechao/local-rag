@@ -156,11 +156,16 @@ export function ChatInterface() {
               })),
             ];
 
-            sendMessage({
-              role: 'user',
-              // @ts-ignore - parts is the v5 way
-              parts: parts,
-            });
+            sendMessage(
+              {
+                role: "user",
+                // @ts-ignore - parts is the v5 way
+                parts: parts,
+              },
+              {
+                body: { modelId: selectedModel },
+              },
+            );
             setInput("");
           }}
         >
