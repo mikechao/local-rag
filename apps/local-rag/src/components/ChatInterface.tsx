@@ -37,8 +37,8 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, Paperclip, MicIcon } from "lucide-react";
 import { LocalModelSelector } from "@/components/LocalModelSelector";
 import { VoiceInput } from "@/components/VoiceInput";
-import { transformersJS } from "@built-in-ai/transformers-js";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { hasCachedWhisperWeights } from "@/lib/whisperModel";
 
 export function ChatInterface() {
   const [isModelAvailable] = useState<boolean | null>(true);
@@ -47,10 +47,8 @@ export function ChatInterface() {
 
   useEffect(() => {
     const checkWhisper = async () => {
-      // @ts-ignore - casting to any to avoid type issues if types are not perfectly aligned
-      const model = transformersJS.transcription("Xenova/whisper-base") as any;
-      const avail = await model.availability();
-      setIsWhisperAvailable(avail === "available");
+      const isCached = await hasCachedWhisperWeights();
+      setIsWhisperAvailable(isCached);
     };
     checkWhisper();
   }, []);

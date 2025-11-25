@@ -3,7 +3,7 @@ import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import { Button } from "@/components/ui/button";
 import { Loader2Icon, SquareIcon } from "lucide-react";
 import { experimental_transcribe as transcribe } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { getWhisperModel } from "@/lib/whisperModel";
 
 interface VoiceInputProps {
   onTranscription: (text: string) => void;
@@ -27,7 +27,7 @@ export function VoiceInput({ onTranscription, children }: VoiceInputProps) {
       const arrayBuffer = await blob.arrayBuffer();
       
       const transcript = await transcribe({
-        model: transformersJS.transcription("Xenova/whisper-base"),
+        model: getWhisperModel(),
         audio: arrayBuffer,
       });
 
