@@ -137,6 +137,9 @@ importers:
       react-pdf:
         specifier: ^10.2.0
         version: 10.2.0(@types/react@19.2.7)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      react-voice-visualizer:
+        specifier: ^2.0.8
+        version: 2.0.8(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       shiki:
         specifier: ^3.15.0
         version: 3.15.0
@@ -5007,6 +5010,12 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  react-voice-visualizer@2.0.8:
+    resolution: {integrity: sha512-oA/IyNeh15+mERgm2n33IAqQaMGBEFN1n3gs2V/0LbLyscqsbhNo8JOFXh2I9neIqYJ4q27TEzXzbO00Xq/aXg==}
+    peerDependencies:
+      react: ^18.2.0
+      react-dom: ^18.2.0
 
   react@19.2.0:
     resolution: {integrity: sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ==}
@@ -10798,6 +10807,11 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.2.7
+
+  react-voice-visualizer@2.0.8(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+    dependencies:
+      react: 19.2.0
+      react-dom: 19.2.0(react@19.2.0)
 
   react@19.2.0: {}
 

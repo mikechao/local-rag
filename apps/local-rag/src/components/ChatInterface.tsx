@@ -31,15 +31,29 @@ import {
   ReasoningContent,
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Paperclip } from "lucide-react";
+import { AlertCircle, Paperclip, MicIcon } from "lucide-react";
 import { LocalModelSelector } from "@/components/LocalModelSelector";
+import { VoiceInput } from "@/components/VoiceInput";
+import { transformersJS } from "@built-in-ai/transformers-js";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function ChatInterface() {
   const [isModelAvailable] = useState<boolean | null>(true);
   const [selectedModel, setSelectedModel] = useState<string>("gemini-nano");
+  const [isWhisperAvailable, setIsWhisperAvailable] = useState(false);
+
+  useEffect(() => {
+    const checkWhisper = async () => {
+      // @ts-ignore - casting to any to avoid type issues if types are not perfectly aligned
+      const model = transformersJS.transcription("Xenova/whisper-base") as any;
+      const avail = await model.availability();
+      setIsWhisperAvailable(avail === "available");
+    };
+    checkWhisper();
+  }, []);
 
   const [input, setInput] = useState("");
   
@@ -226,21 +240,55 @@ export function ChatInterface() {
             onChange={handleInputChange}
           />
           <PromptInputFooter>
-            <PromptInputTools>
-              <PromptInputActionMenu>
-                <PromptInputActionMenuTrigger>
-                  <Paperclip className="size-4" />
-                </PromptInputActionMenuTrigger>
-                <PromptInputActionMenuContent>
-                  <PromptInputActionAddAttachments label="Attach Photos"/>
-                </PromptInputActionMenuContent>
-              </PromptInputActionMenu>
-              <LocalModelSelector
-                value={selectedModel}
-                onValueChange={setSelectedModel}
-              />
-            </PromptInputTools>
-            <PromptInputSubmit />
+            <VoiceInput 
+              onTranscription={(text) => setInput(prev => prev + (prev ? " " : "") + text)}
+            >
+              {({ startRecording }) => (
+                <>
+                  <PromptInputTools>
+                    <PromptInputActionMenu>
+                      <PromptInputActionMenuTrigger>
+                        <Paperclip className="size-4" />
+                      </PromptInputActionMenuTrigger>
+                      <PromptInputActionMenuContent>
+                        <PromptInputActionAddAttachments label="Attach Photos"/>
+                      </PromptInputActionMenuContent>
+                    </PromptInputActionMenu>
+                    <LocalModelSelector
+                      value={selectedModel}
+                      onValueChange={setSelectedModel}
+                    />
+                  </PromptInputTools>
+                  <div className="flex items-center gap-1">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span tabIndex={-1}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 text-muted-foreground hover:text-foreground"
+                              onClick={startRecording}
+                              disabled={!isWhisperAvailable}
+                              type="button"
+                            >
+                              <MicIcon className="size-4" />
+                              <span className="sr-only">Voice Input</span>
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        {!isWhisperAvailable && (
+                          <TooltipContent>
+                            <p>Download Whisper model to enable voice input</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                    <PromptInputSubmit />
+                  </div>
+                </>
+              )}
+            </VoiceInput>
           </PromptInputFooter>
         </PromptInput>
       </div>
