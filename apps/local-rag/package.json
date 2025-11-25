@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "pnpm --filter @built-in-ai/transformers-js build",
+    "predev": "pnpm --filter @built-in-ai/transformers-js --filter @built-in-ai/core build",
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "serve": "vite preview",
