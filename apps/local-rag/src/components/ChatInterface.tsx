@@ -111,17 +111,14 @@ export function ChatInterface() {
     <div className="flex h-[calc(100vh-14rem)] flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
       <Conversation className="flex-1">
         <ConversationContent>
-          {messages.map((message) => (
-            <Message key={message.id} from={message.role}>
-              <MessageContent>
-                <MessageAttachments className="mb-2">
-                  {getAttachments(message).map((attachment: any, index: number) => (
-                    <MessageAttachment data={attachment} key={index} />
-                  ))}
-                </MessageAttachments>
-                {message.parts ? (
-                  message.parts.map((part, index) => {
-                    if (part.type === "text") {
+          {messages.map((message) => {
+            const attachments = getAttachments(message);
+            return (
+              <Message key={message.id} from={message.role}>
+                <MessageContent>
+                  {message.parts ? (
+                    message.parts.map((part, index) => {
+                      if (part.type === "text") {
                       const thinkMatch = part.text.match(/<think>([\s\S]*?)(?:<\/think>|$)/);
                       if (thinkMatch) {
                         const reasoning = thinkMatch[1];
@@ -169,9 +166,17 @@ export function ChatInterface() {
                 ) : (
                   <MessageResponse>{getMessageText(message)}</MessageResponse>
                 )}
+                  {attachments.length > 0 && (
+                    <MessageAttachments className="mt-2">
+                      {attachments.map((attachment: any, index: number) => (
+                        <MessageAttachment data={attachment} key={index} />
+                      ))}
+                    </MessageAttachments>
+                  )}
               </MessageContent>
             </Message>
-          ))}
+            );
+          })}
           {error && (
             <div className="mx-4 my-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
               Error: {error.message}
