@@ -137,7 +137,7 @@ export function ChatInterface() {
               <PromptInputActionMenu>
                 <PromptInputActionMenuTrigger />
                 <PromptInputActionMenuContent>
-                  <PromptInputActionAddAttachments />
+                  <PromptInputActionAddAttachments label="Attach Photos"/>
                 </PromptInputActionMenuContent>
               </PromptInputActionMenu>
             </PromptInputTools>
