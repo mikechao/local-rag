@@ -10,6 +10,8 @@ import {
   Message,
   MessageContent,
   MessageResponse,
+  MessageAttachments,
+  MessageAttachment,
 } from "@/components/ai-elements/message";
 import {
   PromptInput,
@@ -69,6 +71,31 @@ export function ChatInterface() {
     return '';
   };
 
+  const getAttachments = (message: any) => {
+    if (!message.parts) return [];
+    return message.parts
+      .filter((part: any) => part.type === 'file' || part.type === 'image')
+      .map((part: any) => {
+        if (part.type === 'file') {
+           return {
+             ...part,
+             url: part.url || (part.data ? `data:${part.mimeType || part.mediaType};base64,${part.data}` : ''),
+             mediaType: part.mimeType || part.mediaType,
+             filename: part.filename || 'Image'
+           };
+        }
+        if (part.type === 'image') {
+           return {
+             ...part,
+             url: part.url || (part.image ? `data:${part.mimeType};base64,${part.image}` : ''),
+             mediaType: part.mimeType || 'image/jpeg',
+             filename: 'Image'
+           };
+        }
+        return part;
+      });
+  };
+
 
   if (isModelAvailable === false) {
     return (
@@ -95,6 +122,11 @@ export function ChatInterface() {
           {messages.map((message) => (
             <Message key={message.id} from={message.role}>
               <MessageContent>
+                <MessageAttachments className="mb-2">
+                  {getAttachments(message).map((attachment: any, index: number) => (
+                    <MessageAttachment data={attachment} key={index} />
+                  ))}
+                </MessageAttachments>
                 <MessageResponse>{getMessageText(message)}</MessageResponse>
               </MessageContent>
             </Message>
