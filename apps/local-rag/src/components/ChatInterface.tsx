@@ -30,7 +30,7 @@ import { builtInAI } from "@built-in-ai/core";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Paperclip } from "lucide-react";
 
 export function ChatInterface() {
   const [isModelAvailable, setIsModelAvailable] = useState<boolean | null>(null);
@@ -172,7 +172,9 @@ export function ChatInterface() {
           <PromptInputFooter>
             <PromptInputTools>
               <PromptInputActionMenu>
-                <PromptInputActionMenuTrigger />
+                <PromptInputActionMenuTrigger>
+                  <Paperclip className="size-4" />
+                </PromptInputActionMenuTrigger>
                 <PromptInputActionMenuContent>
                   <PromptInputActionAddAttachments label="Attach Photos"/>
                 </PromptInputActionMenuContent>
