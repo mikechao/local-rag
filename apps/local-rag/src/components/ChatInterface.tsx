@@ -21,6 +21,8 @@ import {
   PromptInputActionMenuContent,
   PromptInputActionAddAttachments,
   PromptInputSubmit,
+  PromptInputAttachments,
+  PromptInputAttachment,
 } from "@/components/ai-elements/prompt-input";
 import { builtInAI } from "@built-in-ai/core";
 import { useEffect, useState } from "react";
@@ -113,9 +115,9 @@ export function ChatInterface() {
           onSubmit={(message) => {
             const parts = [
               { type: 'text', text: message.text },
-              ...message.files.map(file => ({
-                type: 'file',
-                url: file.url,
+              ...message.files.map((file) => ({
+                type: "image",
+                image: file.url,
                 mimeType: file.mediaType,
               })),
             ];
@@ -128,6 +130,9 @@ export function ChatInterface() {
             setInput("");
           }}
         >
+          <PromptInputAttachments>
+            {(attachment) => <PromptInputAttachment data={attachment} />}
+          </PromptInputAttachments>
           <PromptInputTextarea 
             value={input}
             onChange={handleInputChange}
