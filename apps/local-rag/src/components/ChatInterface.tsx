@@ -48,8 +48,6 @@ export function ChatInterface() {
     id: "local-chat",
   });
 
-  console.log("Messages:", messages);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
   };

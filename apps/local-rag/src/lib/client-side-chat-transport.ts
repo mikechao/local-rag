@@ -3,6 +3,7 @@ import {
   UIMessageChunk,
   streamText,
   ChatRequestOptions,
+  convertToModelMessages,
 } from "ai";
 import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
 import { getQwenModel } from "./qwenModel";
@@ -28,32 +29,44 @@ export class ClientSideChatTransport
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal, body } = options;
 
-    // Manually convert messages to preserve data in file parts
-    // convertToModelMessages from ai SDK might strip data from file parts
-    const prompt = messages.map((m) => ({
-      role: m.role,
-      content: m.parts.map((p) => {
-        if (p.type === "file") {
-          const filePart = p as any;
-          const mediaType = filePart.mimeType || filePart.mediaType;
-
-          if (mediaType?.startsWith("image/")) {
+    // Convert UI messages to Model messages
+    // We need to massage the input slightly because the UI sends 'data' (base64) for files,
+    // but the SDK expects 'url' (data URL) for FileUIPart.
+    const prompt = convertToModelMessages(
+      messages.map((m) => ({
+        ...m,
+        parts: m.parts.map((p) => {
+          if (p.type === "file" && (p as any).data) {
+            const filePart = p as any;
+            const mediaType = filePart.mimeType || filePart.mediaType;
             return {
-              type: "image",
-              image: filePart.data,
-              mimeType: mediaType,
+              type: "file",
+              url: `data:${mediaType};base64,${filePart.data}`,
+              mediaType: mediaType,
+              filename: filePart.filename,
             };
           }
-
-          return {
-            type: "file",
-            data: filePart.data,
-            mimeType: mediaType,
-          };
-        }
-        return p;
-      }),
-    })) as any;
+          return p;
+        }),
+      })) as any,
+    ).map((m) => {
+      // Post-processing: The transformers-js provider expects 'image' parts for vision,
+      // but convertToModelMessages produces 'file' parts.
+      // We convert 'file' parts with image mime types to 'image' parts.
+      if (Array.isArray(m.content)) {
+        m.content = (m.content as any[]).map((p) => {
+          if (p.type === "file" && p.mimeType?.startsWith("image/")) {
+            return {
+              type: "image",
+              image: p.data,
+              mimeType: p.mimeType,
+            };
+          }
+          return p;
+        });
+      }
+      return m;
+    });
 
     const modelId = (body as any)?.modelId;
     let model;
