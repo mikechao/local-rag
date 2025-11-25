@@ -38,7 +38,7 @@ import { AlertCircle, Paperclip, MicIcon } from "lucide-react";
 import { LocalModelSelector } from "@/components/LocalModelSelector";
 import { VoiceInput } from "@/components/VoiceInput";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { hasCachedWhisperWeights } from "@/lib/whisperModel";
+import { hasCachedWhisperWeights } from "@/lib/models/whisperModel";
 
 export function ChatInterface() {
   const [isModelAvailable] = useState<boolean | null>(true);

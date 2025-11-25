@@ -3,7 +3,7 @@ import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import { Button } from "@/components/ui/button";
 import { Loader2Icon, SquareIcon } from "lucide-react";
 import { experimental_transcribe as transcribe } from "ai";
-import { getWhisperModel } from "@/lib/whisperModel";
+import { getWhisperModel } from "@/lib/models/whisperModel";
 
 interface VoiceInputProps {
   onTranscription: (text: string) => void;

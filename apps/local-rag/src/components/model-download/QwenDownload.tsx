@@ -6,7 +6,7 @@ import {
 	isQwenModelReadyFlag,
 	MODEL_ID,
 	getQwenModel,
-} from "@/lib/qwenModel";
+} from "@/lib/models/qwenModel";
 import { TransformersJSDownloadCard } from "./TransformersJSDownloadCard";
 
 export function QwenDownload() {

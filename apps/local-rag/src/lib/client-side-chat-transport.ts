@@ -6,7 +6,7 @@ import {
   convertToModelMessages,
 } from "ai";
 import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
-import { getQwenModel } from "./qwenModel";
+import { getQwenModel } from "./models/qwenModel";
 
 /**
  * Client-side chat transport AI SDK implementation that handles AI model communication

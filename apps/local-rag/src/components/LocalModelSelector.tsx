@@ -13,7 +13,7 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
-import { hasCachedQwenWeights, isQwenModelReadyFlag } from "@/lib/qwenModel";
+import { hasCachedQwenWeights, isQwenModelReadyFlag } from "@/lib/models/qwenModel";
 
 interface LocalModelSelectorProps {
   value: string;

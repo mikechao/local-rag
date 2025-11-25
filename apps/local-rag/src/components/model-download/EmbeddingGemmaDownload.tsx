@@ -1,4 +1,4 @@
-import { ensureEmbeddingModelReady } from "@/lib/embeddingModel";
+import { ensureEmbeddingModelReady } from "@/lib/models/embeddingModel";
 import {
 	clearEmbeddingCache,
 	getModel,
@@ -6,7 +6,7 @@ import {
 	isModelReadyFlag,
 	LOCAL_READY_KEY,
 	MODEL_ID,
-} from "@/lib/embeddingModel";
+} from "@/lib/models/embeddingModel";
 import { TransformersJSDownloadCard } from "./TransformersJSDownloadCard";
 
 // Use ONNX-converted weights that include `onnx/model_quantized.onnx`

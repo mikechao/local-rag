@@ -8,7 +8,7 @@ import {
   hasCachedWhisperWeights,
   isWhisperModelReadyFlag,
   clearWhisperCache,
-} from "@/lib/whisperModel";
+} from "@/lib/models/whisperModel";
 
 // Configure local environment for transformers.js
 env.allowLocalModels = false;
