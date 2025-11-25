@@ -26,34 +26,19 @@ import {
   PromptInputAttachments,
   PromptInputAttachment,
 } from "@/components/ai-elements/prompt-input";
-import { builtInAI } from "@built-in-ai/core";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Paperclip } from "lucide-react";
 import { LocalModelSelector } from "@/components/LocalModelSelector";
 
 export function ChatInterface() {
-  const [isModelAvailable, setIsModelAvailable] = useState<boolean | null>(null);
+  const [isModelAvailable] = useState<boolean | null>(true);
   const [selectedModel, setSelectedModel] = useState<string>("gemini-nano");
-
-  useEffect(() => {
-    const checkAvailability = async () => {
-      try {
-        const model = builtInAI();
-        const availability = await model.availability();
-        setIsModelAvailable(availability === "available");
-      } catch (error) {
-        console.error("Failed to check model availability:", error);
-        setIsModelAvailable(false);
-      }
-    };
-    checkAvailability();
-  }, []);
 
   const [input, setInput] = useState("");
   
-  const { messages, sendMessage } = useChat({
+  const { messages, sendMessage, error } = useChat({
     transport: new ClientSideChatTransport(),
     id: "local-chat",
   });
@@ -133,7 +118,12 @@ export function ChatInterface() {
               </MessageContent>
             </Message>
           ))}
-          {messages.length === 0 && (
+          {error && (
+            <div className="mx-4 my-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              Error: {error.message}
+            </div>
+          )}
+          {messages.length === 0 && !error && (
             <ConversationEmptyState
               title="Start a conversation"
               description="Chat with the local AI model"

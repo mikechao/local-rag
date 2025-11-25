@@ -12,16 +12,16 @@ type DownloadableLanguageModel = ReturnType<typeof transformersJS> & {
 	) => Promise<unknown>;
 };
 
-let modelSingleton: DownloadableLanguageModel | null = null;
 let initPromise: Promise<DownloadableLanguageModel> | null = null;
+let cachedModel: DownloadableLanguageModel | null = null;
 
 export function getQwenModel(): DownloadableLanguageModel {
-	if (!modelSingleton) {
-		modelSingleton = transformersJS(MODEL_ID, {
+	if (!cachedModel) {
+		cachedModel = transformersJS(MODEL_ID, {
 			device: "webgpu",
 		}) as DownloadableLanguageModel;
 	}
-	return modelSingleton;
+	return cachedModel;
 }
 
 type EnsureOptions = {
@@ -82,8 +82,8 @@ export async function clearQwenCache() {
 		);
 	}
 
-	modelSingleton = null;
 	initPromise = null;
+	cachedModel = null;
 }
 
 /**

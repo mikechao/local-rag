@@ -56,7 +56,6 @@ export class ClientSideChatTransport
     })) as any;
 
     const modelId = (body as any)?.modelId;
-    console.log('Selected model ID:', modelId);
     let model;
 
     if (modelId === "qwen3-0.6b") {
@@ -68,7 +67,8 @@ export class ClientSideChatTransport
 
     // Check if model is available
     const availability = await model.availability();
-    if (availability !== "available") {
+    
+    if (availability === "unavailable") {
       throw new Error(
         "Model is not available. Please download it from the Models page.",
       );
