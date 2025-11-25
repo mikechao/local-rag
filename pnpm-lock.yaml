@@ -222,10 +222,10 @@ importers:
       '@mediapipe/tasks-text':
         specifier: ^0.10.22-rc.20250304
         version: 0.10.22-rc.20250304
-      ai:
-        specifier: '>=5.0.0'
-        version: 5.0.101(zod@3.25.76)
     devDependencies:
+      '@ai-sdk/provider':
+        specifier: ^2.0.0
+        version: 2.0.0
       '@types/dom-chromium-ai':
         specifier: ^0.0.10
         version: 0.0.10
@@ -235,6 +235,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^1.0.0
         version: 1.6.1(vitest@1.6.1(@types/node@20.19.25)(jsdom@26.1.0)(lightningcss@1.30.2))
+      ai:
+        specifier: ^5.0.101
+        version: 5.0.101(zod@3.25.76)
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0
@@ -263,6 +266,9 @@ importers:
         specifier: '>=5.0.0'
         version: 5.0.101(zod@3.25.76)
     devDependencies:
+      '@ai-sdk/provider':
+        specifier: ^2.0.0
+        version: 2.0.0
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.25
@@ -297,6 +303,9 @@ importers:
         specifier: '>=5.0.0'
         version: 5.0.101(zod@3.25.76)
     devDependencies:
+      '@ai-sdk/provider':
+        specifier: ^2.0.0
+        version: 2.0.0
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.25

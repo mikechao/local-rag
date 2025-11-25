@@ -57,6 +57,7 @@
     "ai": ">=5.0.0"
   },
   "devDependencies": {
+    "@ai-sdk/provider": "^2.0.0",
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^1.0.0",
     "jsdom": "^26.1.0",

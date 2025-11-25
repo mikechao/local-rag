@@ -284,6 +284,7 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
 
           audioContext
             .decodeAudioData(
+              // @ts-ignore - ArrayBufferLike mismatch with ArrayBuffer in strict mode
               audioData.buffer.slice(
                 audioData.byteOffset,
                 audioData.byteOffset + audioData.byteLength,

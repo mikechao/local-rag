@@ -16,7 +16,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
+      "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     }
   },
@@ -55,9 +55,11 @@
     "ai": ">=5.0.0"
   },
   "devDependencies": {
+    "@ai-sdk/provider": "^2.0.0",
     "@types/dom-chromium-ai": "^0.0.10",
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^1.0.0",
+    "ai": "^5.0.101",
     "jsdom": "^26.1.0",
     "rimraf": "^5.0.0",
     "tsup": "^8.0.0",
