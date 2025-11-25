@@ -12,7 +12,7 @@ interface VoiceInputProps {
 
 export function VoiceInput({ onTranscription, children }: VoiceInputProps) {
   const controls = useVoiceVisualizer();
-  const { isRecordingInProgress, isPausedRecording, recordingTime, recordedBlob } = controls;
+  const { isRecordingInProgress, isPausedRecording, formattedRecordingTime, recordedBlob } = controls;
   const [isTranscribing, setIsTranscribing] = useState(false);
 
   useEffect(() => {
@@ -76,8 +76,7 @@ export function VoiceInput({ onTranscription, children }: VoiceInputProps) {
         </div>
         <div className="flex items-center gap-1">
             <span className="text-xs font-mono w-12 text-center">
-                {String(Math.floor(recordingTime / 60)).padStart(2, '0')}:
-                {String(recordingTime % 60).padStart(2, '0')}
+                {formattedRecordingTime}
             </span>
             <Button
             variant="neutral"
