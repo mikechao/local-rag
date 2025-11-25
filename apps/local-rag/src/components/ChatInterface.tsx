@@ -87,7 +87,7 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-[calc(100vh-14rem)] flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
       <Conversation className="flex-1">
         <ConversationContent>
           {messages.map((message) => (
