@@ -12,7 +12,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import {
 	LOCAL_READY_KEY,
 	clearQwenCache,
@@ -30,7 +30,7 @@ import {
 	DrawerFooter,
 	DrawerHeader,
 	DrawerTitle,
-} from "./ui/drawer";
+} from "../ui/drawer";
 
 type Status =
 	| "checking"
