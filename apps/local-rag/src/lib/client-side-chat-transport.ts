@@ -1,36 +1,25 @@
 import {
-  type ChatTransport,
-  type UIMessageChunk,
+  ChatTransport,
+  UIMessageChunk,
   streamText,
   convertToModelMessages,
-  type ChatRequestOptions,
-  type UIMessage,
+  ChatRequestOptions,
 } from "ai";
-import { builtInAI } from "@built-in-ai/core";
-
-type ClientSideChatTransportOptions = {
-  getSystemPrompt?: () => string | undefined;
-};
+import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
 
 /**
  * Client-side chat transport AI SDK implementation that handles AI model communication
  * with in-browser AI capabilities.
  *
- * @implements {ChatTransport<UIMessage>}
+ * @implements {ChatTransport<BuiltInAIUIMessage>}
  */
 export class ClientSideChatTransport
-  implements ChatTransport<UIMessage>
+  implements ChatTransport<BuiltInAIUIMessage>
 {
-  private readonly getSystemPrompt?: () => string | undefined;
-
-  constructor(options?: ClientSideChatTransportOptions) {
-    this.getSystemPrompt = options?.getSystemPrompt;
-  }
-
   async sendMessages(
     options: {
       chatId: string;
-      messages: UIMessage[];
+      messages: BuiltInAIUIMessage[];
       abortSignal: AbortSignal | undefined;
     } & {
       trigger: "submit-message" | "submit-tool-result" | "regenerate-message";
@@ -39,22 +28,19 @@ export class ClientSideChatTransport
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal } = options;
 
-    const systemPrompt = this.getSystemPrompt?.()?.trim();
-
-    console.log("ClientSideChatTransport sendMessages systemPrompt:", systemPrompt);
-
     const prompt = convertToModelMessages(messages);
     const model = builtInAI();
 
     // Check if model is available
     const availability = await model.availability();
     if (availability !== "available") {
-      throw new Error("Model is not available. Please download it from the Models page.");
+      throw new Error(
+        "Model is not available. Please download it from the Models page.",
+      );
     }
 
     const result = streamText({
       model,
-      ...(systemPrompt ? { system: systemPrompt } : {}),
       messages: prompt,
       abortSignal: abortSignal,
     });
