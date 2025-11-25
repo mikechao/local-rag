@@ -79,7 +79,9 @@ export class ClientSideChatTransport
       messages: prompt,
       abortSignal: abortSignal,
     });
-    return result.toUIMessageStream();
+    return result.toUIMessageStream({
+      sendReasoning: true,
+    });
   }
 
   async reconnectToStream(

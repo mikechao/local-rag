@@ -26,6 +26,11 @@ import {
   PromptInputAttachments,
   PromptInputAttachment,
 } from "@/components/ai-elements/prompt-input";
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@/components/ai-elements/reasoning";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -38,10 +43,12 @@ export function ChatInterface() {
 
   const [input, setInput] = useState("");
   
-  const { messages, sendMessage, error } = useChat({
+  const { messages, sendMessage, error, status } = useChat({
     transport: new ClientSideChatTransport(),
     id: "local-chat",
   });
+
+  console.log("Messages:", messages);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
@@ -114,7 +121,56 @@ export function ChatInterface() {
                     <MessageAttachment data={attachment} key={index} />
                   ))}
                 </MessageAttachments>
-                <MessageResponse>{getMessageText(message)}</MessageResponse>
+                {message.parts ? (
+                  message.parts.map((part, index) => {
+                    if (part.type === "text") {
+                      const thinkMatch = part.text.match(/<think>([\s\S]*?)(?:<\/think>|$)/);
+                      if (thinkMatch) {
+                        const reasoning = thinkMatch[1];
+                        const hasFinishedThinking = part.text.includes("</think>");
+                        const content = part.text.replace(/<think>[\s\S]*?(?:<\/think>|$)/, "").trim();
+                        
+                        return (
+                          <div key={index} className="flex flex-col gap-2">
+                            <Reasoning
+                              isStreaming={
+                                status === "streaming" &&
+                                index === message.parts.length - 1 &&
+                                message.id === messages[messages.length - 1].id &&
+                                !hasFinishedThinking
+                              }
+                            >
+                              <ReasoningTrigger />
+                              <ReasoningContent>{reasoning}</ReasoningContent>
+                            </Reasoning>
+                            {content && <MessageResponse>{content}</MessageResponse>}
+                          </div>
+                        );
+                      }
+                      return (
+                        <MessageResponse key={index}>{part.text}</MessageResponse>
+                      );
+                    }
+                    if (part.type === "reasoning") {
+                      return (
+                        <Reasoning
+                          key={index}
+                          isStreaming={
+                            status === "streaming" &&
+                            index === message.parts.length - 1 &&
+                            message.id === messages[messages.length - 1].id
+                          }
+                        >
+                          <ReasoningTrigger />
+                          <ReasoningContent>{part.text}</ReasoningContent>
+                        </Reasoning>
+                      );
+                    }
+                    return null;
+                  })
+                ) : (
+                  <MessageResponse>{getMessageText(message)}</MessageResponse>
+                )}
               </MessageContent>
             </Message>
           ))}
