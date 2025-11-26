@@ -208,14 +208,17 @@ export function ChatInterface() {
         <PromptInput
           accept="image/*"
           onSubmit={(message) => {
+            const trimmedText = message.text.trim();
             const parts = [
-              { type: 'text', text: message.text },
+              ...(trimmedText ? [{ type: "text", text: trimmedText }] : []),
               ...message.files.map((file) => ({
                 type: "file",
                 data: file.url.toString().split(",")[1],
                 mediaType: file.mediaType,
               })),
             ];
+
+            if (parts.length === 0) return; // avoid sending empty messages
 
             sendMessage(
               {
