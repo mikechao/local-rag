@@ -30,43 +30,7 @@ export class ClientSideChatTransport
     const { messages, abortSignal, body } = options;
 
     // Convert UI messages to Model messages
-    // We need to massage the input slightly because the UI sends 'data' (base64) for files,
-    // but the SDK expects 'url' (data URL) for FileUIPart.
-    const prompt = convertToModelMessages(
-      messages.map((m) => ({
-        ...m,
-        parts: m.parts.map((p) => {
-          if (p.type === "file" && (p as any).data) {
-            const filePart = p as any;
-            const mediaType = filePart.mimeType || filePart.mediaType;
-            return {
-              type: "file",
-              url: `data:${mediaType};base64,${filePart.data}`,
-              mediaType: mediaType,
-              filename: filePart.filename,
-            };
-          }
-          return p;
-        }),
-      })) as any,
-    ).map((m) => {
-      // Post-processing: The transformers-js provider expects 'image' parts for vision,
-      // but convertToModelMessages produces 'file' parts.
-      // We convert 'file' parts with image mime types to 'image' parts.
-      if (Array.isArray(m.content)) {
-        m.content = (m.content as any[]).map((p) => {
-          if (p.type === "file" && p.mimeType?.startsWith("image/")) {
-            return {
-              type: "image",
-              image: p.data,
-              mimeType: p.mimeType,
-            };
-          }
-          return p;
-        });
-      }
-      return m;
-    });
+    const prompt = convertToModelMessages(messages);
 
     const modelId = (body as any)?.modelId;
     let model;

@@ -235,13 +235,16 @@ export function ChatInterface() {
           accept="image/*"
           onSubmit={(message) => {
             const trimmedText = message.text.trim();
+            const fileParts = message.files.map((file) => ({
+              type: "file" as const,
+              url: file.url,
+              mediaType: file.mediaType,
+              filename: file.filename,
+            }));
+
             const parts = [
               ...(trimmedText ? [{ type: "text", text: trimmedText }] : []),
-              ...message.files.map((file) => ({
-                type: "file",
-                data: file.url.toString().split(",")[1],
-                mediaType: file.mediaType,
-              })),
+              ...fileParts,
             ];
 
             if (parts.length === 0) return; // avoid sending empty messages
