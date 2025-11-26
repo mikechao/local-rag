@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { EmbeddingGemmaDownload } from "@/components/model-download/EmbeddingGemmaDownload"
 import { GeminiNanoDownload } from "@/components/model-download/GeminiNanoDownload"
 import { QwenDownload } from "@/components/model-download/QwenDownload"
-import { WhisperDownload } from "@/components/WhisperDownload"
+import { WhisperDownload } from "@/components/model-download/WhisperDownload"
 import { PageContainer } from "@/components/PageContainer"
 
 export const Route = createFileRoute("/models")({ component: ModelsPage })

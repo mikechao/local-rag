@@ -9,7 +9,7 @@ Add a microphone button to the chat interface that allows users to record audio,
 ## Components
 
 ### `WhisperDownload`
-A new component `apps/local-rag/src/components/WhisperDownload.tsx` to manage the download of the `Xenova/whisper-base` model.
+A new component `apps/local-rag/src/components/model-download/WhisperDownload.tsx` to manage the download of the `Xenova/whisper-base` model.
 - Wraps `TransformersJSDownloadCard` to handle the download logic and UI.
 - Uses `transformersJS` to check availability and download.
 

@@ -1,5 +1,5 @@
 import { TransformersJSTranscriptionModel } from "@built-in-ai/transformers-js";
-import { TransformersJSDownloadCard } from "@/components/model-download/TransformersJSDownloadCard";
+import { TransformersJSDownloadCard } from "./TransformersJSDownloadCard";
 import { env } from "@huggingface/transformers";
 import {
   MODEL_ID,
