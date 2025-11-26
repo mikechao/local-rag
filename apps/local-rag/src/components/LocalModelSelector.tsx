@@ -61,7 +61,7 @@ export function LocalModelSelector({ value, onValueChange }: LocalModelSelectorP
   return (
     <ModelSelector open={open} onOpenChange={setOpen}>
       <ModelSelectorTrigger asChild>
-        <Button className="gap-2 pl-2 pr-2 h-8" variant="ghost" size="sm">
+        <Button className="gap-2 pl-2 pr-2 h-8" variant="noShadow" size="sm">
           <div className="flex items-center gap-2">
             {selectedModelData?.chefSlug && (
               <ModelSelectorLogo provider={selectedModelData.chefSlug} />

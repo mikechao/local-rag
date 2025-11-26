@@ -245,7 +245,7 @@ export function ChatInterface() {
                 <>
                   <PromptInputTools>
                     <PromptInputActionMenu>
-                      <PromptInputActionMenuTrigger>
+                      <PromptInputActionMenuTrigger variant={"noShadow"}>
                         <Paperclip className="size-4" />
                       </PromptInputActionMenuTrigger>
                       <PromptInputActionMenuContent>
@@ -263,9 +263,9 @@ export function ChatInterface() {
                         <TooltipTrigger asChild>
                           <span tabIndex={-1}>
                             <Button
-                              variant="ghost"
+                              variant="noShadow"
                               size="icon"
-                              className="size-8 text-muted-foreground hover:text-foreground"
+                              className="size-8"
                               onClick={startRecording}
                               disabled={!isWhisperAvailable}
                               type="button"
@@ -282,7 +282,7 @@ export function ChatInterface() {
                         )}
                       </Tooltip>
                     </TooltipProvider>
-                    <PromptInputSubmit />
+                    <PromptInputSubmit  variant={"noShadow"}/>
                   </div>
                 </>
               )}
