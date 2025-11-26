@@ -3,8 +3,21 @@ import { transformersJS } from "@built-in-ai/transformers-js";
 export const MODEL_ID = "Xenova/speecht5_tts";
 export const LOCAL_READY_KEY = "speecht5-tts-ready";
 
+let speechWorker: Worker | undefined;
+
 export function getSpeechModel() {
-  return transformersJS.textToSpeech(MODEL_ID);
+  if (typeof window !== "undefined" && !speechWorker) {
+    speechWorker = new Worker(
+      new URL("../../workers/speech.worker.ts", import.meta.url),
+      { type: "module" },
+    );
+  }
+
+  return transformersJS.textToSpeech(MODEL_ID, {
+    dtype: "fp32",
+    device: "wasm",
+    worker: speechWorker,
+  });
 }
 
 export async function hasCachedSpeechWeights(): Promise<boolean> {

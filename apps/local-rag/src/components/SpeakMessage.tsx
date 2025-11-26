@@ -46,10 +46,15 @@ export function SpeakMessage({ text, className = "" }: SpeakMessageProps) {
           "https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin",
       });
 
+      const audioData = (audio as any).uint8ArrayData;
+      if (!audioData) {
+        throw new Error("No audio data found in response");
+      }
+
       // Create a blob from the audio data and play it
-      // @ts-ignore - audio is Uint8Array in newer versions or has .buffer
-      const blob = new Blob([audio], { type: "audio/wav" });
+      const blob = new Blob([audioData], { type: "audio/wav" });
       const url = URL.createObjectURL(blob);
+      
       const audioEl = new Audio(url);
       
       audioEl.onended = () => {
@@ -57,7 +62,8 @@ export function SpeakMessage({ text, className = "" }: SpeakMessageProps) {
         setIsGenerating(false);
       };
       
-      audioEl.onerror = () => {
+      audioEl.onerror = (e) => {
+        console.error("Audio playback error:", e);
         URL.revokeObjectURL(url);
         setIsGenerating(false);
       };
