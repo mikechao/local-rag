@@ -36,3 +36,12 @@ export type {
 export { TransformersJSWorkerHandler } from "./chat/transformers-js-worker-handler";
 
 export { TransformersJSTranscriptionWorkerHandler } from "./transcription/transformers-js-transcription-worker-handler";
+
+export {
+  TransformersJSSpeechModel,
+  type TransformersJSSpeechModelId,
+} from "./speech/transformers-js-speech-model";
+
+export { type TransformersJSSpeechSettings } from "./speech/transformers-js-speech-settings";
+
+export { initTransformersJSSpeechWorker } from "./speech/transformers-js-speech-worker-handler";

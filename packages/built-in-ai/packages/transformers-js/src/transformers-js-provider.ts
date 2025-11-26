@@ -3,6 +3,7 @@ import {
   LanguageModelV2,
   NoSuchModelError,
   ProviderV2,
+  SpeechModelV2,
   TranscriptionModelV2,
 } from "@ai-sdk/provider";
 import {
@@ -21,6 +22,11 @@ import {
   TransformersJSTranscriptionModelId,
   TransformersJSTranscriptionSettings,
 } from "./transcription/transformers-js-transcription-model";
+import {
+  TransformersJSSpeechModel,
+  TransformersJSSpeechModelId,
+} from "./speech/transformers-js-speech-model";
+import { TransformersJSSpeechSettings } from "./speech/transformers-js-speech-settings";
 
 export interface TransformersJSProvider extends ProviderV2 {
   (
@@ -63,6 +69,16 @@ export interface TransformersJSProvider extends ProviderV2 {
     modelId: TransformersJSTranscriptionModelId,
     settings?: TransformersJSTranscriptionSettings,
   ) => TranscriptionModelV2;
+
+  textToSpeech(
+    modelId: TransformersJSSpeechModelId,
+    settings?: TransformersJSSpeechSettings,
+  ): SpeechModelV2;
+
+  textToSpeechModel: (
+    modelId: TransformersJSSpeechModelId,
+    settings?: TransformersJSSpeechSettings,
+  ) => SpeechModelV2;
 }
 
 export interface TransformersJSProviderSettings {
@@ -125,6 +141,23 @@ export function createTransformersJS(
     return new TransformersJSTranscriptionModel(modelId, settings);
   };
 
+  const createSpeechModel = (
+    modelId: TransformersJSSpeechModelId,
+    settings?: TransformersJSSpeechSettings,
+  ) => {
+    if (isServerEnvironment()) {
+      const key = getSpeechModelKey(modelId, settings);
+      const cached = serverSpeechModelSingletons.get(key);
+      if (cached) return cached;
+
+      const instance = new TransformersJSSpeechModel(modelId, settings);
+      serverSpeechModelSingletons.set(key, instance);
+      return instance;
+    }
+
+    return new TransformersJSSpeechModel(modelId, settings);
+  };
+
   const provider = function (
     modelId: TransformersJSModelId,
     settings?: TransformersJSModelSettings,
@@ -144,6 +177,8 @@ export function createTransformersJS(
   provider.textEmbeddingModel = createEmbeddingModel;
   provider.transcription = createTranscriptionModel;
   provider.transcriptionModel = createTranscriptionModel;
+  provider.textToSpeech = createSpeechModel;
+  provider.textToSpeechModel = createSpeechModel;
 
   provider.imageModel = (modelId: string) => {
     throw new NoSuchModelError({ modelId, modelType: "imageModel" });
@@ -173,6 +208,12 @@ const serverTranscriptionModelSingletons = new Map<
   TransformersJSTranscriptionModel
 >();
 
+// Server-side singleton cache for speech model instances
+const serverSpeechModelSingletons = new Map<
+  string,
+  TransformersJSSpeechModel
+>();
+
 function getLanguageModelKey(
   modelId: string,
   settings?: TransformersJSModelSettings,
@@ -191,4 +232,14 @@ function getTranscriptionModelKey(
   const dtype = (settings?.dtype ?? "auto").toString();
   const maxNewTokens = (settings?.maxNewTokens ?? 64).toString();
   return `${modelId}::${device}::${dtype}::${maxNewTokens}`;
+}
+
+function getSpeechModelKey(
+  modelId: string,
+  settings?: TransformersJSSpeechSettings,
+): string {
+  const device = (settings?.device ?? "auto").toString();
+  const dtype = (settings?.dtype ?? "auto").toString();
+  const quantized = (settings?.quantized ?? true).toString();
+  return `${modelId}::${device}::${dtype}::${quantized}`;
 }
