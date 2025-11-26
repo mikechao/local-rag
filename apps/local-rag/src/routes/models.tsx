@@ -4,6 +4,7 @@ import { EmbeddingGemmaDownload } from "@/components/model-download/EmbeddingGem
 import { GeminiNanoDownload } from "@/components/model-download/GeminiNanoDownload"
 import { QwenDownload } from "@/components/model-download/QwenDownload"
 import { WhisperDownload } from "@/components/model-download/WhisperDownload"
+import { SpeechDownload } from "@/components/model-download/SpeechDownload"
 import { PageContainer } from "@/components/PageContainer"
 
 export const Route = createFileRoute("/models")({ component: ModelsPage })
@@ -20,6 +21,7 @@ function ModelsPage() {
         <QwenDownload />
         <GeminiNanoDownload />
         <WhisperDownload />
+        <SpeechDownload />
       </div>
     </PageContainer>
   )
