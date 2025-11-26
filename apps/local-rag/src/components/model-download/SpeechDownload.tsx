@@ -17,13 +17,13 @@ env.useBrowserCache = true;
 export function SpeechDownload() {
   return (
     <TransformersJSDownloadCard
-      title="Supertonic TTS"
+      title="SpeechT5 TTS"
       modelId={MODEL_ID}
       descriptionPrefix="Download"
       descriptionSuffix="for text-to-speech generation directly in your browser."
       links={[
         {
-          href: "https://huggingface.co/onnx-community/Supertonic-TTS-ONNX",
+          href: "https://huggingface.co/Xenova/speecht5_tts",
           label: "Hugging Face",
         },
       ]}

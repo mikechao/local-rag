@@ -42,6 +42,8 @@ export function SpeakMessage({ text, className = "" }: SpeakMessageProps) {
       const { audio } = await generateSpeech({
         model,
         text,
+        voice:
+          "https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin",
       });
 
       // Create a blob from the audio data and play it

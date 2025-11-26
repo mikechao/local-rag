@@ -1,7 +1,7 @@
 import { transformersJS } from "@built-in-ai/transformers-js";
 
-export const MODEL_ID = "onnx-community/Supertonic-TTS-ONNX";
-export const LOCAL_READY_KEY = "supertonic-tts-ready";
+export const MODEL_ID = "Xenova/speecht5_tts";
+export const LOCAL_READY_KEY = "speecht5-tts-ready";
 
 export function getSpeechModel() {
   return transformersJS.textToSpeech(MODEL_ID);
