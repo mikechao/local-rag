@@ -39,13 +39,15 @@ export function SpeakMessage({ text, className = "" }: SpeakMessageProps) {
       setIsGenerating(true);
       const model = getSpeechModel();
       
+      const before = performance.now();
       const { audio } = await generateSpeech({
         model,
         text,
         voice:
           "https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin",
       });
-
+      const after = performance.now();
+      console.log(`Speech generation took ${(after - before).toFixed(2)} ms`);
       const audioData = (audio as any).uint8ArrayData;
       if (!audioData) {
         throw new Error("No audio data found in response");

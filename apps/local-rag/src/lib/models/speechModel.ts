@@ -14,8 +14,8 @@ export function getSpeechModel() {
   }
 
   return transformersJS.textToSpeech(MODEL_ID, {
-    dtype: "fp32",
-    device: "wasm",
+    dtype: "fp32", // q8 is too low quality for speecht5, fp32 is required for decent audio
+    device: "wasm", // WebGPU has issues with SpeechT5 (MatMul errors), so we use WASM (CPU)
     worker: speechWorker,
   });
 }
