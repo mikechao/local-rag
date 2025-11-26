@@ -12,6 +12,8 @@ import {
   MessageResponse,
   MessageAttachments,
   MessageAttachment,
+  MessageActions,
+  MessageAction,
 } from "@/components/ai-elements/message";
 import {
   PromptInput,
@@ -34,7 +36,7 @@ import {
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Paperclip, MicIcon } from "lucide-react";
+import { AlertCircle, Paperclip, MicIcon, CopyIcon, CheckIcon } from "lucide-react";
 import { LocalModelSelector } from "@/components/LocalModelSelector";
 import { VoiceInput } from "@/components/VoiceInput";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -44,6 +46,7 @@ export function ChatInterface() {
   const [isModelAvailable] = useState<boolean | null>(true);
   const [selectedModel, setSelectedModel] = useState<string>("gemini-nano");
   const [isWhisperAvailable, setIsWhisperAvailable] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkWhisper = async () => {
@@ -64,6 +67,9 @@ export function ChatInterface() {
     setInput(e.target.value);
   };
 
+  const stripThinking = (text: string) =>
+    text.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, "").trim();
+
   const getMessageText = (message: any) => {
     if (message.content) return message.content;
     if (message.parts) {
@@ -73,6 +79,18 @@ export function ChatInterface() {
         .join('');
     }
     return '';
+  };
+
+  const getCopyableText = (message: any) => {
+    if (message.parts) {
+      return message.parts
+        .filter((part: any) => part.type === 'text')
+        .map((part: any) => stripThinking(part.text))
+        .filter(Boolean)
+        .join("\n\n");
+    }
+
+    return stripThinking(getMessageText(message));
   };
 
   const getAttachments = (message: any) => {
@@ -125,6 +143,7 @@ export function ChatInterface() {
         <ConversationContent>
           {messages.map((message) => {
             const attachments = getAttachments(message);
+            const copyableText = getCopyableText(message);
             return (
               <Message key={message.id} from={message.role}>
                 <MessageContent>
@@ -184,6 +203,32 @@ export function ChatInterface() {
                         <MessageAttachment data={attachment} key={index} />
                       ))}
                     </MessageAttachments>
+                  )}
+                  {message.role === "assistant" && copyableText && (
+                    <MessageActions className="ml-auto">
+                      <MessageAction
+                        aria-label="Copy message"
+                        label="Copy message"
+                        tooltip={copiedMessageId === message.id ? "Copied" : "Copy message"}
+                        onClick={async () => {
+                          if (typeof navigator === "undefined" || !navigator.clipboard) return;
+
+                          try {
+                            await navigator.clipboard.writeText(copyableText);
+                            setCopiedMessageId(message.id);
+                            setTimeout(() => setCopiedMessageId(null), 2000);
+                          } catch (err) {
+                            console.error("Failed to copy message", err);
+                          }
+                        }}
+                      >
+                        {copiedMessageId === message.id ? (
+                          <CheckIcon className="size-4" />
+                        ) : (
+                          <CopyIcon className="size-4" />
+                        )}
+                      </MessageAction>
+                    </MessageActions>
                   )}
               </MessageContent>
             </Message>
