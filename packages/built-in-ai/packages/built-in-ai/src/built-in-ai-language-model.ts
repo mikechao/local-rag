@@ -52,8 +52,8 @@ type BuiltInAIConfig = {
 function hasMultimodalContent(prompt: LanguageModelV2Prompt): boolean {
   for (const message of prompt) {
     if (message.role === "user") {
-      for (const part of (message.content as any[])) {
-        if (part.type === "file" || part.type === "image") {
+      for (const part of message.content) {
+        if (part.type === "file") {
           return true;
         }
       }
@@ -73,17 +73,13 @@ function getExpectedInputs(
 
   for (const message of prompt) {
     if (message.role === "user") {
-      for (const part of (message.content as any[])) {
+      for (const part of message.content) {
         if (part.type === "file") {
-          const p = part as any;
-          const mediaType = p.mediaType || p.mimeType;
-          if (mediaType?.startsWith("image/")) {
+          if (part.mediaType?.startsWith("image/")) {
             inputs.add("image");
-          } else if (mediaType?.startsWith("audio/")) {
+          } else if (part.mediaType?.startsWith("audio/")) {
             inputs.add("audio");
           }
-        } else if (part.type === "image") {
-          inputs.add("image");
         }
       }
     }

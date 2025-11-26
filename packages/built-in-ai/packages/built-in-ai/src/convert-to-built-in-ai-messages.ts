@@ -72,7 +72,7 @@ export function convertToBuiltInAIMessages(
       case "user": {
         messages.push({
           role: "user",
-          content: (message.content as any[]).map((part) => {
+          content: message.content.map((part) => {
             switch (part.type) {
               case "text": {
                 return {
@@ -81,22 +81,8 @@ export function convertToBuiltInAIMessages(
                 } as LanguageModelMessageContent;
               }
 
-              case "image": {
-                const imagePart = part as any;
-                const data = imagePart.image;
-                const mediaType = imagePart.mimeType;
-                const convertedData = convertFileData(data, mediaType || "image/jpeg");
-
-                return {
-                  type: "image",
-                  value: convertedData,
-                } as LanguageModelMessageContent;
-              }
-
               case "file": {
-                const p = part as any;
-                const { data } = p;
-                const mediaType = p.mediaType || p.mimeType;
+                const { mediaType, data, filename } = part;
 
                 if (mediaType?.startsWith("image/")) {
                   const convertedData = convertFileData(data, mediaType);
