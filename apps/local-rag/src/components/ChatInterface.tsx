@@ -36,6 +36,7 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Paperclip, MicIcon } from "lucide-react";
 import { CopyMessage } from "@/components/CopyMessage";
+import { SpeakMessage } from "@/components/SpeakMessage";
 import { LocalModelSelector } from "@/components/LocalModelSelector";
 import { VoiceInput } from "@/components/VoiceInput";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -204,12 +205,16 @@ export function ChatInterface() {
                     </MessageAttachments>
                   )}
                   {message.role === "assistant" && copyableText && status === "ready" && (
-                    <CopyMessage
-                      messageId={message.id}
-                      copyableText={copyableText}
-                      copiedMessageId={copiedMessageId}
-                      setCopiedMessageId={setCopiedMessageId}
-                    />
+                    <div className="flex items-center gap-2 ml-auto">
+                      <SpeakMessage text={copyableText} />
+                      <CopyMessage
+                        messageId={message.id}
+                        copyableText={copyableText}
+                        copiedMessageId={copiedMessageId}
+                        setCopiedMessageId={setCopiedMessageId}
+                        className=""
+                      />
+                    </div>
                   )}
               </MessageContent>
             </Message>
