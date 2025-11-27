@@ -367,15 +367,13 @@ export function ChatInterface() {
                       value={selectedModel}
                       onValueChange={setSelectedModel}
                     />
-                  </PromptInputTools>
-                  <div className="flex items-center gap-1">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="noShadow"
-                            size="icon"
-                            className="size-8"
+                            size="sm"
+                            className="h-8 gap-2 px-2"
                             onClick={() => setAutoSpeak(!autoSpeak)}
                             disabled={!isSpeechAvailable}
                             type="button"
@@ -385,7 +383,7 @@ export function ChatInterface() {
                             ) : (
                               <VolumeX className="size-4 text-muted-foreground" />
                             )}
-                            <span className="sr-only">Toggle Auto-Speak</span>
+                            <span className="hidden sm:inline">{autoSpeak ? "Auto-Speak On" : "Auto-Speak Off"}</span>
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -393,6 +391,8 @@ export function ChatInterface() {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                  </PromptInputTools>
+                  <div className="flex items-center gap-1">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
