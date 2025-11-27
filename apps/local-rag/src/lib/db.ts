@@ -36,6 +36,7 @@ export async function getDb() {
 async function runBootstrap(pg: PGliteWorker) {
 	// Ensure pgvector exists before applying migrations that rely on it.
 	await pg.query("create extension if not exists vector;")
+	await pg.query("create extension if not exists lo;")
 	await applyMigrations(pg as unknown as PGlite)
 }
 

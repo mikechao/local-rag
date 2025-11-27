@@ -1,9 +1,10 @@
 import { PGlite } from "@electric-sql/pglite"
 import { vector } from "@electric-sql/pglite/vector"
-import { IdbFs } from "@electric-sql/pglite"
+import { lo } from "@electric-sql/pglite/contrib/lo"
+import { OpfsAhpFS } from "@electric-sql/pglite/opfs-ahp"
 import { drizzle } from "drizzle-orm/pglite"
-import { eq, asc } from "drizzle-orm"
-import { documents, docChunks } from "../db/schema"
+import { eq, sql } from "drizzle-orm"
+import { documents } from "../db/schema"
 
 let db: ReturnType<typeof drizzle> | null = null
 
@@ -15,8 +16,8 @@ async function getDb() {
 		const wasmModule = await WebAssembly.compile(wasmBuffer)
 
 		const client = new PGlite({
-			fs: new IdbFs("local-rag"),
-			extensions: { vector },
+			fs: new OpfsAhpFS("local-rag"),
+			extensions: { vector, lo },
 			relaxedDurability: true,
 			wasmModule,
 		})
@@ -47,18 +48,17 @@ self.onmessage = async (e) => {
 
 			// We can fetch all chunks here because we are in a worker
 			// and won't block the UI thread.
-			const chunks = await db
-				.select({
-					data: docChunks.data,
-				})
-				.from(docChunks)
-				.where(eq(docChunks.docId, docId))
-				.orderBy(asc(docChunks.chunkNo))
-
-			const blob = new Blob(
-				chunks.map((chunk) => chunk.data as unknown as BlobPart),
-				{ type: docRow.mime },
+			const loResult = await db.execute<{ data: Uint8Array }>(
+				sql`select lo_get(${docRow.blobOid}) as data`,
 			)
+			const loRow = loResult.rows[0]
+			if (!loRow) {
+				throw new Error("Document data missing")
+			}
+
+			const blob = new Blob([loRow.data as unknown as BlobPart], {
+				type: docRow.mime,
+			})
 
 			self.postMessage({
 				type: "BLOB_RESULT",

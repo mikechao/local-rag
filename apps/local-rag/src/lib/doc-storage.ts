@@ -1,10 +1,8 @@
-import { docChunks, documents, docText } from "@/db/schema"
+import { documents, docText } from "@/db/schema"
 import { ensureDbReady, getDb } from "@/lib/db"
+import { sql } from "drizzle-orm"
 
 const FALLBACK_CHUNK_MB = 1
-
-export const CHUNK_BYTES =
-	Number(import.meta.env.VITE_CHUNK_MB ?? FALLBACK_CHUNK_MB) * 1024 * 1024
 
 export type QuotaEstimate = {
 	usage?: number
@@ -33,14 +31,6 @@ export async function checkStorageQuota(requiredBytes: number): Promise<QuotaEst
 	}
 }
 
-function chunkBuffer(bytes: Uint8Array, chunkSize = CHUNK_BYTES): Uint8Array[] {
-	const chunks: Uint8Array[] = []
-	for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-		chunks.push(bytes.slice(offset, Math.min(offset + chunkSize, bytes.length)))
-	}
-	return chunks
-}
-
 export async function saveDocument(params: {
 	file: File
 	pageTexts?: string[]
@@ -65,31 +55,25 @@ export async function saveDocument(params: {
 	const now = params.clock ? params.clock() : new Date()
 	const pageTexts = params.pageTexts ?? []
 	const total = fileBytes.length
-	let written = 0
 
 	await db.transaction(async (tx) => {
+		const loResult = await tx.execute<{ oid: number }>(
+			sql`select lo_from_bytea(0, ${fileBytes}) as oid`,
+		)
+		const blobOid = loResult.rows[0]?.oid
+		if (blobOid == null) {
+			throw new Error("Failed to store document bytes")
+		}
+
 		await tx.insert(documents).values({
 			id,
 			filename: params.file.name,
 			mime: params.file.type || "application/octet-stream",
 			size: params.file.size,
+			blobOid,
 			createdAt: now,
 			updatedAt: now,
 		})
-
-		const chunks = chunkBuffer(fileBytes)
-		for (let i = 0; i < chunks.length; i += 1) {
-			if (params.signal?.aborted) {
-				throw new DOMException("Upload aborted", "AbortError")
-			}
-			await tx.insert(docChunks).values({
-				docId: id,
-				chunkNo: i,
-				data: chunks[i],
-			})
-			written += chunks[i].length
-			params.onChunkProgress?.(written, total)
-		}
 
 		if (pageTexts.length > 0) {
 			for (let page = 0; page < pageTexts.length; page += 1) {
@@ -101,6 +85,8 @@ export async function saveDocument(params: {
 			}
 		}
 	})
+
+	params.onChunkProgress?.(total, total)
 
 	return { id }
 }

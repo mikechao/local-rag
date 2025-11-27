@@ -9,15 +9,15 @@ import {
 	customType,
 } from "drizzle-orm/pg-core"
 
-const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
+const oid = customType<{ data: number; driverData: number }>({
 	dataType() {
-		return "bytea"
+		return "oid"
 	},
 	toDriver(value) {
 		return value
 	},
 	fromDriver(value) {
-		return value instanceof Uint8Array ? value : new Uint8Array(value as ArrayBuffer)
+		return Number(value)
 	},
 })
 
@@ -26,23 +26,10 @@ export const documents = pgTable("documents", {
 	filename: text("filename").notNull(),
 	mime: text("mime").notNull(),
 	size: integer("size").notNull(),
+	blobOid: oid("blob_oid").notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 })
-
-export const docChunks = pgTable(
-	"doc_chunks",
-	{
-		docId: text("doc_id")
-			.notNull()
-			.references(() => documents.id, { onDelete: "cascade" }),
-		chunkNo: integer("chunk_no").notNull(),
-		data: bytea("data").notNull(),
-	},
-	(table) => ({
-		pk: primaryKey({ columns: [table.docId, table.chunkNo] }),
-	}),
-)
 
 export const docText = pgTable(
 	"doc_text",
@@ -76,6 +63,5 @@ export const embeddings = pgTable(
 
 export type Document = typeof documents.$inferSelect
 export type InsertDocument = typeof documents.$inferInsert
-export type DocChunk = typeof docChunks.$inferSelect
 export type DocText = typeof docText.$inferSelect
 export type EmbeddingRow = typeof embeddings.$inferSelect
