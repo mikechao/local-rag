@@ -2,8 +2,6 @@ import { documents, docText } from "@/db/schema"
 import { ensureDbReady, getDb } from "@/lib/db"
 import { sql } from "drizzle-orm"
 
-const FALLBACK_CHUNK_MB = 1
-
 export type QuotaEstimate = {
 	usage?: number
 	quota?: number
@@ -102,6 +100,41 @@ function getBlobWorker() {
 	return blobWorker
 }
 
+type BlobWorkerResponse<T> = {
+	type: string
+	id: string
+	payload?: T
+	begin?: number
+	data?: Uint8Array
+	error?: string
+}
+
+async function callBlobWorker<TPayload = unknown, TResult = unknown>(
+	type: string,
+	payload: TPayload,
+): Promise<TResult> {
+	const worker = getBlobWorker()
+	return new Promise((resolve, reject) => {
+		const id = crypto.randomUUID()
+		const handler = (e: MessageEvent<BlobWorkerResponse<TResult>>) => {
+			if (e.data.id === id) {
+				worker.removeEventListener("message", handler)
+				if (e.data.error) {
+					reject(new Error(e.data.error))
+				} else if (e.data.payload !== undefined) {
+					resolve(e.data.payload)
+				} else if (e.data.data !== undefined) {
+					resolve({ begin: e.data.begin, data: e.data.data } as TResult)
+				} else {
+					reject(new Error("Unexpected worker response"))
+				}
+			}
+		}
+		worker.addEventListener("message", handler)
+		worker.postMessage({ type, id, ...payload })
+	})
+}
+
 export async function getDocumentBlob(
 	docId: string,
 ): Promise<{ blob: Blob; filename: string; mime: string }> {
@@ -131,4 +164,23 @@ export async function getDocumentObjectUrl(docId: string) {
 		url,
 		revoke: () => URL.revokeObjectURL(url),
 	}
+}
+
+export type PdfStreamMeta = {
+	blobOid: number
+	mime: string
+	filename: string
+	size: number
+}
+
+export async function initPdfStream(docId: string): Promise<PdfStreamMeta> {
+	return callBlobWorker("START_PDF_STREAM", { docId })
+}
+
+export async function fetchPdfRange(
+	docId: string,
+	start: number,
+	end: number,
+): Promise<{ begin: number | undefined; data: Uint8Array }> {
+	return callBlobWorker("GET_PDF_RANGE", { docId, start, end })
 }

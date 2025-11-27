@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { getDocumentObjectUrl } from "@/lib/doc-storage";
+import { pdfjs } from "react-pdf";
+import { fetchPdfRange, getDocumentObjectUrl, initPdfStream } from "@/lib/doc-storage";
 import { MarkdownView } from "./MarkdownView";
 import { PdfView } from "./PdfView";
 import { Spinner } from "@/components/ui/shadcn-io/spinner";
@@ -14,6 +15,9 @@ export function DocumentView({ docId }: DocumentViewProps) {
 	const [content, setContent] = useState<string | null>(null);
 	const [url, setUrl] = useState<string | null>(null);
 	const [mime, setMime] = useState<string | null>(null);
+	const [rangeFile, setRangeFile] = useState<{ range: pdfjs.PDFDataRangeTransport } | null>(
+		null,
+	);
 
 	useEffect(() => {
 		let active = true;
@@ -22,22 +26,38 @@ export function DocumentView({ docId }: DocumentViewProps) {
 		async function load() {
 			try {
 				setLoading(true);
-				const result = await getDocumentObjectUrl(docId);
-				if (!active) {
-					result.revoke();
-					return;
-				}
-				revoke = result.revoke;
-				setMime(result.mime);
-				setUrl(result.url);
+				const streamMeta = await initPdfStream(docId);
+				if (!active) return;
+				setMime(streamMeta.mime);
+				if (streamMeta.mime === "application/pdf") {
+					const transport = new pdfjs.PDFDataRangeTransport(streamMeta.size, new Uint8Array());
+					transport.requestDataRange = async (begin: number, end: number) => {
+						try {
+							const result = await fetchPdfRange(docId, begin, end);
+							transport.onDataRange(result.begin ?? begin, result.data);
+						} catch (_err) {
+							transport.abort();
+						}
+					};
+					setRangeFile({ range: transport });
+					revoke = null;
+				} else {
+					const result = await getDocumentObjectUrl(docId);
+					if (!active) {
+						result.revoke();
+						return;
+					}
+					revoke = result.revoke;
+					setUrl(result.url);
 
-				if (
-					result.mime === "text/markdown" ||
-					result.mime === "text/plain" ||
-					result.filename.endsWith(".md")
-				) {
-					const text = await result.blob.text();
-					if (active) setContent(text);
+					if (
+						result.mime === "text/markdown" ||
+						result.mime === "text/plain" ||
+						result.filename.endsWith(".md")
+					) {
+						const text = await result.blob.text();
+						if (active) setContent(text);
+					}
 				}
 			} catch (err) {
 				if (active) {
@@ -72,10 +92,10 @@ export function DocumentView({ docId }: DocumentViewProps) {
 		);
 	}
 
-	if (mime === "application/pdf" && url) {
+	if (mime === "application/pdf" && (rangeFile || url)) {
 		return (
 			<div className="h-[80vh] w-full overflow-y-auto">
-				<PdfView url={url} />
+				<PdfView file={rangeFile ?? (url as string)} />
 			</div>
 		);
 	}

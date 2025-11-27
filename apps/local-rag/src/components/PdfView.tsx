@@ -15,11 +15,13 @@ const pdfOptions = {
 	cMapPacked: true,
 };
 
+type RangeFile = { range: pdfjs.PDFDataRangeTransport };
+
 interface PdfViewProps {
-	url: string;
+	file: string | RangeFile;
 }
 
-export function PdfView({ url }: PdfViewProps) {
+export function PdfView({ file }: PdfViewProps) {
 	const [numPages, setNumPages] = useState<number>(0);
 	const [pageNumber, setPageNumber] = useState<number>(1);
 
@@ -34,7 +36,7 @@ export function PdfView({ url }: PdfViewProps) {
 	return (
 		<div className="flex flex-col items-center gap-4 p-4">
 			<Document
-				file={url}
+				file={typeof file === "string" ? file : { range: file.range }}
 				options={pdfOptions}
 				onLoadSuccess={onDocumentLoadSuccess}
 				onLoadError={onDocumentLoadError}
