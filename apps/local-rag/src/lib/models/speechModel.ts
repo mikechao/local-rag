@@ -27,6 +27,13 @@ export async function loadSpeechPipeline(
         device: "webgpu",
         progress_callback: progressCallback,
       })) as TextToAudioPipeline;
+      // Warm up the model to compile shaders
+      await tts("Hello", {
+        speaker_embeddings: new Float32Array(1 * 101 * 128), // Dummy embedding
+        num_inference_steps: 1,
+        speed: 1.0,
+      });
+      console.log('after warmup');
       return tts;
     })();
   }
@@ -144,6 +151,8 @@ export async function generateSpeech(text: string, voice: "Female" | "Male" = "F
 
     const output = (await tts(chunk, {
       speaker_embeddings,
+      num_inference_steps: 5,
+      speed: 1.05
     })) as RawAudio;
     
     sampling_rate = output.sampling_rate;
@@ -189,6 +198,8 @@ export async function* generateSpeechStream(
 
     const output = (await tts(sentence, {
       speaker_embeddings,
+      num_inference_steps: 5,
+      speed: 1.05
     })) as RawAudio;
 
     yield {
