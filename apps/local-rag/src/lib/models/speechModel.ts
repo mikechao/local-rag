@@ -22,6 +22,7 @@ export async function loadSpeechPipeline(
 ) {
   if (!pipelinePromise) {
     pipelinePromise = (async () => {
+      // @ts-ignore
       const tts = (await pipeline("text-to-speech", MODEL_ID, {
         device: "webgpu",
         progress_callback: progressCallback,
