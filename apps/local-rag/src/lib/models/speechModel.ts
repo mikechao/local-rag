@@ -8,7 +8,7 @@ import { split, TextSplitterStream } from "../splitter";
 
 export const MODEL_ID = "onnx-community/Supertonic-TTS-ONNX";
 export const LOCAL_READY_KEY = "supertonic-tts-ready";
-const VOICES_URL = `https://huggingface.co/${MODEL_ID}/resolve/main/voices/`;
+const VOICES_URL = `/voices/`;
 
 // Configure local environment
 env.allowLocalModels = false;
