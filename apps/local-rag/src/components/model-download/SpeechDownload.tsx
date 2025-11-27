@@ -30,7 +30,10 @@ export function SpeechDownload() {
       onDownload={async ({ onProgress }) => {
         await loadSpeechPipeline((p) => {
           if (p.status === "progress") {
-            onProgress(p.progress);
+            // Normalize to a 0-1 fraction for the UI
+            // it downloads multiple files
+            const fraction = p.progress > 1 ? p.progress / 100 : p.progress;
+            onProgress(Math.min(1, fraction));
           }
         });
         if (typeof localStorage !== "undefined") {
