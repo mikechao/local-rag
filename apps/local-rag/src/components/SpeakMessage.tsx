@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { MessageActions, MessageAction } from "@/components/ai-elements/message";
 import { MegaphoneIcon, Loader2Icon } from "lucide-react";
 import {
-  getSpeechModel,
+  generateSpeech,
   isSpeechModelReadyFlag,
   hasCachedSpeechWeights,
 } from "@/lib/models/speechModel";
-import { experimental_generateSpeech as generateSpeech } from "ai";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "@tanstack/react-router";
 
@@ -37,24 +36,12 @@ export function SpeakMessage({ text, className = "" }: SpeakMessageProps) {
 
     try {
       setIsGenerating(true);
-      const model = getSpeechModel();
       
       const before = performance.now();
-      const { audio } = await generateSpeech({
-        model,
-        text,
-        voice:
-          "https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin",
-      });
+      const blob = await generateSpeech(text);
       const after = performance.now();
       console.log(`Speech generation took ${(after - before).toFixed(2)} ms`);
-      const audioData = (audio as any).uint8ArrayData;
-      if (!audioData) {
-        throw new Error("No audio data found in response");
-      }
 
-      // Create a blob from the audio data and play it
-      const blob = new Blob([audioData], { type: "audio/wav" });
       const url = URL.createObjectURL(blob);
       
       const audioEl = new Audio(url);

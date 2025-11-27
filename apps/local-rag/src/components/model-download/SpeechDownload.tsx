@@ -1,10 +1,9 @@
-import { TransformersJSSpeechModel } from "@built-in-ai/transformers-js";
 import { TransformersJSDownloadCard } from "./TransformersJSDownloadCard";
 import { env } from "@huggingface/transformers";
 import {
   MODEL_ID,
   LOCAL_READY_KEY,
-  getSpeechModel,
+  loadSpeechPipeline,
   hasCachedSpeechWeights,
   isSpeechModelReadyFlag,
   clearSpeechCache,
@@ -17,21 +16,22 @@ env.useBrowserCache = true;
 export function SpeechDownload() {
   return (
     <TransformersJSDownloadCard
-      title="SpeechT5 TTS"
+      title="Supertonic TTS"
       modelId={MODEL_ID}
       descriptionPrefix="Download"
       descriptionSuffix="for text-to-speech generation directly in your browser."
       links={[
         {
-          href: "https://huggingface.co/Xenova/speecht5_tts",
+          href: "https://huggingface.co/onnx-community/Supertonic-TTS-ONNX",
           label: "Hugging Face",
         },
       ]}
       clearCacheDescription="This will remove the model files from your browser cache. You will need to download them again to use the model."
       onDownload={async ({ onProgress }) => {
-        const model = getSpeechModel() as unknown as TransformersJSSpeechModel;
-        await model.createSessionWithProgress((p) => {
-          onProgress(p.progress);
+        await loadSpeechPipeline((p) => {
+          if (p.status === "progress") {
+            onProgress(p.progress);
+          }
         });
         if (typeof localStorage !== "undefined") {
           localStorage.setItem(LOCAL_READY_KEY, "true");
@@ -41,8 +41,9 @@ export function SpeechDownload() {
       hasCached={hasCachedSpeechWeights}
       isReadyFlag={isSpeechModelReadyFlag}
       getAvailability={async () => {
-        const model = getSpeechModel() as unknown as TransformersJSSpeechModel;
-        return await model.availability();
+        if (isSpeechModelReadyFlag()) return "available";
+        if (await hasCachedSpeechWeights()) return "downloadable";
+        return "downloadable";
       }}
     />
   );
