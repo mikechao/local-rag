@@ -1,6 +1,6 @@
 import { documents, docText } from "@/db/schema"
 import { ensureDbReady, getDb } from "@/lib/db"
-import { sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 
 export type QuotaEstimate = {
 	usage?: number
@@ -15,6 +15,10 @@ export class QuotaExceededError extends Error {
 	}
 }
 
+const FALLBACK_CHUNK_MB = 1
+export const CHUNK_BYTES =
+	Number(import.meta.env.VITE_CHUNK_MB ?? FALLBACK_CHUNK_MB) * 1024 * 1024
+
 export async function checkStorageQuota(requiredBytes: number): Promise<QuotaEstimate> {
 	if (!("storage" in navigator) || typeof navigator.storage.estimate !== "function") {
 		return { ok: true }
@@ -26,6 +30,12 @@ export async function checkStorageQuota(requiredBytes: number): Promise<QuotaEst
 		usage: estimate.usage,
 		quota: estimate.quota,
 		ok: remaining >= requiredBytes * 1.2,
+	}
+}
+
+function* chunkBuffer(bytes: Uint8Array, chunkSize = CHUNK_BYTES) {
+	for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+		yield bytes.slice(offset, Math.min(offset + chunkSize, bytes.length))
 	}
 }
 
@@ -55,13 +65,29 @@ export async function saveDocument(params: {
 	const total = fileBytes.length
 
 	await db.transaction(async (tx) => {
-		const loResult = await tx.execute<{ oid: number }>(
-			sql`select lo_from_bytea(0, ${fileBytes}) as oid`,
-		)
-		const blobOid = loResult.rows[0]?.oid
+		const createRes = await tx.execute<{ oid: number }>(sql`select lo_create(0) as oid`)
+		const blobOid = createRes.rows[0]?.oid
 		if (blobOid == null) {
-			throw new Error("Failed to store document bytes")
+			throw new Error("Failed to allocate large object")
 		}
+
+		const fdRes = await tx.execute<{ fd: number }>(sql`select lo_open(${blobOid}, 131072) as fd`)
+		const fd = fdRes.rows[0]?.fd
+		if (fd == null) {
+			throw new Error("Failed to open large object")
+		}
+
+		let written = 0
+		for (const chunk of chunkBuffer(fileBytes)) {
+			if (params.signal?.aborted) {
+				throw new DOMException("Upload aborted", "AbortError")
+			}
+			await tx.execute(sql`select lowrite(${fd}, ${chunk})`)
+			written += chunk.length
+			params.onChunkProgress?.(written, total)
+		}
+
+		await tx.execute(sql`select lo_close(${fd})`)
 
 		await tx.insert(documents).values({
 			id,
@@ -89,71 +115,39 @@ export async function saveDocument(params: {
 	return { id }
 }
 
+// Blob worker is no longer used; kept as a placeholder in case we need a dedicated worker again.
 let blobWorker: Worker | null = null
-
-function getBlobWorker() {
-	if (!blobWorker) {
-		blobWorker = new Worker(new URL("../workers/blob.worker.ts", import.meta.url), {
-			type: "module",
-		})
-	}
-	return blobWorker
-}
-
-type BlobWorkerResponse<T> = {
-	type: string
-	id: string
-	payload?: T
-	begin?: number
-	data?: Uint8Array
-	error?: string
-}
-
-async function callBlobWorker<TPayload = unknown, TResult = unknown>(
-	type: string,
-	payload: TPayload,
-): Promise<TResult> {
-	const worker = getBlobWorker()
-	return new Promise((resolve, reject) => {
-		const id = crypto.randomUUID()
-		const handler = (e: MessageEvent<BlobWorkerResponse<TResult>>) => {
-			if (e.data.id === id) {
-				worker.removeEventListener("message", handler)
-				if (e.data.error) {
-					reject(new Error(e.data.error))
-				} else if (e.data.payload !== undefined) {
-					resolve(e.data.payload)
-				} else if (e.data.data !== undefined) {
-					resolve({ begin: e.data.begin, data: e.data.data } as TResult)
-				} else {
-					reject(new Error("Unexpected worker response"))
-				}
-			}
-		}
-		worker.addEventListener("message", handler)
-		worker.postMessage({ type, id, ...payload })
-	})
-}
 
 export async function getDocumentBlob(
 	docId: string,
 ): Promise<{ blob: Blob; filename: string; mime: string }> {
-	const worker = getBlobWorker()
-	return new Promise((resolve, reject) => {
-		const id = crypto.randomUUID()
-		const handler = (e: MessageEvent) => {
-			if (e.data.id === id) {
-				worker.removeEventListener("message", handler)
-				if (e.data.type === "BLOB_ERROR") {
-					reject(new Error(e.data.error))
-				} else if (e.data.type === "BLOB_RESULT") {
-					resolve(e.data.payload)
-				}
-			}
-		}
-		worker.addEventListener("message", handler)
-		worker.postMessage({ type: "GET_BLOB", docId, id })
+	await ensureDbReady()
+	const db = await getDb()
+
+	const doc = await db
+		.select()
+		.from(documents)
+		.where(eq(documents.id, docId))
+		.limit(1)
+
+	const docRow = doc[0]
+	if (!docRow) {
+		throw new Error("Document not found")
+	}
+
+	const loResult = await db.execute<{ data: Uint8Array }>(
+		sql`select lo_get(${docRow.blobOid}) as data`,
+	)
+	const loRow = loResult.rows[0]
+	if (!loRow) {
+		throw new Error("Document data missing")
+	}
+
+	const blob = new Blob([loRow.data as unknown as BlobPart], {
+		type: docRow.mime,
 	})
+
+	return { blob, filename: docRow.filename, mime: docRow.mime }
 }
 
 export async function getDocumentObjectUrl(docId: string) {
@@ -174,7 +168,25 @@ export type PdfStreamMeta = {
 }
 
 export async function initPdfStream(docId: string): Promise<PdfStreamMeta> {
-	return callBlobWorker("START_PDF_STREAM", { docId })
+	await ensureDbReady()
+	const db = await getDb()
+	const doc = await db
+		.select()
+		.from(documents)
+		.where(eq(documents.id, docId))
+		.limit(1)
+
+	const docRow = doc[0]
+	if (!docRow) {
+		throw new Error("Document not found")
+	}
+
+	return {
+		blobOid: docRow.blobOid,
+		mime: docRow.mime,
+		filename: docRow.filename,
+		size: docRow.size,
+	}
 }
 
 export async function fetchPdfRange(
@@ -182,5 +194,25 @@ export async function fetchPdfRange(
 	start: number,
 	end: number,
 ): Promise<{ begin: number | undefined; data: Uint8Array }> {
-	return callBlobWorker("GET_PDF_RANGE", { docId, start, end })
+	await ensureDbReady()
+	const db = await getDb()
+	const doc = await db
+		.select({ oid: documents.blobOid })
+		.from(documents)
+		.where(eq(documents.id, docId))
+		.limit(1)
+
+	const row = doc[0]
+	if (!row) {
+		throw new Error("Document not found")
+	}
+	const len = Math.max(0, end - start)
+	const loResult = await db.execute<{ data: Uint8Array }>(
+		sql`select lo_get(${row.oid}, ${start}, ${len}) as data`,
+	)
+	const loRow = loResult.rows[0]
+	if (!loRow) {
+		throw new Error("Range read failed")
+	}
+	return { begin: start, data: loRow.data }
 }

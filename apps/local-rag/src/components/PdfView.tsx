@@ -36,7 +36,7 @@ export function PdfView({ file }: PdfViewProps) {
 	return (
 		<div className="flex flex-col items-center gap-4 p-4">
 			<Document
-				file={typeof file === "string" ? file : { range: file.range }}
+				file={file}
 				options={pdfOptions}
 				onLoadSuccess={onDocumentLoadSuccess}
 				onLoadError={onDocumentLoadError}

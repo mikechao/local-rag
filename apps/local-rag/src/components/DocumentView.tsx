@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { pdfjs } from "react-pdf";
 import { fetchPdfRange, getDocumentObjectUrl, initPdfStream } from "@/lib/doc-storage";
 import { MarkdownView } from "./MarkdownView";
@@ -18,6 +18,11 @@ export function DocumentView({ docId }: DocumentViewProps) {
 	const [rangeFile, setRangeFile] = useState<{ range: pdfjs.PDFDataRangeTransport } | null>(
 		null,
 	);
+	const pdfFile = useMemo(() => {
+		if (rangeFile) return rangeFile
+		if (url) return url
+		return null
+	}, [rangeFile, url])
 
 	useEffect(() => {
 		let active = true;
@@ -95,7 +100,7 @@ export function DocumentView({ docId }: DocumentViewProps) {
 	if (mime === "application/pdf" && (rangeFile || url)) {
 		return (
 			<div className="h-[80vh] w-full overflow-y-auto">
-				<PdfView file={rangeFile ?? (url as string)} />
+				{pdfFile && <PdfView file={pdfFile} />}
 			</div>
 		);
 	}
