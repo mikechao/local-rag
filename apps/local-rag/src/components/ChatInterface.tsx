@@ -89,6 +89,15 @@ export function ChatInterface() {
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage || lastMessage.role !== 'assistant') return;
 
+    // If we just turned on auto-speak and the message is already done, don't speak it
+    if (status === 'ready' && lastMessage.id !== lastMessageIdRef.current) {
+      lastMessageIdRef.current = lastMessage.id;
+      const fullText = getMessageText(lastMessage);
+      const cleanText = stripThinkingStream(fullText);
+      lastMessageLengthRef.current = cleanText.length;
+      return;
+    }
+
     // New message started
     if (lastMessage.id !== lastMessageIdRef.current) {
         lastMessageIdRef.current = lastMessage.id;
