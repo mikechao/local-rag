@@ -165,9 +165,16 @@ export type ModelSelectorLogoProps = Omit<
     | (string & {});
 };
 
+// Local offline fallbacks for providers we bundle assets for.
+const localLogos: Partial<Record<ModelSelectorLogoProps["provider"], string>> = {
+  google: "/logos/google.svg",
+  alibaba: "/logos/alibaba.svg",
+};
+
 export const ModelSelectorLogo = ({
   provider,
   className,
+  onError,
   ...props
 }: ModelSelectorLogoProps) => (
   <img
@@ -176,6 +183,16 @@ export const ModelSelectorLogo = ({
     className={cn("size-3 dark:invert", className)}
     height={12}
     src={`https://models.dev/logos/${provider}.svg`}
+    onError={(event) => {
+      // If remote fails, try local fallback once
+      const local = localLogos[provider];
+      if (local && event.currentTarget.dataset.fallbackApplied !== "true") {
+        event.currentTarget.dataset.fallbackApplied = "true";
+        event.currentTarget.src = local;
+        return;
+      }
+      onError?.(event);
+    }}
     width={12}
   />
 );
