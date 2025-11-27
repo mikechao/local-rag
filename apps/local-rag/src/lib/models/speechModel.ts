@@ -4,7 +4,7 @@ import {
   type TextToAudioPipeline,
   type RawAudio,
 } from "@huggingface/transformers";
-import { split } from "../splitter";
+import { split, TextSplitterStream } from "../splitter";
 
 export const MODEL_ID = "onnx-community/Supertonic-TTS-ONNX";
 export const LOCAL_READY_KEY = "supertonic-tts-ready";
@@ -160,6 +160,84 @@ export async function generateSpeech(text: string, voice: "Female" | "Male" = "F
   }
 
   return createAudioBlob(audioChunks, sampling_rate);
+}
+
+export async function* generateSpeechStream(
+  textStream: AsyncIterable<string>,
+  voice: "Female" | "Male" = "Female",
+): AsyncGenerator<{ audio: Float32Array; sampling_rate: number }> {
+  const [tts, embeddings] = await Promise.all([
+    loadSpeechPipeline(),
+    loadSpeakerEmbeddings(),
+  ]);
+
+  const speaker_embeddings = embeddings[voice];
+  const splitter = new TextSplitterStream();
+
+  // Process text stream in background
+  const processText = async () => {
+    for await (const chunk of textStream) {
+      splitter.push(chunk);
+    }
+    splitter.close();
+  };
+  const textProcessing = processText();
+
+  for await (const sentence of splitter) {
+    // Skip empty or punctuation-only sentences to avoid WebGPU errors
+    if (!sentence.trim() || !/[a-zA-Z0-9]/.test(sentence)) continue;
+
+    const output = (await tts(sentence, {
+      speaker_embeddings,
+    })) as RawAudio;
+
+    yield {
+      audio: output.audio,
+      sampling_rate: output.sampling_rate,
+    };
+  }
+
+  await textProcessing;
+}
+
+export class TextStream implements AsyncIterable<string> {
+  private queue: string[] = [];
+  private resolvers: ((value: IteratorResult<string>) => void)[] = [];
+  private finished = false;
+
+  push(text: string) {
+    if (this.finished) return;
+    if (this.resolvers.length > 0) {
+      const resolve = this.resolvers.shift()!;
+      resolve({ value: text, done: false });
+    } else {
+      this.queue.push(text);
+    }
+  }
+
+  close() {
+    this.finished = true;
+    while (this.resolvers.length > 0) {
+      const resolve = this.resolvers.shift()!;
+      resolve({ value: undefined, done: true });
+    }
+  }
+
+  [Symbol.asyncIterator](): AsyncIterator<string> {
+    return {
+      next: () => {
+        if (this.queue.length > 0) {
+          return Promise.resolve({ value: this.queue.shift()!, done: false });
+        }
+        if (this.finished) {
+          return Promise.resolve({ value: undefined, done: true });
+        }
+        return new Promise((resolve) => {
+          this.resolvers.push(resolve);
+        });
+      },
+    };
+  }
 }
 
 export async function hasCachedSpeechWeights(): Promise<boolean> {

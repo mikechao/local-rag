@@ -41,19 +41,32 @@ import { LocalModelSelector } from "@/components/LocalModelSelector";
 import { VoiceInput } from "@/components/VoiceInput";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { hasCachedWhisperWeights } from "@/lib/models/whisperModel";
+import { generateSpeechStream, TextStream, isSpeechModelReadyFlag } from "@/lib/models/speechModel";
+import { useSpeechPlayer } from "@/hooks/use-speech-player";
+import { useRef } from "react";
+import { Volume2, VolumeX } from "lucide-react";
 
 export function ChatInterface() {
   const [isModelAvailable] = useState<boolean | null>(true);
   const [selectedModel, setSelectedModel] = useState<string>("gemini-nano");
   const [isWhisperAvailable, setIsWhisperAvailable] = useState(false);
+  const [isSpeechAvailable, setIsSpeechAvailable] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [autoSpeak, setAutoSpeak] = useState(false);
+
+  const lastMessageIdRef = useRef<string | null>(null);
+  const lastMessageLengthRef = useRef(0);
+  const textStreamRef = useRef<TextStream | null>(null);
+  const { playStream, stop } = useSpeechPlayer();
 
   useEffect(() => {
-    const checkWhisper = async () => {
-      const isCached = await hasCachedWhisperWeights();
-      setIsWhisperAvailable(isCached);
+    const checkModels = async () => {
+      const isWhisperCached = await hasCachedWhisperWeights();
+      setIsWhisperAvailable(isWhisperCached);
+      const isSpeechReady = isSpeechModelReadyFlag();
+      setIsSpeechAvailable(isSpeechReady);
     };
-    checkWhisper();
+    checkModels();
   }, []);
 
   const [input, setInput] = useState("");
@@ -63,12 +76,73 @@ export function ChatInterface() {
     id: "local-chat",
   });
 
+  useEffect(() => {
+    if (!autoSpeak) {
+        if (textStreamRef.current) {
+            textStreamRef.current.close();
+            textStreamRef.current = null;
+            stop();
+        }
+        return;
+    }
+    
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage || lastMessage.role !== 'assistant') return;
+
+    // New message started
+    if (lastMessage.id !== lastMessageIdRef.current) {
+        lastMessageIdRef.current = lastMessage.id;
+        lastMessageLengthRef.current = 0;
+        
+        // Stop previous if any
+        if (textStreamRef.current) {
+            textStreamRef.current.close();
+        }
+        stop();
+
+        // Start new stream
+        const stream = new TextStream();
+        textStreamRef.current = stream;
+        
+        // Start playing (fire and forget, handled by hook)
+        const audioGenerator = generateSpeechStream(stream);
+        playStream(audioGenerator);
+    }
+
+    // Calculate delta
+    const fullText = getMessageText(lastMessage);
+    const cleanText = stripThinkingStream(fullText);
+    
+    const newLength = cleanText.length;
+    
+    // Handle case where text shrinks (e.g. <think> block formed)
+    if (newLength < lastMessageLengthRef.current) {
+        lastMessageLengthRef.current = newLength;
+    }
+
+    const delta = cleanText.slice(lastMessageLengthRef.current);
+    
+    if (delta) {
+        textStreamRef.current?.push(delta);
+        lastMessageLengthRef.current = newLength;
+    }
+
+    if (status === 'ready' && lastMessage.id === lastMessageIdRef.current) {
+        textStreamRef.current?.close();
+        textStreamRef.current = null;
+    }
+
+  }, [messages, status, autoSpeak, playStream, stop]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
   };
 
   const stripThinking = (text: string) =>
     text.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, "").trim();
+
+  const stripThinkingStream = (text: string) =>
+    text.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, "");
 
   const getMessageText = (message: any) => {
     if (message.content) return message.content;
@@ -295,6 +369,30 @@ export function ChatInterface() {
                     />
                   </PromptInputTools>
                   <div className="flex items-center gap-1">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="noShadow"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => setAutoSpeak(!autoSpeak)}
+                            disabled={!isSpeechAvailable}
+                            type="button"
+                          >
+                            {autoSpeak ? (
+                              <Volume2 className="size-4" />
+                            ) : (
+                              <VolumeX className="size-4 text-muted-foreground" />
+                            )}
+                            <span className="sr-only">Toggle Auto-Speak</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{!isSpeechAvailable ? "Download Speech model to enable auto-speak" : (autoSpeak ? "Disable Auto-Speak" : "Enable Auto-Speak")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
