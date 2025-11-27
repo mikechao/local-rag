@@ -1,12 +1,12 @@
 import { PGlite } from "@electric-sql/pglite"
 import { worker } from "@electric-sql/pglite/worker"
 import { vector } from "@electric-sql/pglite/vector"
-import { IdbFs } from "@electric-sql/pglite"
+import { OpfsAhpFS } from '@electric-sql/pglite/opfs-ahp'
 
 worker({
   async init() {
     return new PGlite({
-      fs: new IdbFs("local-rag"),
+      fs: new OpfsAhpFS("local-rag"),
       extensions: { vector },
       relaxedDurability: true,
     })
