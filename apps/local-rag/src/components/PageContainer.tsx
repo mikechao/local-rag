@@ -16,7 +16,7 @@ export function PageContainer({
   actions,
 }: PageContainerProps) {
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="space-y-2">
         <p className="text-sm font-semibold tracking-wide text-main">{label}</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -111,7 +111,7 @@ export function GeminiNanoDownload() {
 						<code className="inline-block bg-background border border-border px-1.5 py-0.5 rounded-base">
 							Gemini Nano
 						</code>{" "}
-						built-in to Chrome for local inference powering the chat.
+						built-in to Chrome. A multimodal model that can handle text, images, and audio inputs.
 					</CardDescription>
 					<div className="flex flex-wrap items-center gap-4 text-sm">
 						<a

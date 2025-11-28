@@ -23,7 +23,7 @@ export function SpeechDownload() {
       links={[
         {
           href: "https://huggingface.co/onnx-community/Supertonic-TTS-ONNX",
-          label: "Hugging Face",
+          label: "View on Hugging Face",
         },
       ]}
       clearCacheDescription="This will remove the model files from your browser cache. You will need to download them again to use the model."

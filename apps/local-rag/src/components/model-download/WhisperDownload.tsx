@@ -24,7 +24,7 @@ export function WhisperDownload() {
       links={[
         {
           href: "https://huggingface.co/Xenova/whisper-base",
-          label: "Hugging Face",
+          label: "View on Hugging Face",
         },
       ]}
       clearCacheDescription="This will remove the model files from your browser cache. You will need to download them again to use the model."

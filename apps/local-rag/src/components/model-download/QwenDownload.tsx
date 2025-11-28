@@ -15,7 +15,7 @@ export function QwenDownload() {
 			title="Qwen3-0.6B"
 			modelId={MODEL_ID}
 			descriptionPrefix="Download"
-			descriptionSuffix="for local chat. Cached locally after first download."
+			descriptionSuffix=' a reasoning model, where you can see the model "thinking" steps in detail.'
 			links={[
 				{
 					href: "https://huggingface.co/onnx-community/Qwen3-0.6B-ONNX",
