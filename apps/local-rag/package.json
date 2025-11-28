@@ -50,6 +50,7 @@
     "drizzle-orm": "^0.44.7",
     "embla-carousel-react": "^8.6.0",
     "jotai": "^2.15.1",
+    "langchain": "^1.1.1",
     "lucide-react": "^0.544.0",
     "motion": "^12.23.24",
     "nanoid": "^5.1.6",
