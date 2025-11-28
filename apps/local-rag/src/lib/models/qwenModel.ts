@@ -1,4 +1,5 @@
 import { transformersJS } from "@built-in-ai/transformers-js";
+import { cleanClearCahce } from "./utils";
 
 // Centralized model config so UI and routes stay in sync.
 export const MODEL_ID = "onnx-community/Qwen3-0.6B-ONNX";
@@ -69,19 +70,7 @@ export function isQwenModelReadyFlag(): boolean {
  * Clear cached weights and our singleton so a fresh download can occur.
  */
 export async function clearQwenCache() {
-	if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
-		localStorage.removeItem(LOCAL_READY_KEY);
-	}
-
-	if (typeof window !== "undefined" && typeof caches !== "undefined") {
-		const cache = await caches.open('transformers-cache');
-		const entries = await cache.keys();
-		for (const req of entries) {
-			if (req.url.includes(MODEL_ID)) {
-				await cache.delete(req, { ignoreSearch: true });
-			}
-		}
-	}
+	await cleanClearCahce(MODEL_ID, LOCAL_READY_KEY);
 
 	initPromise = null;
 	cachedModel = null;
