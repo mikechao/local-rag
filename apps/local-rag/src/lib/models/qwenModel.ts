@@ -74,12 +74,13 @@ export async function clearQwenCache() {
 	}
 
 	if (typeof window !== "undefined" && typeof caches !== "undefined") {
-		const keys = await caches.keys();
-		await Promise.all(
-			keys
-				.filter((k) => k.includes("transformers"))
-				.map((k) => caches.delete(k)),
-		);
+		const cache = await caches.open('transformers-cache');
+		const entries = await cache.keys();
+		for (const req of entries) {
+			if (req.url.includes(MODEL_ID)) {
+				await cache.delete(req, { ignoreSearch: true });
+			}
+		}
 	}
 
 	initPromise = null;
