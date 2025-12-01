@@ -139,9 +139,6 @@ export async function saveChunks(
 	})
 }
 
-// Blob worker is no longer used; kept as a placeholder in case we need a dedicated worker again.
-let blobWorker: Worker | null = null
-
 export async function getDocumentBlob(
 	docId: string,
 ): Promise<{ blob: Blob; filename: string; mime: string }> {
