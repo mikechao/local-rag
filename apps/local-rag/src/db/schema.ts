@@ -7,6 +7,8 @@ import {
 	timestamp,
 	vector,
 	customType,
+	boolean,
+	index,
 } from "drizzle-orm/pg-core"
 
 const oid = customType<{ data: number; driverData: number }>({
@@ -31,37 +33,45 @@ export const documents = pgTable("documents", {
 	updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 })
 
-export const docText = pgTable(
-	"doc_text",
+export const documentChunks = pgTable(
+	"document_chunks",
 	{
-		docId: text("doc_id")
+		id: text("id").primaryKey(), // hash of document_id + page_number + chunk_index
+		docId: text("document_id")
 			.notNull()
 			.references(() => documents.id, { onDelete: "cascade" }),
-		page: integer("page").notNull().default(0),
-		content: text("content").notNull(),
+		docType: text("doc_type").notNull(),
+		pageNumber: integer("page_number").notNull(),
+		chunkIndex: integer("chunk_index").notNull(),
+		headingPath: text("heading_path"),
+		text: text("text").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		embedded: boolean("embedded").default(false).notNull(),
 	},
 	(table) => ({
-		pk: primaryKey({ columns: [table.docId, table.page] }),
+		docIdIdx: index("doc_id_idx").on(table.docId),
+		docIdPageIdx: index("doc_id_page_idx").on(table.docId, table.pageNumber),
+		embeddedIdx: index("embedded_idx").on(table.embedded),
 	}),
 )
 
-export const embeddings = pgTable(
-	"embeddings",
+export const chunkEmbeddings = pgTable(
+	"chunk_embeddings",
 	{
-		docId: text("doc_id")
+		chunkId: text("chunk_id")
 			.notNull()
-			.references(() => documents.id, { onDelete: "cascade" }),
-		page: integer("page").notNull().default(0),
-		chunk: integer("chunk").notNull().default(0),
+			.references(() => documentChunks.id, { onDelete: "cascade" }),
+		embeddingModel: text("embedding_model").notNull(),
 		embedding: vector("embedding", { dimensions: 768 }).notNull(),
-		metadata: jsonb("metadata"),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => ({
-		pk: primaryKey({ columns: [table.docId, table.page, table.chunk] }),
+		pk: primaryKey({ columns: [table.chunkId, table.embeddingModel] }),
 	}),
 )
 
 export type Document = typeof documents.$inferSelect
 export type InsertDocument = typeof documents.$inferInsert
-export type DocText = typeof docText.$inferSelect
-export type EmbeddingRow = typeof embeddings.$inferSelect
+export type DocumentChunk = typeof documentChunks.$inferSelect
+export type InsertDocumentChunk = typeof documentChunks.$inferInsert
+export type ChunkEmbedding = typeof chunkEmbeddings.$inferSelect

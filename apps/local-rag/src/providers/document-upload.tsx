@@ -10,9 +10,10 @@ import {
 import { toast } from "sonner"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { saveDocument } from "@/lib/doc-storage"
+import { saveDocument, saveChunks } from "@/lib/doc-storage"
+import { processMarkdown, processPdf } from "@/lib/chunking"
 
-type UploadStatus = "idle" | "uploading" | "error" | "success"
+type UploadStatus = "idle" | "uploading" | "chunking" | "error" | "success"
 
 interface DocumentUploadContextType {
 	upload: (file: File) => Promise<void>
@@ -58,7 +59,7 @@ export function DocumentUploadProvider({
 						<Progress value={progress} />
 						{status === "uploading" ? (
 							<div className="flex items-center justify-between w-full text-xs text-foreground/70">
-								<span>{progress}%</span>
+								<span>Uploading... {progress}%</span>
 								<Button
 									variant="neutral"
 									size="sm"
@@ -66,6 +67,10 @@ export function DocumentUploadProvider({
 								>
 									Cancel
 								</Button>
+							</div>
+						) : status === "chunking" ? (
+							<div className="flex items-center justify-between w-full text-xs text-foreground/70">
+								<span>Chunking... {progress}%</span>
 							</div>
 						) : status === "success" ? (
 							<div className="flex items-center justify-between text-xs text-foreground/70">
@@ -105,13 +110,35 @@ export function DocumentUploadProvider({
 		errorRef.current = null
 
 		try {
-			await saveDocument({
+			const { id: docId } = await saveDocument({
 				file,
 				signal: controller.signal,
 				onChunkProgress: (written, total) => {
-					setProgress(Math.round((written / total) * 100))
+					// Upload is first 50%
+					setProgress(Math.round((written / total) * 50))
 				},
 			})
+
+			setStatus("chunking")
+
+			let chunkResult
+			if (file.type === "application/pdf") {
+				chunkResult = await processPdf(docId, file.name, file, (p) => {
+					if (p.pagesTotal) {
+						const percent = Math.round((p.pagesDone || 0) / p.pagesTotal * 50)
+						setProgress(50 + percent)
+					}
+				})
+			} else if (file.type === "text/markdown" || file.name.endsWith(".md")) {
+				chunkResult = await processMarkdown(docId, file.name, file, (p) => {
+					setProgress(100)
+				})
+			}
+
+			if (chunkResult) {
+				await saveChunks(docId, chunkResult.docType, chunkResult.chunks)
+			}
+
 			setProgress(100)
 			setStatus("success")
 		} catch (error) {

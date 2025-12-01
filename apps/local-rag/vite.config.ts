@@ -45,6 +45,11 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
   ],
+  resolve: {
+    alias: {
+      "node:module": path.resolve(__dirname, "./src/lib/polyfills/node-module.ts"),
+    },
+  },
   assetsInclude: [/pglite\.wasm$/, /pglite\.data$/],
   optimizeDeps: {
     exclude: ['@electric-sql/pglite'],

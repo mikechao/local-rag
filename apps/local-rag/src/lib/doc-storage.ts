@@ -1,4 +1,4 @@
-import { documents, docText } from "@/db/schema"
+import { documents, documentChunks, chunkEmbeddings } from "@/db/schema"
 import { ensureDbReady, getDb } from "@/lib/db"
 import { eq, sql } from "drizzle-orm"
 
@@ -41,7 +41,6 @@ function* chunkBuffer(bytes: Uint8Array, chunkSize = CHUNK_BYTES) {
 
 export async function saveDocument(params: {
 	file: File
-	pageTexts?: string[]
 	clock?: () => Date
 	signal?: AbortSignal
 	onChunkProgress?: (written: number, total: number) => void
@@ -61,7 +60,6 @@ export async function saveDocument(params: {
 
 	const id = crypto.randomUUID()
 	const now = params.clock ? params.clock() : new Date()
-	const pageTexts = params.pageTexts ?? []
 	const total = fileBytes.length
 
 	await db.transaction(async (tx) => {
@@ -98,21 +96,46 @@ export async function saveDocument(params: {
 			createdAt: now,
 			updatedAt: now,
 		})
-
-		if (pageTexts.length > 0) {
-			for (let page = 0; page < pageTexts.length; page += 1) {
-				await tx.insert(docText).values({
-					docId: id,
-					page,
-					content: pageTexts[page],
-				})
-			}
-		}
 	})
 
 	params.onChunkProgress?.(total, total)
 
 	return { id }
+}
+
+export async function saveChunks(
+	docId: string,
+	docType: string,
+	chunks: {
+		pageNumber: number;
+		chunkIndex: number;
+		text: string;
+		headingPath?: string;
+	}[]
+) {
+	await ensureDbReady()
+	const db = await getDb()
+
+	await db.transaction(async (tx) => {
+		// Delete existing chunks for this doc
+		await tx.delete(documentChunks).where(eq(documentChunks.docId, docId))
+
+		// Insert new chunks
+		if (chunks.length > 0) {
+			const values = chunks.map((chunk) => ({
+				id: `${docId}-${chunk.pageNumber}-${chunk.chunkIndex}`,
+				docId,
+				docType,
+				pageNumber: chunk.pageNumber,
+				chunkIndex: chunk.chunkIndex,
+				headingPath: chunk.headingPath,
+				text: chunk.text,
+				embedded: false,
+			}))
+
+			await tx.insert(documentChunks).values(values)
+		}
+	})
 }
 
 // Blob worker is no longer used; kept as a placeholder in case we need a dedicated worker again.
