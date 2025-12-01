@@ -12,8 +12,9 @@ import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { saveDocument, saveChunks } from "@/lib/doc-storage"
 import { processMarkdown, processPdf } from "@/lib/chunking"
+import { embedDocument } from "@/lib/embedding-controller"
 
-type UploadStatus = "idle" | "uploading" | "chunking" | "error" | "success"
+type UploadStatus = "idle" | "uploading" | "chunking" | "embedding" | "error" | "success"
 
 interface DocumentUploadContextType {
 	upload: (file: File) => Promise<void>
@@ -72,6 +73,10 @@ export function DocumentUploadProvider({
 							<div className="flex items-center justify-between w-full text-xs text-foreground/70">
 								<span>Chunking... {progress}%</span>
 							</div>
+						) : status === "embedding" ? (
+							<div className="flex items-center justify-between w-full text-xs text-foreground/70">
+								<span>Embedding... {progress}%</span>
+							</div>
 						) : status === "success" ? (
 							<div className="flex items-center justify-between text-xs text-foreground/70">
 								<span className="flex items-center gap-1">Upload complete</span>
@@ -114,8 +119,8 @@ export function DocumentUploadProvider({
 				file,
 				signal: controller.signal,
 				onChunkProgress: (written, total) => {
-					// Upload is first 50%
-					setProgress(Math.round((written / total) * 50))
+					// Upload is first 30%
+					setProgress(Math.round((written / total) * 30))
 				},
 			})
 
@@ -125,18 +130,25 @@ export function DocumentUploadProvider({
 			if (file.type === "application/pdf") {
 				chunkResult = await processPdf(docId, file.name, file, (p) => {
 					if (p.pagesTotal) {
-						const percent = Math.round((p.pagesDone || 0) / p.pagesTotal * 50)
-						setProgress(50 + percent)
+						const percent = Math.round((p.pagesDone || 0) / p.pagesTotal * 30)
+						setProgress(30 + percent)
 					}
 				})
 			} else if (file.type === "text/markdown" || file.name.endsWith(".md")) {
 				chunkResult = await processMarkdown(docId, file.name, file, (p) => {
-					setProgress(100)
+					setProgress(60)
 				})
 			}
 
 			if (chunkResult) {
 				await saveChunks(docId, chunkResult.docType, chunkResult.chunks)
+				
+				setStatus("embedding")
+				await embedDocument(docId, chunkResult.chunks.length, (p) => {
+					// Embedding is 60-100%
+					const percent = Math.round((p / 100) * 40)
+					setProgress(60 + percent)
+				})
 			}
 
 			setProgress(100)

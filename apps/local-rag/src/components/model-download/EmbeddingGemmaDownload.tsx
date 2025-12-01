@@ -1,12 +1,14 @@
-import { ensureEmbeddingModelReady } from "@/lib/models/embeddingModel";
 import {
-	clearEmbeddingCache,
 	getModel,
 	hasCachedWeights,
 	isModelReadyFlag,
 	LOCAL_READY_KEY,
 	MODEL_ID,
 } from "@/lib/models/embeddingModel";
+import {
+	clearEmbeddingCacheWorker,
+	warmupEmbeddingModel,
+} from "@/lib/embedding-worker";
 import { TransformersJSDownloadCard } from "./TransformersJSDownloadCard";
 
 // Use ONNX-converted weights that include `onnx/model_quantized.onnx`
@@ -30,14 +32,14 @@ export function EmbeddingGemmaDownload() {
 			]}
 			clearCacheDescription="Clearing the cache will disable adding new documents."
 			onDownload={async ({ onProgress }) => {
-				await ensureEmbeddingModelReady({
-					onProgress: ({ progress }) => onProgress(progress),
+				await warmupEmbeddingModel({
+					onProgress: (progress) => onProgress(progress),
 				});
 				if (typeof localStorage !== "undefined") {
 					localStorage.setItem(LOCAL_READY_KEY, "true");
 				}
 			}}
-			clearCache={clearEmbeddingCache}
+			clearCache={clearEmbeddingCacheWorker}
 			hasCached={hasCachedWeights}
 			isReadyFlag={isModelReadyFlag}
 			getAvailability={async () => {

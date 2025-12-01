@@ -52,6 +52,20 @@ pnpx shadcn@latest add button
 
 
 
+## Embedding Pipeline
+
+The application uses a dedicated Web Worker for generating embeddings to keep the main thread responsive.
+
+- **Worker**: `src/workers/embedding.worker.ts`
+- **Model**: `onnx-community/embeddinggemma-300m-ONNX` (via `@built-in-ai/transformers-js`)
+- **Process**:
+  1.  Document uploaded and chunked.
+  2.  Chunks sent to embedding worker in batches.
+  3.  Worker generates embeddings using WebGPU (if available) or CPU.
+  4.  Embeddings returned to main thread and saved to PGlite database.
+
+**Note**: Requires a browser with WebGPU support for optimal performance.
+
 ## Routing
 This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
 

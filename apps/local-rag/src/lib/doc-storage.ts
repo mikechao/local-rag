@@ -1,6 +1,7 @@
 import { documents, documentChunks, chunkEmbeddings } from "@/db/schema"
 import { ensureDbReady, getDb } from "@/lib/db"
-import { eq, sql } from "drizzle-orm"
+import { eq, sql, and } from "drizzle-orm"
+import { MODEL_ID } from "@/lib/models/embeddingModel"
 
 export type QuotaEstimate = {
 	usage?: number
@@ -238,4 +239,43 @@ export async function fetchPdfRange(
 		throw new Error("Range read failed")
 	}
 	return { begin: start, data: loRow.data }
+}
+
+export async function getUnembeddedChunks(docId: string, limit = 64) {
+	await ensureDbReady()
+	const db = await getDb()
+	return db
+		.select({
+			id: documentChunks.id,
+			text: documentChunks.text,
+		})
+		.from(documentChunks)
+		.where(
+			and(
+				eq(documentChunks.docId, docId),
+				eq(documentChunks.embedded, false),
+			),
+		)
+		.limit(limit)
+}
+
+export async function saveChunkEmbeddings(
+	embeddings: { chunkId: string; embedding: number[] }[],
+) {
+	await ensureDbReady()
+	const db = await getDb()
+
+	await db.transaction(async (tx) => {
+		for (const { chunkId, embedding } of embeddings) {
+			await tx.insert(chunkEmbeddings).values({
+				chunkId,
+				embedding,
+				embeddingModel: MODEL_ID,
+			})
+			await tx
+				.update(documentChunks)
+				.set({ embedded: true })
+				.where(eq(documentChunks.id, chunkId))
+		}
+	})
 }
