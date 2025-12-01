@@ -109,3 +109,12 @@ export function embedBatchWorker(
 		} satisfies EmbeddingWorkerMessage);
 	});
 }
+
+export async function embedQuery(text: string): Promise<number[]> {
+	const batchId = crypto.randomUUID();
+	// Use a dummy docId for query
+	const result = await embedBatchWorker("query", [text], batchId);
+	const floatArray = new Float32Array(result.buffer);
+	return Array.from(floatArray);
+}
+

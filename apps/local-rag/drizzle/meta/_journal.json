@@ -22,6 +22,13 @@
       "when": 1764612930185,
       "tag": "0002_minor_synch",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1764630180284,
+      "tag": "0003_add_vector_indexes",
+      "breakpoints": true
     }
   ]
 }

@@ -4,9 +4,12 @@ import {
   streamText,
   ChatRequestOptions,
   convertToModelMessages,
+  tool,
 } from "ai";
+import { z } from "zod";
 import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
 import { getQwenModel } from "./models/qwenModel";
+import { retrieveChunks } from "./retrieval";
 
 /**
  * Client-side chat transport AI SDK implementation that handles AI model communication
@@ -55,6 +58,26 @@ export class ClientSideChatTransport
       model,
       messages: prompt,
       abortSignal: abortSignal,
+      system: `You are a helpful assistant. Check your knowledge base before answering any questions. 
+      If the answer is not in your knowledge base, acknowledgege that it is not in your knowledge base, but
+      try to answer as best as you can`,
+      tools: {
+        getInformation: tool({
+          description: `get information from your knowledge base to answer questions.`,
+          inputSchema: z.object({
+            question: z.string().describe("the users question"),
+          }),
+          execute: async ({ question }) => {
+            const { results } = await retrieveChunks(question);
+            const joinedResults = results
+              .map((r) => `Content: ${r.text}\nSource: ${r.docId}`)
+              .join("\n\n");
+            console.log('--- Retrieved information ---');
+            console.log(joinedResults);
+            return joinedResults;
+          },
+        }),
+      },
     });
     return result.toUIMessageStream({
       sendReasoning: true,
