@@ -1,6 +1,5 @@
 import {
 	integer,
-	jsonb,
 	pgTable,
 	primaryKey,
 	text,
@@ -48,11 +47,11 @@ export const documentChunks = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 		embedded: boolean("embedded").default(false).notNull(),
 	},
-	(table) => ({
-		docIdIdx: index("doc_id_idx").on(table.docId),
-		docIdPageIdx: index("doc_id_page_idx").on(table.docId, table.pageNumber),
-		embeddedIdx: index("embedded_idx").on(table.embedded),
-	}),
+	(table) => [
+		index("doc_id_idx").on(table.docId),
+		index("doc_id_page_idx").on(table.docId, table.pageNumber),
+		index("embedded_idx").on(table.embedded),
+	],
 )
 
 export const chunkEmbeddings = pgTable(
@@ -65,9 +64,7 @@ export const chunkEmbeddings = pgTable(
 		embedding: vector("embedding", { dimensions: 384 }).notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 	},
-	(table) => ({
-		pk: primaryKey({ columns: [table.chunkId, table.embeddingModel] }),
-	}),
+	(table) => [primaryKey({ columns: [table.chunkId, table.embeddingModel] })],
 )
 
 export type Document = typeof documents.$inferSelect
