@@ -31,6 +31,7 @@ export async function retrieveChunks(
 	options: RetrievalOptions = {},
 ): Promise<RetrievalResponse> {
 	try {
+		console.log("--- Starting retrieval for query:", query);
 		const { limit = 8, docId, docType, similarityThreshold = 0.25 } = options;
 		const db = await getDb();
 
@@ -64,10 +65,23 @@ export async function retrieveChunks(
 			)
 			.orderBy(desc(similarity))
 			.limit(limit);
-
+		console.log("--- Retrieved candidate chunks:", results.length);
+		if (results.length > 0) {
+			console.log("Top similarity:", results[0].similarity);
+			console.log(
+				"Bottom similarity:",
+				results[results.length - 1].similarity,
+			);
+		}
 		// 3. Post-processing
 		// Filter by threshold
 		const filtered = results.filter((r) => r.similarity >= similarityThreshold);
+		console.log(
+			"--- Filtered chunks:",
+			filtered.length,
+			"Threshold:",
+			similarityThreshold,
+		);
 
 		// Group by docId to facilitate merging
 		const groupedByDoc = new Map<string, typeof filtered>();
