@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 
-import { EmbeddingGemmaDownload } from "@/components/model-download/EmbeddingGemmaDownload"
+import { EmbeddingModelDownload } from "@/components/model-download/EmbeddingModelDownload"
 import { GeminiNanoDownload } from "@/components/model-download/GeminiNanoDownload"
 import { QwenDownload } from "@/components/model-download/QwenDownload"
 import { WhisperDownload } from "@/components/model-download/WhisperDownload"
@@ -36,7 +36,7 @@ function ModelsPage() {
             <QwenDownload />
           </CardContent>
         </Card>
-        <EmbeddingGemmaDownload />
+        <EmbeddingModelDownload />
         <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-2xl">Speech Models</CardTitle>

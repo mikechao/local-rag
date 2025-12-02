@@ -11,23 +11,22 @@ import {
 } from "@/lib/embedding-worker";
 import { TransformersJSDownloadCard } from "./TransformersJSDownloadCard";
 
-// Use ONNX-converted weights that include `onnx/model_quantized.onnx`
-// to avoid missing-file errors from the original repository.
-export function EmbeddingGemmaDownload() {
+// all-MiniLM-L6-v2 is a popular sentence-transformers model optimized for semantic similarity
+export function EmbeddingModelDownload() {
 	return (
 		<TransformersJSDownloadCard
-			title="EmbeddingGemma"
+			title="all-MiniLM-L6-v2"
 			modelId={MODEL_ID}
 			descriptionPrefix="Download"
 			descriptionSuffix="for offline embeddings. Cached locally after first download."
 			links={[
 				{
-					href: "https://huggingface.co/onnx-community/embeddinggemma-300m-ONNX",
+					href: "https://huggingface.co/Xenova/all-MiniLM-L6-v2",
 					label: "View on Hugging Face",
 				},
 				{
-					href: "https://ai.google.dev/gemma/docs/embeddinggemma",
-					label: "Google Model Card",
+					href: "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2",
+					label: "Original Model",
 				},
 			]}
 			clearCacheDescription="Clearing the cache will disable adding new documents."

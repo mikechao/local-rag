@@ -2,9 +2,9 @@ import { transformersJS } from "@built-in-ai/transformers-js";
 import { cleanClearCahce } from "./utils";
 
 // Centralized model config so UI and routes stay in sync.
-export const MODEL_ID = "onnx-community/embeddinggemma-300m-ONNX";
+export const MODEL_ID = "Xenova/all-MiniLM-L6-v2";
 export const MODEL_DEVICE: "auto" | "cpu" | "webgpu" = "auto";
-export const LOCAL_READY_KEY = "embeddinggemma-onnx-ready";
+export const LOCAL_READY_KEY = "all-minilm-l6-v2-ready";
 
 type DownloadableEmbeddingModel = ReturnType<
 	typeof transformersJS.textEmbedding

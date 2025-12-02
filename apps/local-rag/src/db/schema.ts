@@ -62,7 +62,7 @@ export const chunkEmbeddings = pgTable(
 			.notNull()
 			.references(() => documentChunks.id, { onDelete: "cascade" }),
 		embeddingModel: text("embedding_model").notNull(),
-		embedding: vector("embedding", { dimensions: 768 }).notNull(),
+		embedding: vector("embedding", { dimensions: 384 }).notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => ({
