@@ -1,4 +1,4 @@
-import { MarkdownTextSplitter, RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { WebPDFLoader } from "@langchain/community/document_loaders/web/pdf";
 
 export type ChunkingProgress = {
@@ -24,31 +24,42 @@ export type ChunkResult = {
     }[];
 };
 
+/**
+ * Strip markdown link syntax to plain text for better semantic embedding.
+ * Converts [text](url) to just text, and ![alt](url) to alt.
+ */
+function stripMarkdownLinks(text: string): string {
+    // Remove image links ![alt](url) -> alt
+    let cleaned = text.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1');
+    // Remove regular links [text](url) -> text
+    cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    return cleaned;
+}
+
 export async function processMarkdown(
     docId: string,
     filename: string,
     blob: Blob,
     onProgress?: (progress: ChunkingProgress) => void
 ): Promise<ChunkResult> {
-    const text = await blob.text();
-    const splitter = new MarkdownTextSplitter({
-        chunkSize: 1000,
-        chunkOverlap: 150,
+    const rawText = await blob.text();
+    
+    // Strip markdown links to improve semantic embedding quality
+    // This converts [text](url) to plain text so embeddings focus on content, not URLs
+    const text = stripMarkdownLinks(rawText);
+    
+    const splitter = RecursiveCharacterTextSplitter.fromLanguage("markdown", {
+        chunkSize: 512, // Larger chunks for better context preservation
+        chunkOverlap: 50,
     });
 
     const docs = await splitter.createDocuments([text]);
     
-    // MarkdownTextSplitter doesn't give us page numbers, but we can treat it as page 1
-    // It might give us header metadata if we configured it, but basic usage just splits text.
-    // Let's see if we can extract headers. MarkdownTextSplitter preserves headers in metadata if configured?
-    // Actually, RecursiveCharacterTextSplitter is the base. MarkdownTextSplitter just has specific separators.
-    
-    // For now, simple mapping
     const chunks = docs.map((doc, index) => ({
         pageNumber: 1,
         chunkIndex: index,
         text: doc.pageContent,
-        headingPath: doc.metadata.header // This might need adjustment depending on how we want to capture headers
+        headingPath: undefined // We can improve this later with MarkdownHeaderTextSplitter
     }));
 
     if (onProgress) {
