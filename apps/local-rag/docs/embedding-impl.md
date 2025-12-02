@@ -4,7 +4,21 @@ This document details the implementation of the in-browser embedding generation 
 
 ## Overview
 
-The embedding system generates vector embeddings for document chunks using the `onnx-community/embeddinggemma-300m-ONNX` model via `@built-in-ai/transformers-js`. To ensure the UI remains responsive, the heavy lifting of model inference is offloaded to a dedicated Web Worker.
+The embedding system generates vector embeddings for document chunks using the `Xenova/all-MiniLM-L6-v2` model via `@built-in-ai/transformers-js`. To ensure the UI remains responsive, the heavy lifting of model inference is offloaded to a dedicated Web Worker.
+
+### Model Selection Rationale
+
+The system originally used `onnx-community/embeddinggemma-300m-ONNX` (768 dimensions), but was switched to `Xenova/all-MiniLM-L6-v2` (384 dimensions) for the following reasons:
+
+1. **Retrieval Quality**: During testing, embeddinggemma showed poor semantic similarity scores for factual Q&A queries. For example, a query about "When was Stargate Atlantis cancelled?" would return chunks with ~0.46 similarity while unrelated chunks scored ~0.66.
+
+2. **Established Performance**: all-MiniLM-L6-v2 is a well-tested sentence transformer model with known good performance on semantic search tasks.
+
+3. **Smaller Footprint**: 384 dimensions vs 768 dimensions reduces storage requirements and speeds up vector similarity calculations.
+
+4. **Faster Inference**: The smaller model runs faster on client-side hardware, improving the user experience during document upload.
+
+> **Note**: Even with the model change, pure vector search has limitations for factual queries. The retrieval system now uses a hybrid approach combining vector similarity with trigram keyword search. See [retrieval-impl.md](./retrieval-impl.md) for details.
 
 ## Architecture
 
@@ -71,7 +85,7 @@ The implementation relies on the following schema updates in `src/db/schema.ts`:
 -   `document_chunks`: Added `embedded` boolean flag (default `false`).
 -   `chunk_embeddings`: Stores the vector data.
     -   `chunkId`: FK to `document_chunks`.
-    -   `embedding`: `vector(768)` column.
+    -   `embedding`: `vector(384)` column (reduced from 768 after model change).
     -   `embeddingModel`: Identifier for the model used.
 
 ## UI Integration
@@ -80,4 +94,4 @@ The implementation relies on the following schema updates in `src/db/schema.ts`:
     -   0-30%: File Upload
     -   30-60%: Chunking (PDF/Markdown processing)
     -   60-100%: Embedding Generation
--   **Model Management**: The `EmbeddingGemmaDownload` component now uses the worker client to manage model downloads and cache clearing, ensuring the main thread doesn't accidentally instantiate a duplicate model.
+-   **Model Management**: The `EmbeddingModelDownload` component uses the worker client to manage model downloads and cache clearing, ensuring the main thread doesn't accidentally instantiate a duplicate model.
