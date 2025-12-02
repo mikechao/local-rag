@@ -5,6 +5,7 @@ import {
   ChatRequestOptions,
   convertToModelMessages,
   tool,
+  stepCountIs,
 } from "ai";
 import { z } from "zod";
 import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
@@ -61,6 +62,7 @@ export class ClientSideChatTransport
       system: `You are a helpful assistant. Check your knowledge base before answering any questions. 
       If the answer is not in your knowledge base, acknowledgege that it is not in your knowledge base, but
       try to answer as best as you can`,
+      stopWhen: stepCountIs(5),
       tools: {
         getInformation: tool({
           description: `get information from your knowledge base to answer questions.`,

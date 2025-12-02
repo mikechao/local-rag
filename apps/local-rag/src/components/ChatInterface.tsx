@@ -45,6 +45,7 @@ import { generateSpeechStream, TextStream, isSpeechModelReadyFlag } from "@/lib/
 import { useSpeechPlayer } from "@/hooks/use-speech-player";
 import { useRef } from "react";
 import { Volume2, VolumeX } from "lucide-react";
+import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 
 export function ChatInterface() {
   const [isModelAvailable] = useState<boolean | null>(true);
@@ -74,6 +75,7 @@ export function ChatInterface() {
   const { messages, sendMessage, error, status } = useChat({
     transport: new ClientSideChatTransport(),
     id: "local-chat",
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls
   });
 
   useEffect(() => {
