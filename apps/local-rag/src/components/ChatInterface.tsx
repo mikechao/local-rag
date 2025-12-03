@@ -43,6 +43,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { hasCachedWhisperWeights } from "@/lib/models/whisperModel";
 import { generateSpeechStream, TextStream, isSpeechModelReadyFlag } from "@/lib/models/speechModel";
 import { useSpeechPlayer } from "@/hooks/use-speech-player";
+import { warmupEmbeddingModel } from "@/lib/embedding-worker";
 import { useRef } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
@@ -68,6 +69,8 @@ export function ChatInterface() {
       setIsSpeechAvailable(isSpeechReady);
     };
     checkModels();
+    // Pre-warm embedding model for faster RAG retrieval
+    warmupEmbeddingModel().catch(console.error);
   }, []);
 
   const [input, setInput] = useState("");

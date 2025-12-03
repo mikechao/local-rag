@@ -58,6 +58,7 @@ async function handleWarmup() {
 				ctx.postMessage({ type: "progress", progress });
 			},
 		});
+		isModelReady = true;
 		ctx.postMessage({ type: "warmup-complete" });
 	} catch (error) {
 		console.error("Warmup failed", error);
@@ -67,6 +68,8 @@ async function handleWarmup() {
 
 import { embedMany } from "ai";
 
+let isModelReady = false;
+
 async function handleEmbedBatch(data: {
 	docId: string;
 	chunks: string[];
@@ -75,8 +78,11 @@ async function handleEmbedBatch(data: {
 	const { docId, chunks, batchId } = data;
 	const model = getModel();
 
-	// Ensure model is ready
-	await ensureEmbeddingModelReady();
+	// Only call ensureEmbeddingModelReady if not already ready
+	if (!isModelReady) {
+		await ensureEmbeddingModelReady();
+		isModelReady = true;
+	}
 
 	try {
 		const { embeddings } = await embedMany({
