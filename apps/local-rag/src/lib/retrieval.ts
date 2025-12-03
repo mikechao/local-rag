@@ -64,10 +64,18 @@ export async function retrieveChunks(
 		const keywords = extractKeywords(query);
 
 		// 1. Embed query for vector search
+		performance.mark("retrieval:embed-query-start");
 		const queryEmbedding = await embedQuery(query);
 		const vectorStr = JSON.stringify(queryEmbedding);
+		performance.mark("retrieval:embed-query-end");
+		performance.measure(
+			"retrieval:embed-query",
+			"retrieval:embed-query-start",
+			"retrieval:embed-query-end",
+		);
 
 		// 2. Vector similarity search (semantic)
+		performance.mark("retrieval:vector-search-start");
 		const vectorSimilarity = sql<number>`1 - (${chunkEmbeddings.embedding} <=> ${vectorStr})`;
 
 		const vectorResults = await db
@@ -92,9 +100,16 @@ export async function retrieveChunks(
 			)
 			.orderBy(desc(vectorSimilarity))
 			.limit(limit);
+		performance.mark("retrieval:vector-search-end");
+		performance.measure(
+			"retrieval:vector-search",
+			"retrieval:vector-search-start",
+			"retrieval:vector-search-end",
+		);
 
 		// 3. Trigram search using pg_trgm (if we have keywords)
 		// This finds chunks that are textually similar to the query keywords
+		performance.mark("retrieval:trigram-search-start");
 		let trigramResults: typeof vectorResults = [];
 		if (keywords.length > 0) {
 			// Join keywords into a search string for trigram matching
@@ -129,9 +144,15 @@ export async function retrieveChunks(
 				.orderBy(desc(trigramSimilarity))
 				.limit(limit);
 		}
-
+		performance.mark("retrieval:trigram-search-end");
+		performance.measure(
+			"retrieval:trigram-search",
+			"retrieval:trigram-search-start",
+			"retrieval:trigram-search-end",
+		);
 		// 4. Merge and re-rank results using Reciprocal Rank Fusion (RRF)
 		// RRF is a proven method for combining rankings from multiple sources
+		performance.mark("retrieval:rrf-start");
 		const RRF_K = 60; // Standard RRF constant
 		const resultMap = new Map<string, {
 			result: typeof vectorResults[0];
@@ -186,11 +207,25 @@ export async function retrieveChunks(
 				similarity: Math.min(1.0, rrfScore * 50),
 			};
 		}).sort((a, b) => b.hybridScore - a.hybridScore);
+		performance.mark("retrieval:rrf-end");
+		performance.measure(
+			"retrieval:rrf",
+			"retrieval:rrf-start",
+			"retrieval:rrf-end",
+		);
 
 		// 5. Filter by threshold
+		performance.mark("retrieval:filter-start");
 		const filtered = combinedResults.filter((r) => r.similarity >= similarityThreshold);
+		performance.mark("retrieval:filter-end");
+		performance.measure(
+			"retrieval:filter",
+			"retrieval:filter-start",
+			"retrieval:filter-end",
+		);
 
 		// Group by docId to facilitate merging
+		performance.mark("retrieval:group-start");
 		const groupedByDoc = new Map<string, typeof filtered>();
 		for (const r of filtered) {
 			if (!groupedByDoc.has(r.docId)) {
@@ -198,7 +233,15 @@ export async function retrieveChunks(
 			}
 			groupedByDoc.get(r.docId)!.push(r);
 		}
-
+		performance.mark("retrieval:group-end");
+		performance.measure(
+			"retrieval:group",
+			"retrieval:group-start",
+			"retrieval:group-end",
+		);
+		
+		// 6. Merge consecutive chunks from the same document page
+		performance.mark("retrieval:merge-start");
 		const allMerged: RetrievalResult[] = [];
 
 		for (const [_, docChunks] of groupedByDoc) {
@@ -231,8 +274,14 @@ export async function retrieveChunks(
 
 		// Sort by similarity descending
 		allMerged.sort((a, b) => b.similarity - a.similarity);
-
+		performance.mark("retrieval:merge-end");
+		performance.measure(
+			"retrieval:merge",
+			"retrieval:merge-start",
+			"retrieval:merge-end",
+		);
 		// Deduplicate by text content
+		performance.mark("retrieval:deduplicate-start");
 		const uniqueResults: RetrievalResult[] = [];
 		const seenText = new Set<string>();
 
@@ -241,6 +290,19 @@ export async function retrieveChunks(
 				seenText.add(r.text);
 				uniqueResults.push(r);
 			}
+		}
+		performance.mark("retrieval:deduplicate-end");
+		performance.measure(
+			"retrieval:deduplicate",
+			"retrieval:deduplicate-start",
+			"retrieval:deduplicate-end",
+		);
+
+		const entries = performance.getEntriesByType("measure").filter((e) => e.name.startsWith("retrieval:"));
+		for (const e of entries) {
+			console.log(`${e.name} took ${e.duration.toFixed(2)} ms`);
+			performance.clearMarks(e.name);
+			performance.clearMeasures(e.name);
 		}
 
 		return { results: uniqueResults };
