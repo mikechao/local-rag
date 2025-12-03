@@ -70,7 +70,10 @@ export class ClientSideChatTransport
             question: z.string().describe("the users question"),
           }),
           execute: async ({ question }) => {
+            const before = performance.now();
             const { results } = await retrieveChunks(question);
+            const after = performance.now();
+            console.log(`Retrieval took ${after - before} ms`);
             const joinedResults = results
               .map((r) => `Content: ${r.text}\nSource: ${r.docId}`)
               .join("\n\n");
