@@ -1,7 +1,7 @@
 {
   "name": "@built-in-ai/core",
   "version": "2.0.1",
-  "description": "Browser Built-in AI API provider for Vercel AI SDK v5+ (Chrome & Edge)",
+  "description": "Browser Built-in AI API provider for Vercel AI SDK v6 beta (Chrome & Edge)",
   "author": {
     "name": "Jakob Hoeg Mørk",
     "url": "https://jakobhoeg.dev"
@@ -52,14 +52,14 @@
     "@mediapipe/tasks-text": "^0.10.22-rc.20250304"
   },
   "peerDependencies": {
-    "ai": ">=5.0.0"
+    "ai": "^6.0.0-beta.131"
   },
   "devDependencies": {
-    "@ai-sdk/provider": "^2.0.0",
+    "@ai-sdk/provider": "3.0.0-beta.23",
     "@types/dom-chromium-ai": "^0.0.10",
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^1.0.0",
-    "ai": "^5.0.101",
+    "ai": "6.0.0-beta.131",
     "jsdom": "^26.1.0",
     "rimraf": "^5.0.0",
     "tsup": "^8.0.0",

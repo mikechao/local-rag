@@ -45,7 +45,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/router-plugin": "^1.132.0",
     "@xyflow/react": "^12.9.3",
-    "ai": "^5.0.98",
+    "ai": "6.0.0-beta.131",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
