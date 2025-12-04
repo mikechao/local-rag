@@ -60,7 +60,7 @@ describe("BuiltInAIEmbeddingModel", () => {
       expect(model).toBeInstanceOf(BuiltInAIEmbeddingModel);
       expect(model.modelId).toBe("embedding");
       expect(model.provider).toBe("google-mediapipe");
-      expect(model.specificationVersion).toBe("v2");
+      expect(model.specificationVersion).toBe("v3");
       expect(model.supportsParallelCalls).toBe(true);
       expect(model.maxEmbeddingsPerCall).toBeUndefined();
     });

@@ -1,14 +1,14 @@
 import {
-  LanguageModelV2,
-  LanguageModelV2CallOptions,
-  LanguageModelV2CallWarning,
-  LanguageModelV2Content,
-  LanguageModelV2FinishReason,
-  LanguageModelV2Prompt,
-  LanguageModelV2StreamPart,
+  LanguageModelV3,
+  LanguageModelV3CallOptions,
+  SharedV3Warning,
+  LanguageModelV3Content,
+  LanguageModelV3FinishReason,
+  LanguageModelV3Prompt,
+  LanguageModelV3StreamPart,
   LoadSettingError,
   JSONValue,
-} from "@ai-sdk/provider";
+} from "@ai-sdk/provider"
 import { convertToBuiltInAIMessages } from "./convert-to-built-in-ai-messages";
 
 export type BuiltInAIChatModelId = "text";
@@ -49,7 +49,7 @@ type BuiltInAIConfig = {
 /**
  * Detect if the prompt contains multimodal content
  */
-function hasMultimodalContent(prompt: LanguageModelV2Prompt): boolean {
+function hasMultimodalContent(prompt: LanguageModelV3Prompt): boolean {
   for (const message of prompt) {
     if (message.role === "user") {
       for (const part of message.content) {
@@ -66,7 +66,7 @@ function hasMultimodalContent(prompt: LanguageModelV2Prompt): boolean {
  * Get expected inputs based on prompt content
  */
 function getExpectedInputs(
-  prompt: LanguageModelV2Prompt,
+  prompt: LanguageModelV3Prompt,
 ): Array<{ type: "text" | "image" | "audio" }> {
   const inputs = new Set<"text" | "image" | "audio">();
   // Don't add text by default - it's assumed by the Prompt API
@@ -88,8 +88,8 @@ function getExpectedInputs(
   return Array.from(inputs).map((type) => ({ type }));
 }
 
-export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
-  readonly specificationVersion = "v2";
+export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
+  readonly specificationVersion = "v3";
   readonly modelId: BuiltInAIChatModelId;
   readonly provider = "browser-ai";
 
@@ -177,62 +177,62 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     responseFormat,
     seed,
     tools,
-  }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
-    const warnings: LanguageModelV2CallWarning[] = [];
+  }: Parameters<LanguageModelV3["doGenerate"]>[0]) {
+    const warnings: SharedV3Warning[] = [];
 
     // Add warnings for unsupported settings
     if (tools && tools.length > 0) {
       warnings.push({
-        type: "unsupported-setting",
-        setting: "tools",
+        type: "unsupported",
+        feature: "tools",
         details: "Tool calling is not yet supported by Prompt API",
       });
     }
 
     if (maxOutputTokens != null) {
       warnings.push({
-        type: "unsupported-setting",
-        setting: "maxOutputTokens",
+        type: "unsupported",
+        feature: "maxOutputTokens",
         details: "maxOutputTokens is not supported by Prompt API",
       });
     }
 
     if (stopSequences != null) {
       warnings.push({
-        type: "unsupported-setting",
-        setting: "stopSequences",
+        type: "unsupported",
+        feature: "stopSequences",
         details: "stopSequences is not supported by Prompt API",
       });
     }
 
     if (topP != null) {
       warnings.push({
-        type: "unsupported-setting",
-        setting: "topP",
+        type: "unsupported",
+        feature: "topP",
         details: "topP is not supported by Prompt API",
       });
     }
 
     if (presencePenalty != null) {
       warnings.push({
-        type: "unsupported-setting",
-        setting: "presencePenalty",
+        type: "unsupported",
+        feature: "presencePenalty",
         details: "presencePenalty is not supported by Prompt API",
       });
     }
 
     if (frequencyPenalty != null) {
       warnings.push({
-        type: "unsupported-setting",
-        setting: "frequencyPenalty",
+        type: "unsupported",
+        feature: "frequencyPenalty",
         details: "frequencyPenalty is not supported by Prompt API",
       });
     }
 
     if (seed != null) {
       warnings.push({
-        type: "unsupported-setting",
-        setting: "seed",
+        type: "unsupported",
+        feature: "seed",
         details: "seed is not supported by Prompt API",
       });
     }
@@ -281,7 +281,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
    * @throws {LoadSettingError} When the Prompt API is not available or model needs to be downloaded
    * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
-  public async doGenerate(options: LanguageModelV2CallOptions) {
+  public async doGenerate(options: LanguageModelV3CallOptions) {
     const converted = this.getArgs(options);
     const { systemMessage, messages, warnings, promptOptions, expectedInputs } =
       converted;
@@ -294,7 +294,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
     const text = await session.prompt(messages, promptOptions);
 
-    const content: LanguageModelV2Content[] = [
+    const content: LanguageModelV3Content[] = [
       {
         type: "text",
         text,
@@ -303,7 +303,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
     return {
       content,
-      finishReason: "stop" as LanguageModelV2FinishReason,
+      finishReason: "stop" as LanguageModelV3FinishReason,
       usage: {
         inputTokens: undefined,
         outputTokens: undefined,
@@ -354,7 +354,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
    * @throws {LoadSettingError} When the Prompt API is not available or model needs to be downloaded
    * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
-  public async doStream(options: LanguageModelV2CallOptions) {
+  public async doStream(options: LanguageModelV3CallOptions) {
     const converted = this.getArgs(options);
     const {
       systemMessage,
@@ -383,7 +383,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     const textId = "text-0";
 
     const stream = promptStream.pipeThrough(
-      new TransformStream<string, LanguageModelV2StreamPart>({
+      new TransformStream<string, LanguageModelV3StreamPart>({
         start(controller) {
           // Send stream start event with warnings
           controller.enqueue({
@@ -427,7 +427,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
           // Send finish event
           controller.enqueue({
             type: "finish",
-            finishReason: "stop" as LanguageModelV2FinishReason,
+            finishReason: "stop" as LanguageModelV3FinishReason,
             usage: {
               inputTokens: session.inputUsage,
               outputTokens: undefined,

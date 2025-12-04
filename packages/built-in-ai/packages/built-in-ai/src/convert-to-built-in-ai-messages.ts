@@ -1,5 +1,5 @@
 import {
-  LanguageModelV2Prompt,
+  LanguageModelV3Prompt,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 
@@ -56,7 +56,7 @@ function convertFileData(data: any, mediaType: string): Uint8Array | string {
  * Returns system message (for initialPrompts) and regular messages (for prompt method)
  */
 export function convertToBuiltInAIMessages(
-  prompt: LanguageModelV2Prompt,
+  prompt: LanguageModelV3Prompt,
 ): ConvertedMessages {
   let systemMessage: string | undefined;
   const messages: LanguageModelMessage[] = [];

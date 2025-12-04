@@ -40,7 +40,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     expect(model).toBeInstanceOf(BuiltInAIChatLanguageModel);
     expect(model.modelId).toBe("text");
     expect(model.provider).toBe("browser-ai");
-    expect(model.specificationVersion).toBe("v2");
+    expect(model.specificationVersion).toBe("v3");
   });
   it("should throw when LanguageModel is not available", async () => {
     vi.stubGlobal("LanguageModel", undefined);
