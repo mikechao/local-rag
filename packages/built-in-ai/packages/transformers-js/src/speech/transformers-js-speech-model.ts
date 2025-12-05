@@ -1,6 +1,6 @@
 import {
-  SpeechModelV2,
-  SpeechModelV2CallOptions,
+  SpeechModelV3,
+  SpeechModelV3CallOptions,
   LoadSettingError,
 } from "@ai-sdk/provider";
 import {
@@ -22,8 +22,8 @@ export function isServerEnvironment(): boolean {
   return typeof window === "undefined" && typeof process !== "undefined";
 }
 
-export class TransformersJSSpeechModel implements SpeechModelV2 {
-  readonly specificationVersion = "v2";
+export class TransformersJSSpeechModel implements SpeechModelV3 {
+  readonly specificationVersion = "v3";
   readonly provider = "transformers-js";
   readonly modelId: TransformersJSSpeechModelId;
 
@@ -198,8 +198,8 @@ export class TransformersJSSpeechModel implements SpeechModelV2 {
   }
 
   async doGenerate(
-    options: SpeechModelV2CallOptions,
-  ): Promise<Awaited<ReturnType<SpeechModelV2["doGenerate"]>>> {
+    options: SpeechModelV3CallOptions,
+  ): Promise<Awaited<ReturnType<SpeechModelV3["doGenerate"]>>> {
     const currentDate = new Date();
     const { text, voice, speed } = options;
 
@@ -312,8 +312,8 @@ export class TransformersJSSpeechModel implements SpeechModelV2 {
     speakerOptions: { speaker_embeddings?: any; speaker_id?: number },
     speed: number | undefined,
     currentDate: Date,
-    options: SpeechModelV2CallOptions,
-  ): Promise<Awaited<ReturnType<SpeechModelV2["doGenerate"]>>> {
+    options: SpeechModelV3CallOptions,
+  ): Promise<Awaited<ReturnType<SpeechModelV3["doGenerate"]>>> {
     const worker = this.config.worker!;
 
     await this.initializeWorker();

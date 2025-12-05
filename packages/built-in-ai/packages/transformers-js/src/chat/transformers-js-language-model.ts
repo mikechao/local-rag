@@ -1,12 +1,12 @@
 import {
-  LanguageModelV2,
-  LanguageModelV2CallOptions,
-  LanguageModelV2CallWarning,
-  LanguageModelV2Content,
-  LanguageModelV2FinishReason,
-  LanguageModelV2ProviderDefinedTool,
-  LanguageModelV2StreamPart,
-  LanguageModelV2ToolCall,
+  LanguageModelV3,
+  LanguageModelV3CallOptions,
+  SharedV3Warning,
+  LanguageModelV3Content,
+  LanguageModelV3FinishReason,
+  LanguageModelV3ProviderTool,
+  LanguageModelV3StreamPart,
+  LanguageModelV3ToolCall,
   LoadSettingError,
 } from "@ai-sdk/provider";
 import {
@@ -20,7 +20,6 @@ import {
   type PretrainedModelOptions,
   type ProgressInfo,
   type PreTrainedTokenizer,
-  type Processor,
   type Tensor,
 } from "@huggingface/transformers";
 import { convertToTransformersMessages } from "./convert-to-transformers-message";
@@ -226,8 +225,8 @@ function extractArgumentsContent(content: string): string {
   return result;
 }
 
-export class TransformersJSLanguageModel implements LanguageModelV2 {
-  readonly specificationVersion = "v2";
+export class TransformersJSLanguageModel implements LanguageModelV3 {
+  readonly specificationVersion = "v3";
   readonly modelId: TransformersJSModelId;
   readonly provider = "transformers-js";
 
@@ -434,13 +433,13 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     seed,
     tools,
     toolChoice,
-  }: Parameters<LanguageModelV2["doGenerate"]>[0]): {
+  }: Parameters<LanguageModelV3["doGenerate"]>[0]): {
     messages: TransformersMessage[];
-    warnings: LanguageModelV2CallWarning[];
+    warnings: SharedV3Warning[];
     generationOptions: GenerationOptions;
     functionTools: ToolDefinition[];
   } {
-    const warnings: LanguageModelV2CallWarning[] = [];
+    const warnings: SharedV3Warning[] = [];
 
     // Filter and warn about unsupported tools
     const functionTools: ToolDefinition[] = (tools ?? [])
@@ -452,7 +451,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       }));
 
     const unsupportedTools = (tools ?? []).filter(
-      (tool): tool is LanguageModelV2ProviderDefinedTool =>
+      (tool): tool is LanguageModelV3ProviderTool =>
         !isFunctionTool(tool),
     );
 
@@ -587,7 +586,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   /**
    * Generates a complete text response using TransformersJS
    */
-  public async doGenerate(options: LanguageModelV2CallOptions) {
+  public async doGenerate(options: LanguageModelV3CallOptions) {
     const { messages, warnings, generationOptions, functionTools } =
       this.getArgs(options);
 
@@ -695,7 +694,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       if (toolCalls.length > 0) {
         const toolCallsToEmit = toolCalls.slice(0, 1);
 
-        const parts: LanguageModelV2Content[] = [];
+        const parts: LanguageModelV3Content[] = [];
 
         if (textContent) {
           parts.push({
@@ -710,12 +709,12 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             toolCallId: call.toolCallId,
             toolName: call.toolName,
             input: JSON.stringify(call.args ?? {}),
-          } satisfies LanguageModelV2ToolCall);
+          } satisfies LanguageModelV3ToolCall);
         }
 
         return {
           content: parts,
-          finishReason: "tool-calls" as LanguageModelV2FinishReason,
+          finishReason: "tool-calls" as LanguageModelV3FinishReason,
           usage: isVision
             ? {
                 inputTokens: undefined,
@@ -732,7 +731,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         };
       }
 
-      const content: LanguageModelV2Content[] = [
+      const content: LanguageModelV3Content[] = [
         {
           type: "text",
           text: textContent || generatedText,
@@ -741,7 +740,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
       return {
         content,
-        finishReason: "stop" as LanguageModelV2FinishReason,
+        finishReason: "stop" as LanguageModelV3FinishReason,
         usage: isVision
           ? {
               inputTokens: undefined,
@@ -767,9 +766,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
   private async doGenerateWithWorker(
     messages: TransformersMessage[],
-    warnings: LanguageModelV2CallWarning[],
+    warnings: SharedV3Warning[],
     generationOptions: GenerationOptions,
-    options: LanguageModelV2CallOptions,
+    options: LanguageModelV3CallOptions,
     functionTools: ToolDefinition[],
   ) {
     const worker = this.config.worker!;
@@ -817,7 +816,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     // Handle tool calls if present
     if (result.toolCalls && result.toolCalls.length > 0) {
       const toolCallsToEmit = result.toolCalls.slice(0, 1);
-      const parts: LanguageModelV2Content[] = [];
+      const parts: LanguageModelV3Content[] = [];
 
       // Extract text content from result
       const { textContent } = parseJsonFunctionCalls(result.text);
@@ -834,12 +833,12 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           toolCallId: call.toolCallId,
           toolName: call.toolName,
           input: JSON.stringify(call.args ?? {}),
-        } satisfies LanguageModelV2ToolCall);
+        } satisfies LanguageModelV3ToolCall);
       }
 
       return {
         content: parts,
-        finishReason: "tool-calls" as LanguageModelV2FinishReason,
+        finishReason: "tool-calls" as LanguageModelV3FinishReason,
         usage: {
           inputTokens: undefined,
           outputTokens: undefined,
@@ -850,12 +849,12 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       };
     }
 
-    const content: LanguageModelV2Content[] = [
+    const content: LanguageModelV3Content[] = [
       { type: "text", text: result.text },
     ];
     return {
       content,
-      finishReason: "stop" as LanguageModelV2FinishReason,
+      finishReason: "stop" as LanguageModelV3FinishReason,
       usage: {
         inputTokens: undefined,
         outputTokens: undefined,
@@ -925,7 +924,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   /**
    * Generates a streaming text response using TransformersJS
    */
-  public async doStream(options: LanguageModelV2CallOptions) {
+  public async doStream(options: LanguageModelV3CallOptions) {
     let converted;
     try {
       converted = this.getArgs(options);
@@ -970,7 +969,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     const self = this;
     const textId = "text-0";
 
-    const stream = new ReadableStream<LanguageModelV2StreamPart>({
+    const stream = new ReadableStream<LanguageModelV3StreamPart>({
       async start(controller) {
         controller.enqueue({
           type: "stream-start",
@@ -1011,7 +1010,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         };
 
         const finishStream = (
-          finishReason: LanguageModelV2FinishReason,
+          finishReason: LanguageModelV3FinishReason,
           inputLength: number = 0,
           outputTokens: number = 0,
         ) => {
@@ -1352,16 +1351,16 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
   private async doStreamWithWorker(
     messages: TransformersMessage[],
-    warnings: LanguageModelV2CallWarning[],
+    warnings: SharedV3Warning[],
     generationOptions: GenerationOptions,
-    options: LanguageModelV2CallOptions,
+    options: LanguageModelV3CallOptions,
     functionTools: ToolDefinition[],
   ) {
     const worker = this.config.worker!;
 
     await this.initializeWorker();
 
-    const stream = new ReadableStream<LanguageModelV2StreamPart>({
+    const stream = new ReadableStream<LanguageModelV3StreamPart>({
       start: (controller) => {
         let isFirst = true;
         const textId = "text-0";

@@ -1,5 +1,5 @@
 import {
-  EmbeddingModelV2,
+  EmbeddingModelV3,
   TooManyEmbeddingValuesForCallError,
   LoadSettingError,
 } from "@ai-sdk/provider";
@@ -56,8 +56,8 @@ export interface TransformersJSEmbeddingSettings
   maxTokens?: number;
 }
 
-export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
-  readonly specificationVersion = "v2";
+export class TransformersJSEmbeddingModel implements EmbeddingModelV3 {
+  readonly specificationVersion = "v3";
   readonly provider = "transformers-js";
   readonly modelId: TransformersJSEmbeddingModelId;
   readonly maxEmbeddingsPerCall = 100; // Reasonable limit for browser

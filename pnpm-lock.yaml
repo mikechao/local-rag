@@ -280,9 +280,6 @@ importers:
       '@huggingface/transformers':
         specifier: ^3.7.6
         version: 3.8.0
-      ai:
-        specifier: '>=5.0.0'
-        version: 5.0.101(zod@3.25.76)
     devDependencies:
       '@ai-sdk/provider':
         specifier: 3.0.0-beta.23
@@ -293,6 +290,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^1.0.0
         version: 1.6.1(vitest@1.6.1(@types/node@20.19.25)(jsdom@26.1.0)(lightningcss@1.30.2))
+      ai:
+        specifier: 6.0.0-beta.131
+        version: 6.0.0-beta.131(zod@3.25.76)
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0
@@ -317,9 +317,6 @@ importers:
       '@mlc-ai/web-llm':
         specifier: ^0.2.79
         version: 0.2.80
-      ai:
-        specifier: '>=5.0.0'
-        version: 5.0.101(zod@3.25.76)
     devDependencies:
       '@ai-sdk/provider':
         specifier: 3.0.0-beta.23
@@ -330,6 +327,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^1.0.0
         version: 1.6.1(vitest@1.6.1(@types/node@20.19.25)(jsdom@26.1.0)(lightningcss@1.30.2))
+      ai:
+        specifier: 6.0.0-beta.131
+        version: 6.0.0-beta.131(zod@3.25.76)
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0

@@ -1,10 +1,10 @@
 import {
-  EmbeddingModelV2,
-  LanguageModelV2,
+  EmbeddingModelV3,
+  LanguageModelV3,
   NoSuchModelError,
-  ProviderV2,
-  SpeechModelV2,
-  TranscriptionModelV2,
+  ProviderV3,
+  SpeechModelV3,
+  TranscriptionModelV3,
 } from "@ai-sdk/provider";
 import {
   TransformersJSLanguageModel,
@@ -28,7 +28,7 @@ import {
 } from "./speech/transformers-js-speech-model";
 import { TransformersJSSpeechSettings } from "./speech/transformers-js-speech-settings";
 
-export interface TransformersJSProvider extends ProviderV2 {
+export interface TransformersJSProvider extends ProviderV3 {
   (
     modelId: TransformersJSModelId,
     settings?: TransformersJSModelSettings,
@@ -50,35 +50,40 @@ export interface TransformersJSProvider extends ProviderV2 {
     settings?: TransformersJSModelSettings,
   ): TransformersJSLanguageModel;
 
+  embeddingModel(
+    modelId: TransformersJSEmbeddingModelId,
+    settings?: TransformersJSEmbeddingSettings,
+  ): EmbeddingModelV3;
+
   textEmbedding(
     modelId: TransformersJSEmbeddingModelId,
     settings?: TransformersJSEmbeddingSettings,
-  ): EmbeddingModelV2<string>;
+  ): EmbeddingModelV3;
 
   textEmbeddingModel: (
     modelId: TransformersJSEmbeddingModelId,
     settings?: TransformersJSEmbeddingSettings,
-  ) => EmbeddingModelV2<string>;
+  ) => EmbeddingModelV3;
 
   transcription(
     modelId: TransformersJSTranscriptionModelId,
     settings?: TransformersJSTranscriptionSettings,
-  ): TranscriptionModelV2;
+  ): TranscriptionModelV3;
 
   transcriptionModel: (
     modelId: TransformersJSTranscriptionModelId,
     settings?: TransformersJSTranscriptionSettings,
-  ) => TranscriptionModelV2;
+  ) => TranscriptionModelV3;
 
   textToSpeech(
     modelId: TransformersJSSpeechModelId,
     settings?: TransformersJSSpeechSettings,
-  ): SpeechModelV2;
+  ): SpeechModelV3;
 
   textToSpeechModel: (
     modelId: TransformersJSSpeechModelId,
     settings?: TransformersJSSpeechSettings,
-  ) => SpeechModelV2;
+  ) => SpeechModelV3;
 }
 
 export interface TransformersJSProviderSettings {
@@ -171,6 +176,8 @@ export function createTransformersJS(
     return createChatModel(modelId, settings);
   };
 
+  provider.specificationVersion = "v3" as const;
+  provider.embeddingModel = createEmbeddingModel;
   provider.languageModel = createChatModel;
   provider.chat = createChatModel;
   provider.textEmbedding = createEmbeddingModel;
