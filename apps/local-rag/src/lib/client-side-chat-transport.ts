@@ -1,16 +1,32 @@
 import {
   ChatTransport,
   UIMessageChunk,
-  streamText,
   ChatRequestOptions,
-  convertToModelMessages,
-  tool,
-  stepCountIs,
+  ToolLoopAgent,
+  createAgentUIStream,
 } from "ai";
 import { z } from "zod";
 import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
 import { getQwenModel } from "./models/qwenModel";
-import { retrieveChunks } from "./retrieval";
+import type { RetrievalResult } from "./retrieval";
+
+
+const retrievalResultSchema = z.object({
+  chunkIds: z.array(z.string()),
+  docId: z.string(),
+  docType: z.string(),
+  pageNumber: z.number(),
+  headingPath: z.string().nullable().optional(),
+  text: z.string(),
+  similarity: z.number(),
+}) satisfies z.ZodType<RetrievalResult>;
+
+const callOptionsSchema = z.object({
+  modelId: z.enum(["gemini-nano", "qwen3-0.6b"]).optional(),
+  retrievalResults: z.array(retrievalResultSchema).optional(),
+});
+
+type CallOptions = z.infer<typeof callOptionsSchema>;
 
 /**
  * Client-side chat transport AI SDK implementation that handles AI model communication
@@ -21,6 +37,29 @@ import { retrieveChunks } from "./retrieval";
 export class ClientSideChatTransport
   implements ChatTransport<BuiltInAIUIMessage>
 {
+
+  private chatAgent: ToolLoopAgent<CallOptions>;
+
+  constructor() {
+    this.chatAgent = new ToolLoopAgent<CallOptions>({
+      model: builtInAI(), // default to Gemini Nano
+      instructions: 'You are a helpful assistant. Answer user questions the best you can.',
+      callOptionsSchema,
+      prepareCall: ({ options, ...settings }) => ({
+        ...settings,
+        model: options.modelId === "qwen3-0.6b" ? getQwenModel() : builtInAI(),
+        instructions: settings.instructions + (options.retrievalResults
+          ? ` Use the following retrieval results to inform your answers: ${options.retrievalResults
+              .map(
+                (r) =>
+                  `Content: ${r.text}\nSource: ${r.docId}\n`,
+              )
+              .join("\n")}`
+          : ""),
+      }),
+    })
+  }
+
   async sendMessages(
     options: {
       chatId: string;
@@ -33,59 +72,16 @@ export class ClientSideChatTransport
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal, body } = options;
 
-    // Convert UI messages to Model messages
-    const prompt = convertToModelMessages(messages);
-
     const modelId = (body as any)?.modelId;
-    let model;
 
-    if (modelId === "qwen3-0.6b") {
-      model = getQwenModel();
-    } else {
-      // Default to Gemini Nano
-      model = builtInAI();
-    }
-
-    // Check if model is available
-    const availability = await model.availability();
-    
-    if (availability === "unavailable") {
-      throw new Error(
-        "Model is not available. Please download it from the Models page.",
-      );
-    }
-
-    const result = streamText({
-      model,
-      messages: prompt,
-      abortSignal: abortSignal,
-      system: `You are a helpful assistant. Check your knowledge base before answering any questions. 
-      If the answer is not in your knowledge base, acknowledgege that it is not in your knowledge base, but
-      try to answer as best as you can`,
-      stopWhen: stepCountIs(5),
-      tools: {
-        getInformation: tool({
-          description: `get information from your knowledge base to answer questions.`,
-          inputSchema: z.object({
-            question: z.string().describe("the users question"),
-          }),
-          execute: async ({ question }) => {
-            const before = performance.now();
-            const { results } = await retrieveChunks(question);
-            const after = performance.now();
-            console.log(`Retrieval took ${after - before} ms`);
-            const joinedResults = results
-              .map((r) => `Content: ${r.text}\nSource: ${r.docId}`)
-              .join("\n\n");
-            console.log('--- Retrieved information ---');
-            console.log(joinedResults);
-            return joinedResults;
-          },
-        }),
+    // createAgentUIStream expects UI messages (with id and parts), not model messages
+    return createAgentUIStream({
+      agent: this.chatAgent,
+      messages: messages,
+      options: {
+        modelId,
       },
-    });
-    return result.toUIMessageStream({
-      sendReasoning: true,
+      abortSignal,
     });
   }
 

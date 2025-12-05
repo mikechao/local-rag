@@ -57,3 +57,10 @@ retrieval.ts:303 LOG /src/lib/retrieval.ts:303:4 - http://localhost:3000/__tsd/o
 client-side-chat-transport.ts:76 LOG /src/lib/client-side-chat-transport.ts:76:13 - http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Flib%2Fclient-side-chat-transport.ts%3A76%3A13
  →  Retrieval took 225.5 ms
 ```
+
+                                                                         │
+│                     Update available v2.6.1 ≫ v2.6.3                     │
+│    Changelog: https://github.com/vercel/turborepo/releases/tag/v2.6.3    │
+│          Run "pnpm dlx @turbo/codemod@latest update" to update           │
+│                                                                          │
+│          Follow @turborepo for updates: https://x.com/turborepo
