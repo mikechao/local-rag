@@ -4,6 +4,9 @@ import {
   ChatRequestOptions,
   ToolLoopAgent,
   createAgentUIStream,
+  generateText,
+  convertToModelMessages,
+  Output
 } from "ai";
 import { z } from "zod";
 import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
@@ -22,11 +25,15 @@ const retrievalResultSchema = z.object({
 }) satisfies z.ZodType<RetrievalResult>;
 
 const callOptionsSchema = z.object({
-  modelId: z.enum(["gemini-nano", "qwen3-0.6b"]).optional(),
   retrievalResults: z.array(retrievalResultSchema).optional(),
 });
 
 type CallOptions = z.infer<typeof callOptionsSchema>;
+
+const shouldRetrieveSchema = z.object({
+  shouldRetrieve: z.boolean().describe("Whether the user's question requires retrieval of relevant documents."),
+  userQuestion: z.string().describe("The user's question that may require retrieval."),
+})
 
 // Returns the most recent message sent by the user, or undefined if none exist.
 function getLatestUserMessage(
@@ -52,12 +59,11 @@ export class ClientSideChatTransport
 
   constructor() {
     this.chatAgent = new ToolLoopAgent<CallOptions>({
-      model: builtInAI(), // default to Gemini Nano
+      model: builtInAI(),
       instructions: 'You are a helpful assistant. Answer user questions the best you can.',
       callOptionsSchema,
       prepareCall: ({ options, ...settings }) => ({
         ...settings,
-        model: options.modelId === "qwen3-0.6b" ? getQwenModel() : builtInAI(),
         instructions: settings.instructions + (options.retrievalResults
           ? ` Use the following retrieval results to inform your answers: ${options.retrievalResults
               .map(
@@ -80,25 +86,63 @@ export class ClientSideChatTransport
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
-    const { messages, abortSignal, body } = options;
+    const { messages, abortSignal } = options;
 
-    const modelId = (body as any)?.modelId;
-    let retrievalResults: RetrievalResult[] | undefined;
-    const latestUserMessage = getLatestUserMessage(messages);
-    if (latestUserMessage) {
-      console.log('latestUserMessage', JSON.stringify(latestUserMessage));
-    }
-
+    const retrievalResults: RetrievalResult[] | undefined = await this.getRetrievalResults(
+      messages,
+      abortSignal,
+    );
+    
     // createAgentUIStream expects UI messages (with id and parts), not model messages
     return createAgentUIStream({
       agent: this.chatAgent,
       messages: messages,
       options: {
-        modelId,
         retrievalResults,
       },
       abortSignal,
     });
+  }
+
+  async getRetrievalResults(
+    messages: BuiltInAIUIMessage[],
+    abortSignal: AbortSignal | undefined,
+  ): Promise<RetrievalResult[] | undefined> {
+    const lastUserMessage = getLatestUserMessage(messages);
+    if (lastUserMessage === undefined) {
+      return undefined;
+    }
+    const systemMessage = {
+      role: "system" as const,
+      parts: [
+        {
+          type: "text" as const,
+          text: "Determine if the user message requires retrieval from the knowledge base to provide a better answer." 
+            + " The knowledge base contains information about Stargate Atlantis.",
+        }
+      ],
+      id: "system-message-id"
+    };
+    const before = performance.now();
+    console.log('before retrieval decision');
+    const result = await generateText({
+      model: builtInAI(),
+      messages: convertToModelMessages([systemMessage, lastUserMessage]),
+      output: Output.object({
+        schema: shouldRetrieveSchema,
+      }),
+      abortSignal,
+    })
+    const after = performance.now();
+    console.log(`retrieval decision took ${after - before} ms`);
+    const { shouldRetrieve, userQuestion } = result.output;
+    console.log('shouldRetrieve', shouldRetrieve);
+    console.log('userQuestion', userQuestion);
+    if (!shouldRetrieve) {
+      return undefined;
+    }
+    const retrievalResults = await retrieveChunks(userQuestion);
+    return retrievalResults.results;
   }
 
   async reconnectToStream(
