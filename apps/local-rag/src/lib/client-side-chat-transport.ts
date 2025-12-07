@@ -10,7 +10,6 @@ import {
 } from "ai";
 import { z } from "zod";
 import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
-import { getQwenModel } from "./models/qwenModel";
 import type { RetrievalResult } from "./retrieval";
 import { retrieveChunks } from "./retrieval";
 
