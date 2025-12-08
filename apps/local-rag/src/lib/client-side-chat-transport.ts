@@ -61,17 +61,39 @@ export class ClientSideChatTransport
       model: builtInAI(),
       instructions: 'You are a helpful assistant. Answer user questions the best you can.',
       callOptionsSchema,
-      prepareCall: ({ options, ...settings }) => ({
-        ...settings,
-        instructions: settings.instructions + (options.retrievalResults
-          ? ` Use the following retrieval results to inform your answers: ${options.retrievalResults
-              .map(
-                (r) =>
-                  `Content: ${r.text}\nSource: ${r.docId}\n`,
-              )
-              .join("\n")}`
-          : ""),
-      }),
+      prepareCall: ({ options, prompt, ...settings }) => {
+        const retrievalResults = options?.retrievalResults;
+        
+        // If we have retrieval results, inject them into the conversation as an assistant message
+        if (retrievalResults && retrievalResults.length > 0 && Array.isArray(prompt)) {
+          const contextText = retrievalResults
+            .map((r) => `${r.text}\n(Source: ${r.docId})`)
+            .join("\n\n---\n\n");
+          
+          // Insert an assistant message with the context before the last user message
+          const lastIndex = prompt.length - 1;
+          const modifiedPrompt = [
+            ...prompt.slice(0, lastIndex),
+            {
+              role: 'assistant' as const,
+              content: `I found the following relevant information from the knowledge base:\n\n${contextText}\n\nI'll use this information to answer your question.`,
+            },
+            prompt[lastIndex], // The user's question
+          ];
+          
+          console.log('[prepareCall] Injected RAG context as assistant message');
+          
+          return {
+            ...settings,
+            prompt: modifiedPrompt,
+          };
+        }
+        
+        return {
+          ...settings,
+          prompt,
+        };
+      },
     })
   }
 
@@ -91,6 +113,8 @@ export class ClientSideChatTransport
       messages,
       abortSignal,
     );
+
+    console.log('retrievalResults', JSON.stringify(retrievalResults, null, 2));
     
     // createAgentUIStream expects UI messages (with id and parts), not model messages
     return createAgentUIStream({
@@ -112,7 +136,7 @@ export class ClientSideChatTransport
       return undefined;
     }
     const systemMessage = {
-      role: "system" as const,
+      role: "assistant" as const,
       parts: [
         {
           type: "text" as const,
