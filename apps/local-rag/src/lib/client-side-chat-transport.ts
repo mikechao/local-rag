@@ -198,7 +198,6 @@ export class ClientSideChatTransport
       id: "system-message-id"
     };
     const before = performance.now();
-    console.log('before retrieval decision');
     const result = await generateText({
       model: builtInAI(),
       messages: convertToModelMessages([systemMessage, lastUserMessage]),
@@ -208,10 +207,8 @@ export class ClientSideChatTransport
       abortSignal,
     })
     const after = performance.now();
-    console.log(`retrieval decision took ${after - before} ms`);
+    console.log(`retrieval decision took ${after - before} ms shouldRetrieve: ${result.output.shouldRetrieve} userQuestion: ${result.output.userQuestion}`);
     const { shouldRetrieve, userQuestion } = result.output;
-    console.log('shouldRetrieve', shouldRetrieve);
-    console.log('userQuestion', userQuestion);
     if (!shouldRetrieve) {
       return undefined;
     }

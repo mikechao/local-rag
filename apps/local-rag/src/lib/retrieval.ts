@@ -19,6 +19,7 @@ export type RetrievalOptions = {
 	docId?: string;
 	docType?: string;
 	similarityThreshold?: number;
+	logPerf?: boolean;
 };
 
 export type RetrievalResponse = {
@@ -298,11 +299,13 @@ export async function retrieveChunks(
 			"retrieval:deduplicate-end",
 		);
 
-		const entries = performance.getEntriesByType("measure").filter((e) => e.name.startsWith("retrieval:"));
-		for (const e of entries) {
-			console.log(`${e.name} took ${e.duration.toFixed(2)} ms`);
-			performance.clearMarks(e.name);
-			performance.clearMeasures(e.name);
+		if (options?.logPerf) {
+			const entries = performance.getEntriesByType("measure").filter((e) => e.name.startsWith("retrieval:"));
+			for (const e of entries) {
+				console.log(`${e.name} took ${e.duration.toFixed(2)} ms`);
+				performance.clearMarks(e.name);
+				performance.clearMeasures(e.name);
+			}
 		}
 
 		return { results: uniqueResults };
