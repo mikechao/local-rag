@@ -53,12 +53,13 @@ function getLatestUserMessage(
 export class ClientSideChatTransport
   implements ChatTransport<BuiltInAIUIMessage>
 {
-
   private chatAgent: ToolLoopAgent<CallOptions>;
+  private chatModel = builtInAI();
+  private warmupPromise: Promise<void> | null = null;
 
   constructor() {
     this.chatAgent = new ToolLoopAgent<CallOptions>({
-      model: builtInAI(),
+      model: this.chatModel,
       instructions: 'You are a helpful assistant. Answer user questions the best you can.',
       callOptionsSchema,
       prepareCall: ({ options, prompt, ...settings }) => {
@@ -97,6 +98,36 @@ export class ClientSideChatTransport
     })
   }
 
+  /**
+   * Pre-initializes the chat model session with the correct system message.
+   * This warms up the model and caches the session for faster subsequent calls.
+   * Safe to call multiple times - subsequent calls return the same promise.
+   */
+  async warmup(): Promise<void> {
+    // Return existing warmup promise if already warming up or completed
+    if (this.warmupPromise) {
+      return this.warmupPromise;
+    }
+    
+    this.warmupPromise = (async () => {
+      console.log("[Warmup] Starting chat model warmup...");
+      const start = performance.now();
+      try {
+        // Make a minimal call to establish the session with the correct system message
+        await generateText({
+          model: this.chatModel,
+          system: 'You are a helpful assistant. Answer user questions the best you can.',
+          messages: [{ role: 'user', content: 'hi' }],
+        });
+        console.log(`[Warmup] Chat model warmed up in ${(performance.now() - start).toFixed(2)}ms`);
+      } catch (e) {
+        console.warn("[Warmup] Chat model warmup failed (non-fatal):", e);
+      }
+    })();
+    
+    return this.warmupPromise;
+  }
+
   async sendMessages(
     options: {
       chatId: string;
@@ -108,16 +139,20 @@ export class ClientSideChatTransport
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal } = options;
+    const totalStart = performance.now();
 
+    const retrievalStart = performance.now();
     const retrievalResults: RetrievalResult[] | undefined = await this.getRetrievalResults(
       messages,
       abortSignal,
     );
-
-    console.log('retrievalResults', JSON.stringify(retrievalResults, null, 2));
+    console.log(`[Timing] Retrieval phase: ${(performance.now() - retrievalStart).toFixed(2)}ms`);
     
     // createAgentUIStream expects UI messages (with id and parts), not model messages
-    return createAgentUIStream({
+    const streamStart = performance.now();
+    console.log(`[Timing] Starting chat stream at ${(streamStart - totalStart).toFixed(2)}ms from message send`);
+    
+    const stream = await createAgentUIStream({
       agent: this.chatAgent,
       messages: messages,
       options: {
@@ -125,6 +160,22 @@ export class ClientSideChatTransport
       },
       abortSignal,
     });
+
+    // Wrap the stream to log when first chunk arrives
+    let firstChunkLogged = false;
+    const wrappedStream = stream.pipeThrough(
+      new TransformStream<UIMessageChunk, UIMessageChunk>({
+        transform(chunk, controller) {
+          if (!firstChunkLogged) {
+            console.log(`[Timing] First chunk received at ${(performance.now() - totalStart).toFixed(2)}ms from message send`);
+            firstChunkLogged = true;
+          }
+          controller.enqueue(chunk);
+        },
+      })
+    );
+
+    return wrappedStream;
   }
 
   async getRetrievalResults(

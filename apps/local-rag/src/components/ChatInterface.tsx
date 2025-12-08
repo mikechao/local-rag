@@ -31,7 +31,7 @@ import {
   ReasoningContent,
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Paperclip, MicIcon } from "lucide-react";
@@ -44,7 +44,6 @@ import { hasCachedWhisperWeights } from "@/lib/models/whisperModel";
 import { generateSpeechStream, TextStream, isSpeechModelReadyFlag } from "@/lib/models/speechModel";
 import { useSpeechPlayer } from "@/hooks/use-speech-player";
 import { warmupEmbeddingModel } from "@/lib/embedding-worker";
-import { useRef } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 
@@ -73,10 +72,17 @@ export function ChatInterface() {
     warmupEmbeddingModel().catch(console.error);
   }, []);
 
+  // Create a stable transport instance and warm it up
+  const chatTransport = useMemo(() => new ClientSideChatTransport(), []);
+  
+  useEffect(() => {
+    chatTransport.warmup().catch(console.error);
+  }, [chatTransport]);
+
   const [input, setInput] = useState("");
   
   const { messages, sendMessage, error, status } = useChat({
-    transport: new ClientSideChatTransport(),
+    transport: chatTransport,
     id: "local-chat",
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls
   });
