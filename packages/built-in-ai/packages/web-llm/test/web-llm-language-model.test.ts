@@ -59,7 +59,7 @@ describe("WebLLMLanguageModel", () => {
       );
 
       expect(model).toBeInstanceOf(WebLLMLanguageModel);
-      expect(model.specificationVersion).toBe("v2");
+      expect(model.specificationVersion).toBe("v3");
       expect(model.provider).toBe("web-llm");
       expect(model.modelId).toBe("Llama-3.1-8B-Instruct-q4f32_1-MLC");
     });
@@ -705,8 +705,8 @@ describe("WebLLMLanguageModel", () => {
 
       const toolChoiceWarning = result.warnings?.find(
         (w) =>
-          (w as any).type === "unsupported-setting" &&
-          (w as any).setting === "toolChoice",
+          (w as any).type === "unsupported" &&
+          (w as any).feature === "toolChoice",
       );
       expect(toolChoiceWarning).toBeDefined();
     });

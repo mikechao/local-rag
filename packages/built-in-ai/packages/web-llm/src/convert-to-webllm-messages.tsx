@@ -1,7 +1,7 @@
 import {
-  LanguageModelV2Prompt,
-  LanguageModelV2ToolResultPart,
-  LanguageModelV2ToolResultOutput,
+  LanguageModelV3Prompt,
+  LanguageModelV3ToolResultPart,
+  LanguageModelV3ToolResultOutput,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 import * as webllm from "@mlc-ai/web-llm";
@@ -11,7 +11,7 @@ import type { ToolResult } from "./tool-calling";
 /**
  * Converts the AI SDK ToolResultOutput format to a simple value + error flag
  */
-function convertToolResultOutput(output: LanguageModelV2ToolResultOutput): {
+function convertToolResultOutput(output: LanguageModelV3ToolResultOutput): {
   value: unknown;
   isError: boolean;
 } {
@@ -27,8 +27,7 @@ function convertToolResultOutput(output: LanguageModelV2ToolResultOutput): {
     case "content":
       return { value: output.value, isError: false };
     default: {
-      const exhaustiveCheck: never = output;
-      return { value: exhaustiveCheck, isError: false };
+      return { value: output, isError: false };
     }
   }
 }
@@ -36,7 +35,7 @@ function convertToolResultOutput(output: LanguageModelV2ToolResultOutput): {
 /**
  * Converts a ToolResultPart to our internal ToolResult format
  */
-function toToolResult(part: LanguageModelV2ToolResultPart): ToolResult {
+function toToolResult(part: LanguageModelV3ToolResultPart): ToolResult {
   const { value, isError } = convertToolResultOutput(part.output);
   return {
     toolCallId: part.toolCallId,
@@ -93,7 +92,7 @@ function convertDataToURL(
 }
 
 export function convertToWebLLMMessages(
-  prompt: LanguageModelV2Prompt,
+  prompt: LanguageModelV3Prompt,
 ): webllm.ChatCompletionMessageParam[] {
   const messages: webllm.ChatCompletionMessageParam[] = [];
 
