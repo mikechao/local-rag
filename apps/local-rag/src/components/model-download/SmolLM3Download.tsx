@@ -1,41 +1,41 @@
 import {
 	LOCAL_READY_KEY,
-	clearMistralCache,
-	ensureMistralModelReady,
-	hasCachedMistralWeights,
-	isMistralModelReadyFlag,
+	clearSmolLM3Cache,
+	ensureSmolLM3ModelReady,
+	hasCachedSmolLM3Weights,
+	isSmolLM3ModelReadyFlag,
 	MODEL_ID,
-	getMistralModel,
-} from "@/lib/models/mistralModel";
+	getSmolLM3Model,
+} from "@/lib/models/smolLM3Model";
 import { TransformersJSDownloadCard } from "./TransformersJSDownloadCard";
 
-export function MistralDownload() {
+export function SmolLM3Download() {
 	return (
 		<TransformersJSDownloadCard
-			title="Ministral 3 3B Instruct"
+			title="SmolLM3 3B"
 			modelId={MODEL_ID}
 			descriptionPrefix="Download"
 			descriptionSuffix=' a reasoning model, where you can see the model "thinking" steps in detail.'
 			links={[
 				{
-					href: "https://huggingface.co/mistralai/Ministral-3-3B-Instruct-2512-ONNX",
+					href: "https://huggingface.co/HuggingFaceTB/SmolLM3-3B-ONNX",
 					label: "View on Hugging Face",
 				},
 			]}
 			clearCacheDescription="Clearing the cache will require re-downloading the model for chat."
 			onDownload={async ({ onProgress }) => {
-				await ensureMistralModelReady({
+				await ensureSmolLM3ModelReady({
 					onProgress: ({ progress }) => onProgress(progress),
 				});
 				if (typeof localStorage !== "undefined") {
 					localStorage.setItem(LOCAL_READY_KEY, "true");
 				}
 			}}
-			clearCache={clearMistralCache}
-			hasCached={hasCachedMistralWeights}
-			isReadyFlag={isMistralModelReadyFlag}
+			clearCache={clearSmolLM3Cache}
+			hasCached={hasCachedSmolLM3Weights}
+			isReadyFlag={isSmolLM3ModelReadyFlag}
 			getAvailability={async () => {
-				const model = getMistralModel();
+				const model = getSmolLM3Model();
 				return model.availability();
 			}}
 		/>

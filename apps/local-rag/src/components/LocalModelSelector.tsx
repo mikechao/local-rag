@@ -14,9 +14,9 @@ import {
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
 import {
-  hasCachedMistralWeights,
-  isMistralModelReadyFlag,
-} from "@/lib/models/mistralModel";
+  hasCachedSmolLM3Weights,
+  isSmolLM3ModelReadyFlag,
+} from "@/lib/models/smolLM3Model";
 
 interface LocalModelSelectorProps {
   value: string;
@@ -29,8 +29,8 @@ export function LocalModelSelector({ value, onValueChange }: LocalModelSelectorP
 
   useEffect(() => {
     const checkMistral = async () => {
-      const cached = await hasCachedMistralWeights();
-      const ready = isMistralModelReadyFlag();
+      const cached = await hasCachedSmolLM3Weights();
+      const ready = isSmolLM3ModelReadyFlag();
       setIsMistralAvailable(cached || ready);
     };
     checkMistral();
@@ -47,11 +47,11 @@ export function LocalModelSelector({ value, onValueChange }: LocalModelSelectorP
     ...(isMistralAvailable
       ? [
           {
-            id: "mistral-3-3b",
-            name: "Ministral 3 3B",
-            chef: "Mistral AI",
-            chefSlug: "mistral",
-            providers: ["mistral"],
+            id: "smollm3-3b",
+            name: "SmolLM3 3B",
+            chef: "Hugging Face",
+            chefSlug: "huggingface",
+            providers: ["huggingface"],
           },
         ]
       : []),
