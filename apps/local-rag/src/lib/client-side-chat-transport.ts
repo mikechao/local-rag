@@ -56,7 +56,9 @@ export class ClientSideChatTransport
   implements ChatTransport<LocalRAGMessage>
 {
   private chatAgent: ToolLoopAgent<CallOptions>;
-  private chatModel = builtInAI();
+  private chatModel = builtInAI("text", {
+    expectedInputs: [{ type: "text" }, { type: "image" }]
+  });
   private warmupPromise: Promise<void> | null = null;
 
   constructor() {
