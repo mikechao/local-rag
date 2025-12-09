@@ -1,5 +1,6 @@
 import { useChat } from "@ai-sdk/react";
 import { BuiltInAIChatTransport } from "@/lib/built-in-ai-chat-transport";
+import { SmolLM3ChatTransport } from "@/lib/smolLM3-chat-transport";
 import {
   Conversation,
   ConversationContent,
