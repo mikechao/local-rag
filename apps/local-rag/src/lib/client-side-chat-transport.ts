@@ -10,9 +10,10 @@ import {
   smoothStream
 } from "ai";
 import { z } from "zod";
-import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
+import { builtInAI } from "@built-in-ai/core";
 import type { RetrievalResult } from "./retrieval";
 import { retrieveChunks } from "./retrieval";
+import { LocalRAGMessage } from "./local-rag-message";
 
 const retrievalResultSchema = z.object({
   chunkIds: z.array(z.string()),
@@ -37,8 +38,8 @@ const shouldRetrieveSchema = z.object({
 
 // Returns the most recent message sent by the user, or undefined if none exist.
 function getLatestUserMessage(
-  messages: BuiltInAIUIMessage[],
-): BuiltInAIUIMessage | undefined {
+  messages: LocalRAGMessage[],
+): LocalRAGMessage | undefined {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     if (messages[i].role === "user") return messages[i];
   }
@@ -49,10 +50,10 @@ function getLatestUserMessage(
  * Client-side chat transport AI SDK implementation that handles AI model communication
  * with in-browser AI capabilities.
  *
- * @implements {ChatTransport<BuiltInAIUIMessage>}
+ * @implements {ChatTransport<LocalRAGMessage>}
  */
 export class ClientSideChatTransport
-  implements ChatTransport<BuiltInAIUIMessage>
+  implements ChatTransport<LocalRAGMessage>
 {
   private chatAgent: ToolLoopAgent<CallOptions>;
   private chatModel = builtInAI();
@@ -132,7 +133,7 @@ export class ClientSideChatTransport
   async sendMessages(
     options: {
       chatId: string;
-      messages: BuiltInAIUIMessage[];
+      messages: LocalRAGMessage[];
       abortSignal: AbortSignal | undefined;
     } & {
       trigger: "submit-message" | "submit-tool-result" | "regenerate-message";
@@ -161,7 +162,7 @@ export class ClientSideChatTransport
   }
 
   async getRetrievalResults(
-    messages: BuiltInAIUIMessage[],
+    messages: LocalRAGMessage[],
     abortSignal: AbortSignal | undefined,
   ): Promise<RetrievalResult[] | undefined> {
     const lastUserMessage = getLatestUserMessage(messages);
