@@ -7,7 +7,9 @@ import {
   generateText,
   convertToModelMessages,
   Output,
-  smoothStream
+  smoothStream,
+  createUIMessageStream,
+  InferUIMessageChunk
 } from "ai";
 import { z } from "zod";
 import { builtInAI } from "@built-in-ai/core";
@@ -148,18 +150,33 @@ export class ClientSideChatTransport
       messages,
       abortSignal,
     );
-    
-    // createAgentUIStream expects UI messages (with id and parts), not model messages
-    return createAgentUIStream({
+
+    const agentStreamPromise = createAgentUIStream({
       agent: this.chatAgent,
-      messages: messages,
-      options: {
-        retrievalResults,
-      },
+      messages,
+      options: { retrievalResults },
       abortSignal,
-      experimental_transform: smoothStream({
-        delayInMs: 10,
-      }),
+      experimental_transform: smoothStream({ delayInMs: 10 }),
+    });
+
+    return createUIMessageStream<LocalRAGMessage>({
+      execute: async ({ writer }) => {
+        const agentStream = await agentStreamPromise;
+
+        // Forward the agent's stream to the UI stream.
+        writer.merge(
+          agentStream as ReadableStream<InferUIMessageChunk<LocalRAGMessage>>
+        );
+
+        // Send retrieval results as a data part after the model completes.
+        if (retrievalResults?.length) {
+          writer.write({
+            type: "data-retrievalResults",
+            data: retrievalResults,
+            transient: false,
+          });
+        }
+      },
     });
   }
 
