@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 
 import { EmbeddingModelDownload } from "@/components/model-download/EmbeddingModelDownload"
 import { GeminiNanoDownload } from "@/components/model-download/GeminiNanoDownload"
-import { QwenDownload } from "@/components/model-download/QwenDownload"
+import { MistralDownload } from "@/components/model-download/MistralDownload"
 import { WhisperDownload } from "@/components/model-download/WhisperDownload"
 import { SpeechDownload } from "@/components/model-download/SpeechDownload"
 import { PageContainer } from "@/components/PageContainer"
@@ -33,7 +33,7 @@ function ModelsPage() {
           </CardHeader>
           <CardContent className="grid w-full gap-4 md:grid-cols-2">
             <GeminiNanoDownload />
-            <QwenDownload />
+            <MistralDownload />
           </CardContent>
         </Card>
         <EmbeddingModelDownload />

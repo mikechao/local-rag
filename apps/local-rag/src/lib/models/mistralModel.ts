@@ -2,9 +2,9 @@ import { transformersJS } from "@built-in-ai/transformers-js";
 import { cleanClearCahce } from "./utils";
 
 // Centralized model config so UI and routes stay in sync.
-export const MODEL_ID = "onnx-community/Qwen3-0.6B-ONNX";
+export const MODEL_ID = "mistralai/Ministral-3-3B-Instruct-2512-ONNX";
 export const MODEL_DEVICE: "auto" | "cpu" | "webgpu" = "auto";
-export const LOCAL_READY_KEY = "qwen-onnx-ready";
+export const LOCAL_READY_KEY = "ministral-3-3b-onnx-ready";
 
 type DownloadableLanguageModel = ReturnType<typeof transformersJS> & {
 	availability: () => Promise<"unavailable" | "downloadable" | "available">;
@@ -16,7 +16,7 @@ type DownloadableLanguageModel = ReturnType<typeof transformersJS> & {
 let initPromise: Promise<DownloadableLanguageModel> | null = null;
 let cachedModel: DownloadableLanguageModel | null = null;
 
-export function getQwenModel(): DownloadableLanguageModel {
+export function getMistralModel(): DownloadableLanguageModel {
 	if (!cachedModel) {
 		cachedModel = transformersJS(MODEL_ID, {
 			device: "webgpu",
@@ -30,17 +30,17 @@ type EnsureOptions = {
 };
 
 /**
- * Ensure the Qwen model is initialized (and downloaded if needed).
+ * Ensure the Mistral model is initialized (and downloaded if needed).
  * Reuses a shared in-flight promise so concurrent callers don't double-download.
  */
-export async function ensureQwenModelReady(options: EnsureOptions = {}) {
+export async function ensureMistralModelReady(options: EnsureOptions = {}) {
 	if (initPromise) return initPromise;
 
-	const model = getQwenModel();
+	const model = getMistralModel();
 	initPromise = (async () => {
 		const availability = await model.availability();
 		if (availability === "unavailable") {
-			throw new Error("Qwen model unavailable in this environment");
+			throw new Error("Mistral model unavailable in this environment");
 		}
 		if (availability === "downloadable") {
 			await model.createSessionWithProgress(options.onProgress);
@@ -60,7 +60,7 @@ export async function ensureQwenModelReady(options: EnsureOptions = {}) {
  * Best-effort check: has the model been marked ready previously?
  * Returns false server-side or if the flag is missing.
  */
-export function isQwenModelReadyFlag(): boolean {
+export function isMistralModelReadyFlag(): boolean {
 	if (typeof window === "undefined" || typeof localStorage === "undefined")
 		return false;
 	return localStorage.getItem(LOCAL_READY_KEY) === "true";
@@ -69,7 +69,7 @@ export function isQwenModelReadyFlag(): boolean {
 /**
  * Clear cached weights and our singleton so a fresh download can occur.
  */
-export async function clearQwenCache() {
+export async function clearMistralCache() {
 	await cleanClearCahce(MODEL_ID, LOCAL_READY_KEY);
 
 	initPromise = null;
@@ -79,7 +79,7 @@ export async function clearQwenCache() {
 /**
  * Lightweight cache check for UX gating; returns false on SSR.
  */
-export async function hasCachedQwenWeights(): Promise<boolean> {
+export async function hasCachedMistralWeights(): Promise<boolean> {
 	if (typeof window === "undefined" || typeof caches === "undefined")
 		return false;
 	const keys = await caches.keys();

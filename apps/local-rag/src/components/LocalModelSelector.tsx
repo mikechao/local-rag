@@ -13,7 +13,10 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
-import { hasCachedQwenWeights, isQwenModelReadyFlag } from "@/lib/models/qwenModel";
+import {
+  hasCachedMistralWeights,
+  isMistralModelReadyFlag,
+} from "@/lib/models/mistralModel";
 
 interface LocalModelSelectorProps {
   value: string;
@@ -22,15 +25,15 @@ interface LocalModelSelectorProps {
 
 export function LocalModelSelector({ value, onValueChange }: LocalModelSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [isQwenAvailable, setIsQwenAvailable] = useState(false);
+  const [isMistralAvailable, setIsMistralAvailable] = useState(false);
 
   useEffect(() => {
-    const checkQwen = async () => {
-      const cached = await hasCachedQwenWeights();
-      const ready = isQwenModelReadyFlag();
-      setIsQwenAvailable(cached || ready);
+    const checkMistral = async () => {
+      const cached = await hasCachedMistralWeights();
+      const ready = isMistralModelReadyFlag();
+      setIsMistralAvailable(cached || ready);
     };
-    checkQwen();
+    checkMistral();
   }, []);
 
   const availableModels = [
@@ -41,14 +44,14 @@ export function LocalModelSelector({ value, onValueChange }: LocalModelSelectorP
       chefSlug: "google",
       providers: ["google"],
     },
-    ...(isQwenAvailable
+    ...(isMistralAvailable
       ? [
           {
-            id: "qwen3-0.6b",
-            name: "Qwen3-0.6B",
-            chef: "Alibaba",
-            chefSlug: "alibaba",
-            providers: ["alibaba"],
+            id: "mistral-3-3b",
+            name: "Ministral 3 3B",
+            chef: "Mistral AI",
+            chefSlug: "mistral",
+            providers: ["mistral"],
           },
         ]
       : []),
