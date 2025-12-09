@@ -1,5 +1,5 @@
 import { useChat } from "@ai-sdk/react";
-import { ClientSideChatTransport } from "@/lib/client-side-chat-transport";
+import { BuiltInAIChatTransport } from "@/lib/built-in-ai-chat-transport";
 import {
   Conversation,
   ConversationContent,
@@ -73,7 +73,7 @@ export function ChatInterface() {
   }, []);
 
   // Create a stable transport instance and warm it up
-  const chatTransport = useMemo(() => new ClientSideChatTransport(), []);
+  const chatTransport = useMemo(() => new BuiltInAIChatTransport(), []);
   
   useEffect(() => {
     chatTransport.warmup().catch(console.error);

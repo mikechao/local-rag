@@ -54,7 +54,7 @@ function getLatestUserMessage(
  *
  * @implements {ChatTransport<LocalRAGMessage>}
  */
-export class ClientSideChatTransport
+export class BuiltInAIChatTransport
   implements ChatTransport<LocalRAGMessage>
 {
   private chatAgent: ToolLoopAgent<CallOptions>;
