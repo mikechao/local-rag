@@ -6,7 +6,8 @@ import {
   createAgentUIStream,
   generateText,
   convertToModelMessages,
-  Output
+  Output,
+  smoothStream
 } from "ai";
 import { z } from "zod";
 import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
@@ -153,6 +154,9 @@ export class ClientSideChatTransport
         retrievalResults,
       },
       abortSignal,
+      experimental_transform: smoothStream({
+        delayInMs: 10,
+      }),
     });
   }
 
