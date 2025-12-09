@@ -139,20 +139,14 @@ export class ClientSideChatTransport
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal } = options;
-    const totalStart = performance.now();
 
-    const retrievalStart = performance.now();
     const retrievalResults: RetrievalResult[] | undefined = await this.getRetrievalResults(
       messages,
       abortSignal,
     );
-    console.log(`[Timing] Retrieval phase: ${(performance.now() - retrievalStart).toFixed(2)}ms`);
     
     // createAgentUIStream expects UI messages (with id and parts), not model messages
-    const streamStart = performance.now();
-    console.log(`[Timing] Starting chat stream at ${(streamStart - totalStart).toFixed(2)}ms from message send`);
-    
-    const stream = await createAgentUIStream({
+    return createAgentUIStream({
       agent: this.chatAgent,
       messages: messages,
       options: {
@@ -160,22 +154,6 @@ export class ClientSideChatTransport
       },
       abortSignal,
     });
-
-    // Wrap the stream to log when first chunk arrives
-    let firstChunkLogged = false;
-    const wrappedStream = stream.pipeThrough(
-      new TransformStream<UIMessageChunk, UIMessageChunk>({
-        transform(chunk, controller) {
-          if (!firstChunkLogged) {
-            console.log(`[Timing] First chunk received at ${(performance.now() - totalStart).toFixed(2)}ms from message send`);
-            firstChunkLogged = true;
-          }
-          controller.enqueue(chunk);
-        },
-      })
-    );
-
-    return wrappedStream;
   }
 
   async getRetrievalResults(
