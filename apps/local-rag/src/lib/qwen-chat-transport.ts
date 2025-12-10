@@ -8,16 +8,16 @@ import {
     wrapLanguageModel, 
     extractReasoningMiddleware 
 } from "ai";
-import { getSmolLM3Model } from "./models/smolLM3Model";
+import { getQwenModel } from "./models/qwenModel";
 import { LocalRAGMessage } from "./local-rag-message";
 
-export class SmolLM3ChatTransport implements ChatTransport<LocalRAGMessage> {
+export class QwenChatTransport implements ChatTransport<LocalRAGMessage> {
 
   private wrappedModel: LanguageModel
 
   constructor() {
     this.wrappedModel = wrapLanguageModel({
-      model: getSmolLM3Model(),
+      model: getQwenModel(),
       middleware: extractReasoningMiddleware({ tagName: 'think'})
     })
   }

@@ -1,6 +1,6 @@
 import { useChat } from "@ai-sdk/react";
 import { BuiltInAIChatTransport } from "@/lib/built-in-ai-chat-transport";
-import { SmolLM3ChatTransport } from "@/lib/smolLM3-chat-transport";
+import { QwenChatTransport } from "@/lib/qwen-chat-transport";
 import {
   Conversation,
   ConversationContent,
@@ -76,7 +76,7 @@ export function ChatInterface() {
 
   // Choose a transport based on the selected local model
   const chatTransport = useMemo(() => {
-    if (selectedModel === "smollm3-3b") return new SmolLM3ChatTransport();
+    if (selectedModel === "qwen3-0.6b") return new QwenChatTransport();
     return new BuiltInAIChatTransport();
   }, [selectedModel]);
 

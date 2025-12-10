@@ -13,10 +13,7 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
-import {
-  hasCachedSmolLM3Weights,
-  isSmolLM3ModelReadyFlag,
-} from "@/lib/models/smolLM3Model";
+import { hasCachedQwenWeights, isQwenModelReadyFlag } from "@/lib/models/qwenModel";
 
 interface LocalModelSelectorProps {
   value: string;
@@ -25,15 +22,15 @@ interface LocalModelSelectorProps {
 
 export function LocalModelSelector({ value, onValueChange }: LocalModelSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [isMistralAvailable, setIsMistralAvailable] = useState(false);
+  const [isQwenAvailable, setIsQwenAvailable] = useState(false);
 
   useEffect(() => {
-    const checkMistral = async () => {
-      const cached = await hasCachedSmolLM3Weights();
-      const ready = isSmolLM3ModelReadyFlag();
-      setIsMistralAvailable(cached || ready);
+    const checkQwen = async () => {
+      const cached = await hasCachedQwenWeights();
+      const ready = isQwenModelReadyFlag();
+      setIsQwenAvailable(cached || ready);
     };
-    checkMistral();
+    checkQwen();
   }, []);
 
   const availableModels = [
@@ -44,14 +41,14 @@ export function LocalModelSelector({ value, onValueChange }: LocalModelSelectorP
       chefSlug: "google",
       providers: ["google"],
     },
-    ...(isMistralAvailable
+    ...(isQwenAvailable
       ? [
           {
-            id: "smollm3-3b",
-            name: "SmolLM3 3B",
-            chef: "Hugging Face",
-            chefSlug: "huggingface",
-            providers: ["huggingface"],
+            id: "qwen3-0.6b",
+            name: "Qwen3-0.6B",
+            chef: "Alibaba",
+            chefSlug: "alibaba",
+            providers: ["alibaba"],
           },
         ]
       : []),
