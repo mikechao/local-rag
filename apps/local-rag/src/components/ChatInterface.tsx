@@ -73,18 +73,26 @@ export function ChatInterface() {
     warmupEmbeddingModel().catch(console.error);
   }, []);
 
-  // Create a stable transport instance and warm it up
-  const chatTransport = useMemo(() => new BuiltInAIChatTransport(), []);
-  
+  // Choose a transport based on the selected local model
+  const chatTransport = useMemo(() => {
+    if (selectedModel === "smollm3-3b") return new SmolLM3ChatTransport();
+    return new BuiltInAIChatTransport();
+  }, [selectedModel]);
+
+  // Warm up when the transport supports it (BuiltInAIChatTransport only)
   useEffect(() => {
-    chatTransport.warmup().catch(console.error);
+    if (chatTransport instanceof BuiltInAIChatTransport) {
+      chatTransport.warmup().catch(console.error);
+    }
   }, [chatTransport]);
 
   const [input, setInput] = useState("");
   
+  const chatId = `local-chat-${selectedModel}`;
+
   const { messages, sendMessage, error, status } = useChat({
     transport: chatTransport,
-    id: "local-chat",
+    id: chatId,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls
   });
 
