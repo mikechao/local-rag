@@ -4,18 +4,22 @@ import {
     LanguageModel,
     UIMessageChunk,
     convertToModelMessages,
-    streamText
+    streamText,
+    wrapLanguageModel, 
+    extractReasoningMiddleware 
 } from "ai";
-import { ensureSmolLM3ModelReady, getSmolLM3Model } from "./models/smolLM3Model";
+import { getSmolLM3Model } from "./models/smolLM3Model";
 import { LocalRAGMessage } from "./local-rag-message";
 
 export class SmolLM3ChatTransport implements ChatTransport<LocalRAGMessage> {
 
-  private model: LanguageModel;
+  private wrappedModel: LanguageModel
 
   constructor() {
-    ensureSmolLM3ModelReady()
-    this.model = getSmolLM3Model();
+    this.wrappedModel = wrapLanguageModel({
+      model: getSmolLM3Model(),
+      middleware: extractReasoningMiddleware({ tagName: 'think'})
+    })
   }
 
   async sendMessages(
@@ -27,7 +31,7 @@ export class SmolLM3ChatTransport implements ChatTransport<LocalRAGMessage> {
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal } = options;
     const stream = streamText({
-      model: this.model,
+      model: this.wrappedModel,
       messages: convertToModelMessages(messages),
       abortSignal,
     })

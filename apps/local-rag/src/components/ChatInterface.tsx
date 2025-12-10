@@ -47,6 +47,7 @@ import { useSpeechPlayer } from "@/hooks/use-speech-player";
 import { warmupEmbeddingModel } from "@/lib/embedding-worker";
 import { Volume2, VolumeX } from "lucide-react";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
+import { LocalRAGMessage } from "@/lib/local-rag-message";
 
 export function ChatInterface() {
   const [isModelAvailable] = useState<boolean | null>(true);
@@ -90,88 +91,79 @@ export function ChatInterface() {
   
   const chatId = `local-chat-${selectedModel}`;
 
-  const { messages, sendMessage, error, status } = useChat({
+  const { messages, sendMessage, error, status } = useChat<LocalRAGMessage>({
     transport: chatTransport,
     id: chatId,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls
   });
-
+  
   useEffect(() => {
     if (!autoSpeak) {
-        if (textStreamRef.current) {
-            textStreamRef.current.close();
-            textStreamRef.current = null;
-            stop();
-        }
-        return;
+      if (textStreamRef.current) {
+        textStreamRef.current.close();
+        textStreamRef.current = null;
+        stop();
+      }
+      return;
     }
-    
+
     const lastMessage = messages[messages.length - 1];
-    if (!lastMessage || lastMessage.role !== 'assistant') return;
+    if (!lastMessage || lastMessage.role !== "assistant") return;
 
     // If we just turned on auto-speak and the message is already done, don't speak it
-    if (status === 'ready' && lastMessage.id !== lastMessageIdRef.current) {
+    if (status === "ready" && lastMessage.id !== lastMessageIdRef.current) {
       lastMessageIdRef.current = lastMessage.id;
       const fullText = getMessageText(lastMessage);
-      const cleanText = stripThinkingStream(fullText);
-      lastMessageLengthRef.current = cleanText.length;
+      lastMessageLengthRef.current = fullText.length;
       return;
     }
 
     // New message started
     if (lastMessage.id !== lastMessageIdRef.current) {
-        lastMessageIdRef.current = lastMessage.id;
-        lastMessageLengthRef.current = 0;
-        
-        // Stop previous if any
-        if (textStreamRef.current) {
-            textStreamRef.current.close();
-        }
-        stop();
+      lastMessageIdRef.current = lastMessage.id;
+      lastMessageLengthRef.current = 0;
 
-        // Start new stream
-        const stream = new TextStream();
-        textStreamRef.current = stream;
-        
-        // Start playing (fire and forget, handled by hook)
-        const audioGenerator = generateSpeechStream(stream);
-        playStream(audioGenerator);
+      // Stop previous if any
+      if (textStreamRef.current) {
+        textStreamRef.current.close();
+      }
+      stop();
+
+      // Start new stream
+      const stream = new TextStream();
+      textStreamRef.current = stream;
+
+      // Start playing (fire and forget, handled by hook)
+      const audioGenerator = generateSpeechStream(stream);
+      playStream(audioGenerator);
     }
 
     // Calculate delta
     const fullText = getMessageText(lastMessage);
-    const cleanText = stripThinkingStream(fullText);
-    
-    const newLength = cleanText.length;
-    
-    // Handle case where text shrinks (e.g. <think> block formed)
+
+    const newLength = fullText.length;
+
+    // Handle case where text shrinks (shouldn't now, but keep guard)
     if (newLength < lastMessageLengthRef.current) {
-        lastMessageLengthRef.current = newLength;
+      lastMessageLengthRef.current = newLength;
     }
 
-    const delta = cleanText.slice(lastMessageLengthRef.current);
-    
+    const delta = fullText.slice(lastMessageLengthRef.current);
+
     if (delta) {
-        textStreamRef.current?.push(delta);
-        lastMessageLengthRef.current = newLength;
+      textStreamRef.current?.push(delta);
+      lastMessageLengthRef.current = newLength;
     }
 
-    if (status === 'ready' && lastMessage.id === lastMessageIdRef.current) {
-        textStreamRef.current?.close();
-        textStreamRef.current = null;
+    if (status === "ready" && lastMessage.id === lastMessageIdRef.current) {
+      textStreamRef.current?.close();
+      textStreamRef.current = null;
     }
-
   }, [messages, status, autoSpeak, playStream, stop]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
   };
-
-  const stripThinking = (text: string) =>
-    text.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, "").trim();
-
-  const stripThinkingStream = (text: string) =>
-    text.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, "");
 
   const getMessageText = (message: any) => {
     if (message.content) return message.content;
@@ -188,12 +180,12 @@ export function ChatInterface() {
     if (message.parts) {
       return message.parts
         .filter((part: any) => part.type === 'text')
-        .map((part: any) => stripThinking(part.text))
+        .map((part: any) => part.text?.trim())
         .filter(Boolean)
         .join("\n\n");
     }
 
-    return stripThinking(getMessageText(message));
+    return getMessageText(message);
   };
 
   const getAttachments = (message: any) => {
@@ -253,33 +245,10 @@ export function ChatInterface() {
                   {message.parts ? (
                     message.parts.map((part, index) => {
                       if (part.type === "text") {
-                      const thinkMatch = part.text.match(/<think>([\s\S]*?)(?:<\/think>|$)/);
-                      if (thinkMatch) {
-                        const reasoning = thinkMatch[1];
-                        const hasFinishedThinking = part.text.includes("</think>");
-                        const content = part.text.replace(/<think>[\s\S]*?(?:<\/think>|$)/, "").trim();
-                        
                         return (
-                          <div key={index} className="flex flex-col gap-2">
-                            <Reasoning
-                              isStreaming={
-                                status === "streaming" &&
-                                index === message.parts.length - 1 &&
-                                message.id === messages[messages.length - 1].id &&
-                                !hasFinishedThinking
-                              }
-                            >
-                              <ReasoningTrigger />
-                              <ReasoningContent>{reasoning}</ReasoningContent>
-                            </Reasoning>
-                            {content && <MessageResponse>{content}</MessageResponse>}
-                          </div>
+                          <MessageResponse key={index}>{part.text}</MessageResponse>
                         );
                       }
-                      return (
-                        <MessageResponse key={index}>{part.text}</MessageResponse>
-                      );
-                    }
                     if (part.type === "reasoning") {
                       return (
                         <Reasoning
