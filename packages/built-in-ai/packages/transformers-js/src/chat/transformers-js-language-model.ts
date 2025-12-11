@@ -719,47 +719,31 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       if (jsonSchema) {
         const extractedJson = extractJsonPayload(generatedText);
 
-        if (extractedJson) {
-          try {
-            const parsedJson = JSON.parse(extractedJson);
-            const parsedSchema = JSON.parse(jsonSchema); // Assuming jsonSchema is a stringified JSON schema
-
-            const validationResult = z.object(parsedSchema).safeParse(parsedJson);
-
-            if (validationResult.success) {
-              return {
-                content: [{ type: "text", text: extractedJson }] as LanguageModelV3Content[],
-                finishReason: "stop" as LanguageModelV3FinishReason,
-                usage: isVision
-                  ? {
-                      inputTokens: undefined,
-                      outputTokens: undefined,
-                      totalTokens: undefined,
-                    }
-                  : {
-                      inputTokens: inputLength,
-                      outputTokens: extractedJson.length,
-                      totalTokens: inputLength + extractedJson.length,
-                    },
-                request: { body: { messages: promptMessages, ...generationOptions } },
-                warnings,
-              };
-            } else {
-              // Validation failed
-              const errorMessage = `JSON validation failed: ${validationResult.error.message}`;
-              if (generationOptions.responseFormatFailHard) {
-                throw new LoadSettingError({
-                  message: errorMessage,
-                });
-              }
-              warnings.push({
-                type: "other", // Use a valid warning type
-                message: errorMessage,
-              });
-              // Fallback to existing text generation logic
-            }
-          } catch (jsonError: any) {
-            // JSON parsing failed
+                if (extractedJson) {
+                  try {
+                    // Verify it is valid JSON
+                    JSON.parse(extractedJson);
+                    // We rely on AI SDK to validate against schema downstream as we cannot easily 
+                    // reconstitute the Zod schema from the JSON Schema object here.
+        
+                    return {
+                      content: [{ type: "text", text: extractedJson }] as LanguageModelV3Content[],
+                      finishReason: "stop" as LanguageModelV3FinishReason,
+                      usage: isVision
+                        ? {
+                            inputTokens: undefined,
+                            outputTokens: undefined,
+                            totalTokens: undefined,
+                          }
+                        : {
+                            inputTokens: inputLength,
+                            outputTokens: extractedJson.length,
+                            totalTokens: inputLength + extractedJson.length,
+                          },
+                      request: { body: { messages: promptMessages, ...generationOptions } },
+                      warnings,
+                    };
+                  } catch (jsonError: any) {            // JSON parsing failed
             const errorMessage = `JSON parsing failed: ${jsonError.message}`;
             if (generationOptions.responseFormatFailHard) {
               throw new LoadSettingError({
@@ -880,6 +864,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
     const result = await new Promise<{ 
       text: string;
       toolCalls?: ParsedToolCall[];
+      warnings?: SharedV3Warning[];
     }>((resolve, reject) => {
       const onMessage = (e: MessageEvent) => {
         const msg = e.data;
@@ -892,6 +877,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           resolve({
             text,
             toolCalls: msg.toolCalls,
+            warnings: msg.warnings,
           });
         } else if (msg.status === "error") {
           worker.removeEventListener("message", onMessage);
@@ -916,6 +902,10 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         options.abortSignal.addEventListener("abort", onAbort);
       }
     });
+
+    if (result.warnings) {
+      warnings.push(...result.warnings);
+    }
 
     // Handle tool calls if present
     if (result.toolCalls && result.toolCalls.length > 0) {

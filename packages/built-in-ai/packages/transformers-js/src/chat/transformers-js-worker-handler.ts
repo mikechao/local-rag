@@ -332,24 +332,13 @@ export class TransformersJSWorkerHandler {
       const extractedJson = extractJsonPayload(finalOutput);
       if (extractedJson) {
         try {
-          const parsedJson = JSON.parse(extractedJson);
-          const parsedSchema = JSON.parse(jsonSchema);
-          const validationResult = z.object(parsedSchema).safeParse(parsedJson);
-
-          if (validationResult.success) {
-            finalOutput = extractedJson; // Valid JSON as final output
-          } else {
-            // Validation failed
-            finalWarnings.push({
-              type: "invalid_response_format",
-              message: `JSON validation failed in worker: ${validationResult.error.message}`,
-            });
-            // Fallback to original decoded text
-          }
+          // Verify it is valid JSON
+          JSON.parse(extractedJson);
+          finalOutput = extractedJson; // Valid JSON as final output
         } catch (jsonError: any) {
           // JSON parsing failed
           finalWarnings.push({
-            type: "invalid_response_format",
+            type: "other",
             message: `JSON parsing failed in worker: ${jsonError.message}`,
           });
           // Fallback to original decoded text
@@ -357,7 +346,7 @@ export class TransformersJSWorkerHandler {
       } else {
         // No JSON extracted
         finalWarnings.push({
-          type: "invalid_response_format",
+          type: "other",
           message: "Model did not return valid JSON in worker.",
         });
         // Fallback to original decoded text

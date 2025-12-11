@@ -44,6 +44,7 @@ export type WorkerResponse =
       tps?: number;
       numTokens?: number;
       toolCalls?: any[]; // Parsed tool calls from the response
+      warnings?: any[]; // Warnings from the worker
     }
   | ProgressInfo;
 
