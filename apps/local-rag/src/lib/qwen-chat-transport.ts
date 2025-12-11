@@ -19,7 +19,32 @@ import {
 import { getQwenModel } from "./models/qwenModel";
 import { LocalRAGMessage } from "./local-rag-message";
 import { z } from "zod";
-import { retrieveChunks } from "./retrieval";
+import { RetrievalResult, retrieveChunks } from "./retrieval";
+
+const retrievalResultSchema = z.object({
+  chunkIds: z.array(z.string()),
+  docId: z.string(),
+  docType: z.string(),
+  pageNumber: z.number(),
+  headingPath: z.string().nullable().optional(),
+  text: z.string(),
+  similarity: z.number(),
+}) satisfies z.ZodType<RetrievalResult>;
+
+const shouldRetrieveSchema = z.object({
+  shouldRetrieve: z.boolean().describe("Whether the user's question requires retrieval of relevant documents."),
+  userQuestion: z.string().describe("The user's question that may require retrieval."),
+})
+
+// Returns the most recent message sent by the user, or undefined if none exist.
+function getLatestUserMessage(
+  messages: LocalRAGMessage[],
+): LocalRAGMessage | undefined {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i].role === "user") return messages[i];
+  }
+  return undefined;
+}
 
 export class QwenChatTransport implements ChatTransport<LocalRAGMessage> {
 
@@ -66,6 +91,11 @@ export class QwenChatTransport implements ChatTransport<LocalRAGMessage> {
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal } = options;
 
+    const retrievalResults: RetrievalResult[] | undefined = await this.getRetrievalResults(
+      messages,
+      abortSignal,
+    );
+
     return createAgentUIStream({
       agent: this.chatAgent,
       messages,
@@ -82,4 +112,42 @@ export class QwenChatTransport implements ChatTransport<LocalRAGMessage> {
     // Client-side AI doesn't support stream reconnection
     return null;
   }
+
+    async getRetrievalResults(
+      messages: LocalRAGMessage[],
+      abortSignal: AbortSignal | undefined,
+    ): Promise<RetrievalResult[] | undefined> {
+      const lastUserMessage = getLatestUserMessage(messages);
+      if (lastUserMessage === undefined) {
+        return undefined;
+      }
+      const systemMessage = {
+        role: "assistant" as const,
+        parts: [
+          {
+            type: "text" as const,
+            text: "Determine if the user message requires retrieval from the knowledge base to provide a better answer." 
+              + " The knowledge base contains information about Stargate Atlantis.",
+          }
+        ],
+        id: "system-message-id"
+      };
+      const before = performance.now();
+      const result = await generateText({
+        model: this.model,
+        messages: convertToModelMessages([systemMessage, lastUserMessage]),
+        output: Output.object({
+          schema: shouldRetrieveSchema,
+        }),
+        abortSignal,
+      })
+      const after = performance.now();
+      console.log(`retrieval decision took ${after - before} ms shouldRetrieve: ${result.output.shouldRetrieve} userQuestion: ${result.output.userQuestion}`);
+      const { shouldRetrieve, userQuestion } = result.output;
+      if (!shouldRetrieve) {
+        return undefined;
+      }
+      const retrievalResults = await retrieveChunks(userQuestion);
+      return retrievalResults.results;
+    }
 }
