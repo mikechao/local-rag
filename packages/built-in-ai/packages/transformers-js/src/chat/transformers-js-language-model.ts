@@ -43,7 +43,11 @@ import {
   prependSystemPromptToMessages,
   extractSystemPrompt,
 } from "../utils/prompt-utils";
+import { summarizeSchema } from "../utils/schema-utils";
+import { extractJsonPayload } from "../utils/json-utils";
 import { ToolCallFenceDetector } from "../streaming/tool-call-detector";
+import { JsonFenceDetector } from "../streaming/json-fence-detector";
+import { z } from "zod";
 
 declare global {
   interface Navigator {
@@ -155,7 +159,7 @@ class CallbackTextStreamer extends TextStreamer {
  */
 function extractToolName(content: string): string | null {
   // For JSON mode: {"name":"toolName"
-  const jsonMatch = content.match(/\{\s*"name"\s*:\s*"([^"]+)"/);
+  const jsonMatch = content.match(/\{\s*\"name\"\s*:\s*\"([^\"]+)\"/);
   if (jsonMatch) {
     return jsonMatch[1];
   }
@@ -167,7 +171,7 @@ function extractToolName(content: string): string | null {
  * Returns the substring after `"arguments":` (best-effort for partial JSON).
  */
 function extractArgumentsContent(content: string): string {
-  const match = content.match(/"arguments"\s*:\s*/);
+  const match = content.match(/\"arguments\"\s*:\s*/);
   if (!match || match.index === undefined) {
     return "";
   }
@@ -438,6 +442,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
     warnings: SharedV3Warning[];
     generationOptions: GenerationOptions;
     functionTools: ToolDefinition[];
+    jsonSchema?: string;
   } {
     const warnings: SharedV3Warning[] = [];
 
@@ -492,13 +497,24 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       );
     }
 
+    let jsonSchema: string | undefined;
     if (responseFormat?.type === "json") {
-      warnings.push(
-        createUnsupportedSettingWarning(
-          "responseFormat",
-          "JSON response format is not supported by TransformersJS",
-        ),
-      );
+      if (responseFormat.schema) {
+        jsonSchema = summarizeSchema(responseFormat.schema);
+        warnings.push(
+          createUnsupportedSettingWarning(
+            "responseFormat.schema",
+            "JSON response format with schema is experimental and relies on prompt-based guidance. Model compliance may vary.",
+          ),
+        );
+      } else {
+        warnings.push(
+          createUnsupportedSettingWarning(
+            "responseFormat",
+            "JSON response format is experimental and relies on prompt-based guidance. Model compliance may vary.",
+          ),
+        );
+      }
     }
 
     if (seed != null) {
@@ -531,6 +547,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       top_p: topP,
       top_k: topK,
       do_sample: temperature !== undefined && temperature > 0,
+      responseFormatFailHard: responseFormat?.type === "json" ? (responseFormat as any).failHard ?? false : undefined,
     };
 
     return {
@@ -538,6 +555,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       warnings,
       generationOptions,
       functionTools,
+      jsonSchema,
     };
   }
 
@@ -587,7 +605,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
    * Generates a complete text response using TransformersJS
    */
   public async doGenerate(options: LanguageModelV3CallOptions) {
-    const { messages, warnings, generationOptions, functionTools } =
+    const { messages, warnings, generationOptions, functionTools, jsonSchema } =
       this.getArgs(options);
 
     // Use worker if provided and in browser environment
@@ -598,14 +616,23 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         generationOptions,
         options,
         functionTools,
+        jsonSchema,
+        generationOptions.responseFormatFailHard,
       );
     }
 
     // Extract system prompt from messages and build combined prompt with tool calling
-    const {
+    let {
       systemPrompt: originalSystemPrompt,
       messages: messagesWithoutSystem,
     } = extractSystemPrompt(messages);
+
+    // If JSON schema is provided, prepend a system prompt for JSON output
+    if (jsonSchema) {
+      originalSystemPrompt =
+        `Return ONLY valid JSON matching this schema: ${jsonSchema}. No prose.` +
+        (originalSystemPrompt ? `\n${originalSystemPrompt}` : "");
+    }
 
     const systemPrompt = buildJsonToolSystemPrompt(
       originalSystemPrompt,
@@ -688,6 +715,79 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         );
       }
 
+      // If jsonSchema is provided, try to extract and validate JSON
+      if (jsonSchema) {
+        const extractedJson = extractJsonPayload(generatedText);
+
+        if (extractedJson) {
+          try {
+            const parsedJson = JSON.parse(extractedJson);
+            const parsedSchema = JSON.parse(jsonSchema); // Assuming jsonSchema is a stringified JSON schema
+
+            const validationResult = z.object(parsedSchema).safeParse(parsedJson);
+
+            if (validationResult.success) {
+              return {
+                content: [{ type: "text", text: extractedJson }] as LanguageModelV3Content[],
+                finishReason: "stop" as LanguageModelV3FinishReason,
+                usage: isVision
+                  ? {
+                      inputTokens: undefined,
+                      outputTokens: undefined,
+                      totalTokens: undefined,
+                    }
+                  : {
+                      inputTokens: inputLength,
+                      outputTokens: extractedJson.length,
+                      totalTokens: inputLength + extractedJson.length,
+                    },
+                request: { body: { messages: promptMessages, ...generationOptions } },
+                warnings,
+              };
+            } else {
+              // Validation failed
+              const errorMessage = `JSON validation failed: ${validationResult.error.message}`;
+              if (generationOptions.responseFormatFailHard) {
+                throw new LoadSettingError({
+                  message: errorMessage,
+                });
+              }
+              warnings.push({
+                type: "other", // Use a valid warning type
+                message: errorMessage,
+              });
+              // Fallback to existing text generation logic
+            }
+          } catch (jsonError: any) {
+            // JSON parsing failed
+            const errorMessage = `JSON parsing failed: ${jsonError.message}`;
+            if (generationOptions.responseFormatFailHard) {
+              throw new LoadSettingError({
+                message: errorMessage,
+              });
+            }
+            warnings.push({
+              type: "other", // Use a valid warning type
+              message: errorMessage,
+            });
+            // Fallback to existing text generation logic
+          }
+        } else {
+          // No JSON extracted
+          const errorMessage = "Model did not return valid JSON.";
+          if (generationOptions.responseFormatFailHard) {
+            throw new LoadSettingError({
+              message: errorMessage,
+            });
+          }
+          warnings.push({
+            type: "other", // Use a valid warning type
+            message: errorMessage,
+          });
+          // Fallback to existing text generation logic
+        }
+      }
+
       // Parse JSON tool calls from response
       const { toolCalls, textContent } = parseJsonFunctionCalls(generatedText);
 
@@ -757,7 +857,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       };
     } catch (error) {
       throw new Error(
-        `TransformersJS generation failed: ${
+        `TransformersJS generation failed: ${ 
           error instanceof Error ? error.message : "Unknown error"
         }`,
       );
@@ -770,12 +870,14 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
     generationOptions: GenerationOptions,
     options: LanguageModelV3CallOptions,
     functionTools: ToolDefinition[],
+    jsonSchema?: string,
+    responseFormatFailHard?: boolean,
   ) {
     const worker = this.config.worker!;
 
     await this.initializeWorker();
 
-    const result = await new Promise<{
+    const result = await new Promise<{ 
       text: string;
       toolCalls?: ParsedToolCall[];
     }>((resolve, reject) => {
@@ -784,8 +886,8 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         if (!msg) return;
         if (msg.status === "complete") {
           worker.removeEventListener("message", onMessage);
-          const text = Array.isArray(msg.output)
-            ? String(msg.output[0] ?? "")
+          const text = Array.isArray(msg.output) 
+            ? String(msg.output[0] ?? "") 
             : String(msg.output ?? "");
           resolve({
             text,
@@ -802,6 +904,8 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         data: messages,
         generationOptions,
         tools: functionTools.length > 0 ? functionTools : undefined,
+        jsonSchema,
+        responseFormatFailHard,
       });
 
       if (options.abortSignal) {
@@ -933,7 +1037,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       throw error;
     }
 
-    const { messages, warnings, generationOptions, functionTools } = converted;
+    const { messages, warnings, generationOptions, functionTools, jsonSchema } = converted;
 
     // Use worker if available and in browser environment
     if (this.config.worker && isBrowserEnvironment()) {
@@ -943,14 +1047,23 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         generationOptions,
         options,
         functionTools,
+        jsonSchema,
+        generationOptions.responseFormatFailHard,
       );
     }
 
     // Extract system prompt from messages and build combined prompt with tool calling
-    const {
+    let {
       systemPrompt: originalSystemPrompt,
       messages: messagesWithoutSystem,
     } = extractSystemPrompt(messages);
+
+    // If JSON schema is provided, prepend a system prompt for JSON output
+    if (jsonSchema) {
+      originalSystemPrompt =
+        `Return ONLY valid JSON matching this schema: ${jsonSchema}. No prose.` +
+        (originalSystemPrompt ? `\n${originalSystemPrompt}` : "");
+    }
 
     const systemPrompt = buildJsonToolSystemPrompt(
       originalSystemPrompt,
@@ -1082,8 +1195,12 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           let inputLength = isVision ? 0 : inputs.input_ids.data.length;
           let outputTokens = 0;
 
-          // Use ToolCallFenceDetector for real-time streaming
-          const fenceDetector = new ToolCallFenceDetector();
+          // Use JsonFenceDetector for real-time streaming if jsonSchema is present
+          const jsonFenceDetector = jsonSchema ? new JsonFenceDetector() : undefined;
+          let jsonExtractedComplete = false;
+
+          // Use ToolCallFenceDetector for real-time streaming (tool calls take precedence)
+          const toolCallFenceDetector = new ToolCallFenceDetector();
           let accumulatedText = "";
 
           // Streaming tool call state
@@ -1095,181 +1212,82 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           let toolCallDetected = false; // Add flag to stop processing after tool call
 
           const streamCallback = (text: string) => {
-            if (aborted || toolCallDetected) return; // Stop if tool call detected
+            if (aborted || toolCallDetected || jsonExtractedComplete) return;
 
             outputTokens++;
             accumulatedText += text;
 
-            // Add chunk to detector
-            fenceDetector.addChunk(text);
+            // If jsonFenceDetector is active and not yet complete, feed chunk to it.
+            // JSON parsing takes precedence in terms of processing the stream, but tool-call detection
+            // can still interrupt the generation process completely.
+            if (jsonFenceDetector && !jsonExtractedComplete) {
+              jsonFenceDetector.addChunk(text);
+              const jsonResult = jsonFenceDetector.process();
 
-            // Process buffer using streaming detection
-            while (
-              fenceDetector.hasContent() &&
-              !aborted &&
-              !toolCallDetected
-            ) {
-              const wasInsideFence = insideFence;
-              const result = fenceDetector.detectStreamingFence();
-              insideFence = result.inFence;
-
-              let madeProgress = false;
-
-              if (!wasInsideFence && result.inFence) {
-                if (result.safeContent) {
-                  emitTextDelta(result.safeContent);
-                  madeProgress = true;
-                }
-
-                currentToolCallId = `call_${Date.now()}_${Math.random()
-                  .toString(36)
-                  .slice(2, 9)}`;
-                toolInputStartEmitted = false;
-                accumulatedFenceContent = "";
-                streamedArgumentsLength = 0;
-                insideFence = true;
-
-                continue;
+              if (jsonResult.delta) {
+                emitTextDelta(jsonResult.delta);
               }
 
-              if (result.completeFence) {
-                madeProgress = true;
-                if (result.safeContent) {
-                  accumulatedFenceContent += result.safeContent;
+              if (jsonResult.complete || jsonResult.failed) {
+                jsonExtractedComplete = true;
+                // If the model is meant to output *only* JSON, we can interrupt generation here.
+                // Otherwise, we let it continue and emit remaining text.
+                self.stoppingCriteria.interrupt(); // Stop generation once JSON is extracted
+
+                if (jsonResult.failed && generationOptions.responseFormatFailHard) {
+                  aborted = true; // Mark as aborted so finishStream handles it
+                  controller.enqueue({
+                    type: "error",
+                    error: new LoadSettingError({
+                      message: jsonResult.errorMessage || "JSON extraction failed during streaming.",
+                    }),
+                  });
+                  controller.close();
+                  return; // Stop processing further
                 }
+                return; // Do not pass to toolCallFenceDetector if JSON is being handled
+              }
+            }
 
-                if (toolInputStartEmitted && currentToolCallId) {
-                  const argsContent = extractArgumentsContent(
-                    accumulatedFenceContent,
-                  );
-                  if (argsContent.length > streamedArgumentsLength) {
-                    const delta = argsContent.slice(streamedArgumentsLength);
-                    streamedArgumentsLength = argsContent.length;
-                    if (delta.length > 0) {
-                      controller.enqueue({
-                        type: "tool-input-delta",
-                        id: currentToolCallId,
-                        delta,
-                      });
-                    }
+            // Only proceed with tool call detection if JSON extraction is not active or completed/failed,
+            // or if we explicitly want both. For now, assume mutual exclusivity for emitting content.
+            if (!jsonFenceDetector || jsonExtractedComplete) {
+              // Add chunk to tool call detector
+              toolCallFenceDetector.addChunk(text);
+
+              // Process buffer using streaming detection
+              while (
+                toolCallFenceDetector.hasContent() &&
+                !aborted &&
+                !toolCallDetected
+              ) {
+                const wasInsideFence = insideFence;
+                const result = toolCallFenceDetector.detectStreamingFence();
+                insideFence = result.inFence;
+
+                let madeProgress = false;
+
+                if (!wasInsideFence && result.inFence) {
+                  if (result.safeContent) {
+                    emitTextDelta(result.safeContent);
+                    madeProgress = true;
                   }
-                }
 
-                const parsed = parseJsonFunctionCalls(result.completeFence);
-                const parsedToolCalls = parsed.toolCalls;
-                const selectedToolCalls = parsedToolCalls.slice(0, 1);
-
-                if (selectedToolCalls.length === 0) {
-                  emitTextDelta(result.completeFence);
-                  if (result.textAfterFence) {
-                    emitTextDelta(result.textAfterFence);
-                  }
-
-                  currentToolCallId = null;
+                  currentToolCallId = `call_${Date.now()}_${Math.random()
+                    .toString(36)
+                    .slice(2, 9)}`;
                   toolInputStartEmitted = false;
                   accumulatedFenceContent = "";
                   streamedArgumentsLength = 0;
-                  insideFence = false;
+                  insideFence = true;
+
                   continue;
                 }
 
-                if (selectedToolCalls.length > 0 && currentToolCallId) {
-                  selectedToolCalls[0].toolCallId = currentToolCallId;
-                }
-
-                for (const [index, call] of selectedToolCalls.entries()) {
-                  const toolCallId =
-                    index === 0 && currentToolCallId
-                      ? currentToolCallId
-                      : call.toolCallId;
-                  const toolName = call.toolName;
-                  const argsJson = JSON.stringify(call.args ?? {});
-
-                  if (toolCallId === currentToolCallId) {
-                    if (!toolInputStartEmitted) {
-                      controller.enqueue({
-                        type: "tool-input-start",
-                        id: toolCallId,
-                        toolName,
-                      });
-                      toolInputStartEmitted = true;
-                    }
-
-                    const argsContent = extractArgumentsContent(
-                      accumulatedFenceContent,
-                    );
-                    if (argsContent.length > streamedArgumentsLength) {
-                      const delta = argsContent.slice(streamedArgumentsLength);
-                      streamedArgumentsLength = argsContent.length;
-                      if (delta.length > 0) {
-                        controller.enqueue({
-                          type: "tool-input-delta",
-                          id: toolCallId,
-                          delta,
-                        });
-                      }
-                    }
-                  } else {
-                    controller.enqueue({
-                      type: "tool-input-start",
-                      id: toolCallId,
-                      toolName,
-                    });
-                    if (argsJson.length > 0) {
-                      controller.enqueue({
-                        type: "tool-input-delta",
-                        id: toolCallId,
-                        delta: argsJson,
-                      });
-                    }
-                  }
-
-                  controller.enqueue({
-                    type: "tool-input-end",
-                    id: toolCallId,
-                  });
-                  controller.enqueue({
-                    type: "tool-call",
-                    toolCallId,
-                    toolName,
-                    input: argsJson,
-                    providerExecuted: false,
-                  });
-                }
-
-                if (result.textAfterFence) {
-                  emitTextDelta(result.textAfterFence);
-                }
-
-                madeProgress = true;
-
-                // Stop streaming after tool call detected
-                toolCallDetected = true;
-                self.stoppingCriteria.interrupt();
-
-                currentToolCallId = null;
-                toolInputStartEmitted = false;
-                accumulatedFenceContent = "";
-                streamedArgumentsLength = 0;
-                insideFence = false;
-
-                // Break out of the processing loop
-                break;
-              }
-
-              if (insideFence) {
-                if (result.safeContent) {
-                  accumulatedFenceContent += result.safeContent;
+                if (result.completeFence) {
                   madeProgress = true;
-
-                  const toolName = extractToolName(accumulatedFenceContent);
-                  if (toolName && !toolInputStartEmitted && currentToolCallId) {
-                    controller.enqueue({
-                      type: "tool-input-start",
-                      id: currentToolCallId,
-                      toolName,
-                    });
-                    toolInputStartEmitted = true;
+                  if (result.safeContent) {
+                    accumulatedFenceContent += result.safeContent;
                   }
 
                   if (toolInputStartEmitted && currentToolCallId) {
@@ -1288,18 +1306,153 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
                       }
                     }
                   }
+
+                  const parsed = parseJsonFunctionCalls(result.completeFence);
+                  const parsedToolCalls = parsed.toolCalls;
+                  const selectedToolCalls = parsedToolCalls.slice(0, 1);
+
+                  if (selectedToolCalls.length === 0) {
+                    emitTextDelta(result.completeFence);
+                    if (result.textAfterFence) {
+                      emitTextDelta(result.textAfterFence);
+                    }
+
+                    currentToolCallId = null;
+                    toolInputStartEmitted = false;
+                    accumulatedFenceContent = "";
+                    streamedArgumentsLength = 0;
+                    insideFence = false;
+                    continue;
+                  }
+
+                  if (selectedToolCalls.length > 0 && currentToolCallId) {
+                    selectedToolCalls[0].toolCallId = currentToolCallId;
+                  }
+
+                  for (const [index, call] of selectedToolCalls.entries()) {
+                    const toolCallId =
+                      index === 0 && currentToolCallId
+                        ? currentToolCallId
+                        : call.toolCallId;
+                    const toolName = call.toolName;
+                    const argsJson = JSON.stringify(call.args ?? {});
+
+                    if (toolCallId === currentToolCallId) {
+                      if (!toolInputStartEmitted) {
+                        controller.enqueue({
+                          type: "tool-input-start",
+                          id: toolCallId,
+                          toolName,
+                        });
+                        toolInputStartEmitted = true;
+                      }
+
+                      const argsContent = extractArgumentsContent(
+                        accumulatedFenceContent,
+                      );
+                      if (argsContent.length > streamedArgumentsLength) {
+                        const delta = argsContent.slice(streamedArgumentsLength);
+                        streamedArgumentsLength = argsContent.length;
+                        if (delta.length > 0) {
+                          controller.enqueue({
+                            type: "tool-input-delta",
+                            id: currentToolCallId,
+                            delta,
+                          });
+                        }
+                      }
+                    } else {
+                      controller.enqueue({
+                        type: "tool-input-start",
+                        id: toolCallId,
+                        toolName,
+                      });
+                      if (argsJson.length > 0) {
+                        controller.enqueue({
+                          type: "tool-input-delta",
+                          id: toolCallId,
+                          delta: argsJson,
+                        });
+                      }
+                    }
+
+                    controller.enqueue({
+                      type: "tool-input-end",
+                      id: toolCallId,
+                    });
+                    controller.enqueue({
+                      type: "tool-call",
+                      toolCallId,
+                      toolName,
+                      input: argsJson,
+                      providerExecuted: false,
+                    });
+                  }
+
+                  if (result.textAfterFence) {
+                    emitTextDelta(result.textAfterFence);
+                  }
+
+                  madeProgress = true;
+
+                  // Stop streaming after tool call detected
+                  toolCallDetected = true;
+                  self.stoppingCriteria.interrupt();
+
+                  currentToolCallId = null;
+                  toolInputStartEmitted = false;
+                  accumulatedFenceContent = "";
+                  streamedArgumentsLength = 0;
+                  insideFence = false;
+
+                  // Break out of the processing loop
+                  break;
                 }
 
-                continue;
-              }
+                if (insideFence) {
+                  if (result.safeContent) {
+                    accumulatedFenceContent += result.safeContent;
+                    madeProgress = true;
 
-              if (!insideFence && result.safeContent) {
-                emitTextDelta(result.safeContent);
-                madeProgress = true;
-              }
+                    const toolName = extractToolName(accumulatedFenceContent);
+                    if (toolName && !toolInputStartEmitted && currentToolCallId) {
+                      controller.enqueue({
+                        type: "tool-input-start",
+                        id: currentToolCallId,
+                        toolName,
+                      });
+                      toolInputStartEmitted = true;
+                    }
 
-              if (!madeProgress) {
-                break;
+                    if (toolInputStartEmitted && currentToolCallId) {
+                      const argsContent = extractArgumentsContent(
+                        accumulatedFenceContent,
+                      );
+                      if (argsContent.length > streamedArgumentsLength) {
+                        const delta = argsContent.slice(streamedArgumentsLength);
+                        streamedArgumentsLength = argsContent.length;
+                        if (delta.length > 0) {
+                          controller.enqueue({
+                            type: "tool-input-delta",
+                            id: currentToolCallId,
+                            delta,
+                          });
+                        }
+                      }
+                    }
+                  }
+
+                  continue;
+                }
+
+                if (!insideFence && result.safeContent) {
+                  emitTextDelta(result.safeContent);
+                  madeProgress = true;
+                }
+
+                if (!madeProgress) {
+                  break;
+                }
               }
             }
           };
@@ -1321,15 +1474,17 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           });
 
           // Emit any remaining buffer content if no tool was detected
-          if (fenceDetector.hasContent() && !aborted) {
-            emitTextDelta(fenceDetector.getBuffer());
-            fenceDetector.clearBuffer();
+          if (toolCallFenceDetector.hasContent() && !aborted && !jsonExtractedComplete) {
+            emitTextDelta(toolCallFenceDetector.getBuffer());
+            toolCallFenceDetector.clearBuffer();
           }
 
-          // Check if we detected any tool calls
-          const { toolCalls } = parseJsonFunctionCalls(accumulatedText);
-
-          const finishReason = toolCalls.length > 0 ? "tool-calls" : "stop";
+          // Check if we detected any tool calls or if JSON was extracted
+          const finishReason = toolCallDetected
+            ? "tool-calls"
+            : jsonExtractedComplete
+              ? "stop" // Assuming JSON extraction also leads to a stop reason
+              : "stop";
 
           finishStream(finishReason, inputLength, outputTokens);
         } catch (error) {
@@ -1355,6 +1510,8 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
     generationOptions: GenerationOptions,
     options: LanguageModelV3CallOptions,
     functionTools: ToolDefinition[],
+    jsonSchema?: string,
+    responseFormatFailHard?: boolean,
   ) {
     const worker = this.config.worker!;
 
@@ -1366,8 +1523,12 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         const textId = "text-0";
         controller.enqueue({ type: "stream-start", warnings });
 
-        // Use fence detector to filter out tool calls from text stream
-        const fenceDetector = new ToolCallFenceDetector();
+        // Use JsonFenceDetector for real-time streaming if jsonSchema is present
+        const jsonFenceDetector = jsonSchema ? new JsonFenceDetector() : undefined;
+        let jsonExtractedComplete = false;
+
+        // Use ToolCallFenceDetector for real-time streaming
+        const toolCallFenceDetector = new ToolCallFenceDetector();
 
         const onMessage = (e: MessageEvent) => {
           const msg = e.data;
@@ -1378,14 +1539,12 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
             msg.status === "update" &&
             typeof msg.output === "string"
           ) {
-            // Filter out tool call fences from the text stream
-            fenceDetector.addChunk(msg.output);
+            // If jsonFenceDetector is active and not yet complete, feed chunk to it.
+            if (jsonFenceDetector && !jsonExtractedComplete) {
+              jsonFenceDetector.addChunk(msg.output);
+              const jsonResult = jsonFenceDetector.process();
 
-            while (fenceDetector.hasContent()) {
-              const result = fenceDetector.detectStreamingFence();
-
-              // Only emit non-fence content as text
-              if (!result.inFence && result.safeContent) {
+              if (jsonResult.delta) {
                 if (isFirst) {
                   controller.enqueue({ type: "text-start", id: textId });
                   isFirst = false;
@@ -1393,26 +1552,63 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
                 controller.enqueue({
                   type: "text-delta",
                   id: textId,
-                  delta: result.safeContent,
+                  delta: jsonResult.delta,
                 });
               }
 
-              // If we detect a complete fence, don't emit it as text
-              if (result.completeFence) {
-                // Tool call will be emitted separately in "complete" message
-                break;
+              if (jsonResult.complete || jsonResult.failed) {
+                jsonExtractedComplete = true;
+                // Once JSON is extracted, we can consider the text part complete
+                if (!isFirst) {
+                  controller.enqueue({ type: "text-end", id: textId });
+                  isFirst = true; // Reset for potential subsequent text (if any, though not expected for JSON response)
+                }
               }
+            }
 
-              if (!result.safeContent && !result.completeFence) {
-                break;
+            // Only proceed with tool call detection if JSON extraction is not active or completed/failed
+            if (!jsonFenceDetector || jsonExtractedComplete) {
+              // Filter out tool call fences from the text stream
+              toolCallFenceDetector.addChunk(msg.output);
+
+              while (toolCallFenceDetector.hasContent()) {
+                const result = toolCallFenceDetector.detectStreamingFence();
+
+                // Only emit non-fence content as text
+                if (!result.inFence && result.safeContent) {
+                  if (isFirst) {
+                    controller.enqueue({ type: "text-start", id: textId });
+                    isFirst = false;
+                  }
+                  controller.enqueue({
+                    type: "text-delta",
+                    id: textId,
+                    delta: result.safeContent,
+                  });
+                }
+
+                // If we detect a complete fence, don't emit it as text
+                if (result.completeFence) {
+                  // Tool call will be emitted separately in "complete" message
+                  break;
+                }
+
+                if (!result.safeContent && !result.completeFence) {
+                  break;
+                }
               }
             }
           } else if (msg.status === "complete") {
             if (!isFirst) controller.enqueue({ type: "text-end", id: textId });
 
-            // Check for tool calls in the response
-            const finishReason =
-              msg.toolCalls && msg.toolCalls.length > 0 ? "tool-calls" : "stop";
+            // Check for tool calls or if JSON was extracted
+            let finishReason: LanguageModelV3FinishReason = "stop";
+
+            if (msg.toolCalls && msg.toolCalls.length > 0) {
+              finishReason = "tool-calls";
+            } else if (jsonExtractedComplete) {
+              finishReason = "stop"; // JSON extraction is considered a stop event
+            }
 
             // Emit tool calls if present
             if (msg.toolCalls && msg.toolCalls.length > 0) {
@@ -1483,6 +1679,8 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           data: messages,
           generationOptions,
           tools: functionTools.length > 0 ? functionTools : undefined,
+          jsonSchema,
+          responseFormatFailHard,
         });
       },
     });

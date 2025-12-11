@@ -19,6 +19,10 @@ import {
   extractSystemPrompt,
 } from "../utils/prompt-utils";
 import { ToolCallFenceDetector } from "../streaming/tool-call-detector";
+import { extractJsonPayload } from "../utils/json-utils";
+import { JsonFenceDetector } from "../streaming/json-fence-detector";
+import { summarizeSchema } from "../utils/schema-utils"; // Should also be imported here
+import { z } from "zod";
 
 import type {
   WorkerMessage,
@@ -128,6 +132,7 @@ export class TransformersJSWorkerHandler {
     messages: Array<{ role: string; content: any }>,
     generationOptions?: GenerationOptions,
     tools?: any[],
+    jsonSchema?: string,
   ) {
     try {
       const modelInstance = await ModelManager.getInstance(
@@ -138,6 +143,7 @@ export class TransformersJSWorkerHandler {
         messages,
         generationOptions,
         tools,
+        jsonSchema,
       );
     } catch (error) {
       this.sendError(error instanceof Error ? error.message : String(error));
@@ -149,15 +155,23 @@ export class TransformersJSWorkerHandler {
     messages: Array<{ role: string; content: any }>,
     userGenerationOptions?: GenerationOptions,
     tools?: any[],
+    jsonSchema?: string,
   ) {
     const [processor, model] = modelInstance;
     const isVision = this.isVisionModel;
 
     // Extract system prompt from messages and build combined prompt with tool calling
-    const {
+    let {
       systemPrompt: originalSystemPrompt,
       messages: messagesWithoutSystem,
     } = extractSystemPrompt(messages);
+
+    // If JSON schema is provided, prepend a system prompt for JSON output
+    if (jsonSchema) {
+      originalSystemPrompt =
+        `Return ONLY valid JSON matching this schema: ${jsonSchema}. No prose.` +
+        (originalSystemPrompt ? `\n${originalSystemPrompt}` : "");
+    }
 
     const systemPrompt =
       tools && tools.length > 0
@@ -203,7 +217,11 @@ export class TransformersJSWorkerHandler {
     // Setup performance tracking and tool call detection
     let startTime: number | undefined;
     let numTokens = 0;
-    const fenceDetector = new ToolCallFenceDetector();
+    
+    const jsonFenceDetector = jsonSchema ? new JsonFenceDetector() : undefined;
+    let jsonExtractedComplete = false;
+
+    const toolCallFenceDetector = new ToolCallFenceDetector();
     let accumulatedText = "";
     let toolCallDetected = false;
 
@@ -212,28 +230,49 @@ export class TransformersJSWorkerHandler {
       numTokens++;
     };
     const output_callback = (output: string) => {
+      // Don't accumulate or send updates if JSON extraction is complete and we've stopped
+      if (toolCallDetected || jsonExtractedComplete) return;
+
       accumulatedText += output;
 
-      // Check for tool calls if tools are available
-      if (tools && tools.length > 0 && !toolCallDetected) {
-        fenceDetector.addChunk(output);
-        const result = fenceDetector.detectStreamingFence();
+      // Prioritize JSON parsing if schema is provided
+      if (jsonFenceDetector && !jsonExtractedComplete) {
+        jsonFenceDetector.addChunk(output);
+        const jsonResult = jsonFenceDetector.process();
+        if (jsonResult.delta) {
+          this.sendUpdate(jsonResult.delta); // Send incremental JSON parts
+        }
+        if (jsonResult.complete || jsonResult.failed) {
+          jsonExtractedComplete = true;
+          // Worker sends 'update' messages. It doesn't control stopping criteria.
+          // Stopping criteria is handled by the main thread.
+        }
+        if (jsonExtractedComplete) return; // Stop further processing by tool call detector
+      }
+
+      // Check for tool calls if tools are available AND JSON extraction is not active/complete
+      if (tools && tools.length > 0 && !toolCallDetected && (!jsonFenceDetector || jsonExtractedComplete)) {
+        toolCallFenceDetector.addChunk(output);
+        const result = toolCallFenceDetector.detectStreamingFence();
 
         // If we detect a complete fence, check if it's a valid tool call
         if (result.completeFence) {
           const { toolCalls } = parseJsonFunctionCalls(result.completeFence);
           if (toolCalls.length > 0) {
             toolCallDetected = true;
-            // Stop generation after tool call
-            this.stopping_criteria.interrupt();
+            // The main thread is responsible for stopping criteria.
+            // this.stopping_criteria.interrupt(); // This is handled by main thread
           }
         }
       }
-
+      
       const tps = startTime
         ? (numTokens / (performance.now() - startTime)) * 1000
         : undefined;
-      this.sendUpdate(output, tps, numTokens);
+      // Only send non-JSON/tool-call updates if no special processing is active
+      if (!toolCallDetected && !jsonExtractedComplete) {
+        this.sendUpdate(output, tps, numTokens);
+      }
     };
 
     const streamer = new TextStreamer(
@@ -284,18 +323,60 @@ export class TransformersJSWorkerHandler {
       isVision ? 0 : inputs.input_ids.data.length,
     );
 
-    // Parse tool calls from the complete response if tools are available
-    let toolCalls: any[] = [];
-    if (tools && tools.length > 0) {
-      const finalText = Array.isArray(decoded) ? decoded[0] : decoded;
-      const parsed = parseJsonFunctionCalls(finalText);
-      toolCalls = parsed.toolCalls;
+    let finalOutput = Array.isArray(decoded) ? decoded[0] : decoded;
+    let finalToolCalls: any[] = [];
+    let finalWarnings: any[] = [];
+
+    // Prioritize JSON validation if jsonSchema is provided
+    if (jsonSchema) {
+      const extractedJson = extractJsonPayload(finalOutput);
+      if (extractedJson) {
+        try {
+          const parsedJson = JSON.parse(extractedJson);
+          const parsedSchema = JSON.parse(jsonSchema);
+          const validationResult = z.object(parsedSchema).safeParse(parsedJson);
+
+          if (validationResult.success) {
+            finalOutput = extractedJson; // Valid JSON as final output
+          } else {
+            // Validation failed
+            finalWarnings.push({
+              type: "invalid_response_format",
+              message: `JSON validation failed in worker: ${validationResult.error.message}`,
+            });
+            // Fallback to original decoded text
+          }
+        } catch (jsonError: any) {
+          // JSON parsing failed
+          finalWarnings.push({
+            type: "invalid_response_format",
+            message: `JSON parsing failed in worker: ${jsonError.message}`,
+          });
+          // Fallback to original decoded text
+        }
+      } else {
+        // No JSON extracted
+        finalWarnings.push({
+          type: "invalid_response_format",
+          message: "Model did not return valid JSON in worker.",
+        });
+        // Fallback to original decoded text
+      }
+    } else if (tools && tools.length > 0) {
+      // If no jsonSchema but tools are present, process tool calls
+      const parsed = parseJsonFunctionCalls(finalOutput);
+      finalToolCalls = parsed.toolCalls;
+      if (parsed.textContent) {
+        finalOutput = parsed.textContent;
+      }
     }
+
 
     self.postMessage({
       status: "complete",
-      output: decoded,
-      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+      output: finalOutput,
+      toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
+      warnings: finalWarnings.length > 0 ? finalWarnings : undefined,
     });
   }
 
@@ -396,7 +477,7 @@ export class TransformersJSWorkerHandler {
           break;
         case "generate":
           this.stopping_criteria.reset();
-          this.generate(data, e.data.generationOptions, e.data.tools);
+          this.generate(data, e.data.generationOptions, e.data.tools, e.data.jsonSchema);
           break;
         case "interrupt":
           this.interrupt();

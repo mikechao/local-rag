@@ -56,6 +56,48 @@ for await (const chunk of result.textStream) {
 }
 ```
 
+### JSON Response Format (Experimental)
+
+You can request the model to output JSON by providing a `responseFormat` with a schema. This uses prompt engineering to guide the model and performs client-side validation using Zod.
+
+> [!WARNING]
+> This feature relies on the model's ability to follow instructions. Smaller models (< 1B parameters) may struggle to produce valid JSON consistently.
+
+```typescript
+import { generateObject } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+import { z } from "zod";
+
+const result = await generateObject({
+  model: transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct"),
+  schema: z.object({
+    recipe: z.object({
+      name: z.string(),
+      ingredients: z.array(z.object({
+        name: z.string(),
+        amount: z.string()
+      })),
+      steps: z.array(z.string())
+    })
+  }),
+  prompt: "Generate a recipe for chocolate chip cookies.",
+});
+
+console.log(result.object);
+```
+
+#### Strict Mode
+
+By default, if the model output is not valid JSON or does not match the schema, the provider will emit a warning and return the raw text. You can enforce strict validation by enabling the `failHard` option (if supported by your AI SDK version) or by checking warnings.
+
+Currently, this provider implements a custom `responseFormatFailHard` option in `generationOptions` (passed internally) to throw errors on failure.
+
+#### How it works
+
+1.  **Prompt Injection**: The Zod schema is converted to a simplified JSON schema and injected into the system prompt.
+2.  **Streaming Extraction**: A robust JSON fence detector extracts JSON objects from the stream in real-time.
+3.  **Client-side Validation**: The final output is parsed and validated against the Zod schema.
+
 ### Tool calling
 
 > Be aware that some models might struggle with this.

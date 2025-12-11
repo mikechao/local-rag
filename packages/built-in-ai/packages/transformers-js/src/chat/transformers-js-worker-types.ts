@@ -15,6 +15,8 @@ export interface GenerationOptions {
   repetition_penalty?: number;
   num_beams?: number;
   early_stopping?: boolean;
+  responseFormatFailHard?: boolean; // New: strict opt-in for JSON response format failure
+  jsonSchema?: string; // New: The schema used for JSON response format
 }
 
 export type { ProgressInfo } from "@huggingface/transformers";
@@ -25,15 +27,10 @@ export type { ProgressInfo } from "@huggingface/transformers";
 export type WorkerMessage = {
   type: "load" | "generate" | "interrupt" | "reset";
   data?: any;
-  generationOptions?: {
-    max_new_tokens?: number;
-    temperature?: number;
-    top_k?: number;
-    top_p?: number;
-    do_sample?: boolean;
-    repetition_penalty?: number;
-  };
+  generationOptions?: GenerationOptions;
   tools?: any[]; // Tool definitions for tool calling
+  jsonSchema?: string;
+  responseFormatFailHard?: boolean;
 };
 
 /**

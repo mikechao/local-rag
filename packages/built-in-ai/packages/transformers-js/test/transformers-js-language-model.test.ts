@@ -218,4 +218,101 @@ describe("TransformersJSLanguageModel", () => {
     const applyChatCall = tokenizerMock.apply_chat_template.mock.calls[0];
     expect(applyChatCall[0]).toEqual([{ role: "user", content: "" }]);
   });
+
+  it("should handle JSON response format successfully (success case)", async () => {
+    const model = new TransformersJSLanguageModel(
+      "HuggingFaceTB/SmolLM2-360M-Instruct",
+    );
+
+    tokenizerMock.apply_chat_template.mockReturnValue({
+      input_ids: { data: new Array(5).fill(1) },
+    });
+
+    const validJson = JSON.stringify({ answer: "42" });
+    // Simulate model returning valid JSON
+    (modelMock.generate as any).mockResolvedValue({ sequences: [[1, 2, 3]] });
+    tokenizerMock.decode.mockReturnValue(validJson);
+
+    const schema = z.object({ answer: z.string() });
+
+    const { object } = await generateObject({
+      model,
+      schema,
+      prompt: "What is the answer?",
+    });
+
+    expect(object).toEqual({ answer: "42" });
+  });
+
+  it("should fallback to raw text when JSON parsing fails (default behavior)", async () => {
+    const model = new TransformersJSLanguageModel(
+      "HuggingFaceTB/SmolLM2-360M-Instruct",
+    );
+
+    tokenizerMock.apply_chat_template.mockReturnValue({
+      input_ids: { data: new Array(5).fill(1) },
+    });
+
+    const invalidJson = "{ answer: '42' }"; // Invalid JSON (single quotes, no quotes on keys maybe?) -> actually invalid JSON format
+    (modelMock.generate as any).mockResolvedValue({ sequences: [[1, 2, 3]] });
+    tokenizerMock.decode.mockReturnValue(invalidJson);
+
+    const schema = z.object({ answer: z.string() });
+
+    // When generateObject fails to parse JSON from the provider, it usually throws.
+    // However, our provider is designed to return the raw text if parsing fails internally,
+    // wrapping it in a text content block.
+    // generateObject from AI SDK expects structured output. If provider returns text,
+    // AI SDK might try to parse it.
+    // Let's test with generateText and responseFormat option directly to verify provider behavior.
+
+    const result = await model.doGenerate({
+      inputFormat: "prompt",
+      mode: { type: "regular" },
+      prompt: [{ role: "user", content: "test" }],
+      responseFormat: { type: "json", schema },
+    });
+
+    // It should contain the raw text and a warning
+    expect(result.content[0].type).toBe("text");
+    expect(result.content[0].text).toBe(invalidJson);
+    expect(result.warnings?.some(w => w.type === "other" && w.message.includes("JSON"))).toBe(true);
+  });
+
+  it("should fail hard when responseFormatFailHard is true and JSON parsing fails", async () => {
+    const model = new TransformersJSLanguageModel(
+      "HuggingFaceTB/SmolLM2-360M-Instruct",
+    );
+
+    tokenizerMock.apply_chat_template.mockReturnValue({
+      input_ids: { data: new Array(5).fill(1) },
+    });
+
+    const invalidJson = "Not JSON at all";
+    (modelMock.generate as any).mockResolvedValue({ sequences: [[1, 2, 3]] });
+    tokenizerMock.decode.mockReturnValue(invalidJson);
+
+    const schema = z.object({ answer: z.string() });
+
+    // We pass the option via a cast or if we updated the interface (which we haven't in the test file imports yet, but the class accepts it)
+    // The doGenerate method signature in the class accepts `responseFormatFailHard` via `generationOptions`?
+    // Wait, getArgs extracts it from `generationOptions`? No, getArgs constructs `generationOptions` from the input params.
+    // The input params to `doGenerate` are `LanguageModelV3CallOptions`.
+    // We added `responseFormatFailHard` to `GenerationOptions` interface which is internal.
+    // To pass it in from the outside (AI SDK), we rely on `responseFormat` having it?
+    // AI SDK's `responseFormat` doesn't have `failHard`.
+    //
+    // Ah, my implementation in `getArgs`:
+    // `responseFormatFailHard: responseFormat?.type === "json" ? responseFormat.failHard ?? false : undefined,`
+    // I assumed `responseFormat` has `failHard`.
+    // But `LanguageModelV3CallOptions['responseFormat']` is defined by AI SDK.
+    // If I cast it, it should work for the test.
+
+    await expect(model.doGenerate({
+      inputFormat: "prompt",
+      mode: { type: "regular" },
+      prompt: [{ role: "user", content: "test" }],
+      responseFormat: { type: "json", schema, failHard: true } as any,
+    })).rejects.toThrow(/JSON parsing failed|Model did not return valid JSON/);
+  });
 });

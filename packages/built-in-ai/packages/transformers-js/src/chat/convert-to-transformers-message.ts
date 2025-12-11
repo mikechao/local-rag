@@ -118,8 +118,12 @@ export function convertToTransformersMessages(
         if (isVisionModel) {
           return {
             role: "user",
-            content: processVisionContent(message.content),
+            content: typeof message.content === "string" ? [{ type: "text", text: message.content }] : processVisionContent(message.content),
           };
+        }
+
+        if (typeof message.content === "string") {
+          return { role: "user", content: message.content };
         }
 
         const textContent = message.content
