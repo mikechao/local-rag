@@ -48,6 +48,8 @@ import { warmupEmbeddingModel } from "@/lib/embedding-worker";
 import { Volume2, VolumeX } from "lucide-react";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { LocalRAGMessage, type RetrievalStatus } from "@/lib/local-rag-message";
+import { RetrievalResultsCarousel } from "@/components/RetrievalResultsCarousel";
+import type { RetrievalResult } from "@/lib/retrieval";
 
 export function ChatInterface() {
   const [isModelAvailable] = useState<boolean | null>(true);
@@ -284,9 +286,23 @@ export function ChatInterface() {
               status !== "ready" &&
               message.role === "assistant" &&
               isLastMessage;
+            const isLastAssistantMessage =
+              isLastMessage && message.role === "assistant";
+            const retrievalResultsPart = message.parts?.find?.(
+              (part: any) => part.type === "data-retrievalResults"
+            ) as { data?: RetrievalResult[] } | undefined;
+            const retrievalResults = retrievalResultsPart?.data;
+            const showRetrievalResultsCarousel =
+              message.role === "assistant" &&
+              Boolean(retrievalResults?.length) &&
+              (!isLastAssistantMessage || status === "ready");
             return (
               <Message key={message.id} from={message.role}>
-                <MessageContent>
+                <MessageContent
+                  className={
+                    showRetrievalResultsCarousel ? "w-full max-w-full min-w-0" : undefined
+                  }
+                >
                   {message.parts ? (
                     message.parts.map((part, index) => {
                       if (part.type === "data-retrievalResults") return null;
@@ -322,6 +338,12 @@ export function ChatInterface() {
                       ))}
                     </MessageAttachments>
                   )}
+                  {message.role === "assistant" &&
+                    showRetrievalResultsCarousel && retrievalResults && (
+                      <div className="mt-3">
+                        <RetrievalResultsCarousel results={retrievalResults} />
+                      </div>
+                    )}
                   {showRetrievalStatusInThisMessage && retrievalStatus && (
                     <div className="mt-2">{renderRetrievalStatus(retrievalStatus)}</div>
                   )}
