@@ -51,9 +51,6 @@ export function RetrievalResultsCarousel({
 
 	return (
 		<div className="relative flex w-full max-w-full flex-col items-center overflow-hidden">
-			<div className="mb-2 text-muted-foreground text-xs">
-				Showing {results.length} source{results.length === 1 ? "" : "s"}
-			</div>
 			<div className="flex w-full max-w-full items-center gap-2">
 				{results.length > 1 && (
 					<Button
