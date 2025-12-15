@@ -35,7 +35,7 @@ import {
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Paperclip, MicIcon } from "lucide-react";
+import { AlertCircle, Paperclip, MicIcon, Loader2Icon } from "lucide-react";
 import { CopyMessage } from "@/components/CopyMessage";
 import { SpeakMessage } from "@/components/SpeakMessage";
 import { LocalModelSelector } from "@/components/LocalModelSelector";
@@ -47,7 +47,7 @@ import { useSpeechPlayer } from "@/hooks/use-speech-player";
 import { warmupEmbeddingModel } from "@/lib/embedding-worker";
 import { Volume2, VolumeX } from "lucide-react";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import { LocalRAGMessage } from "@/lib/local-rag-message";
+import { LocalRAGMessage, type RetrievalStatus } from "@/lib/local-rag-message";
 
 export function ChatInterface() {
   const [isModelAvailable] = useState<boolean | null>(true);
@@ -56,6 +56,7 @@ export function ChatInterface() {
   const [isSpeechAvailable, setIsSpeechAvailable] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [autoSpeak, setAutoSpeak] = useState(false);
+  const [retrievalStatus, setRetrievalStatus] = useState<RetrievalStatus | null>(null);
 
   const lastMessageIdRef = useRef<string | null>(null);
   const lastMessageLengthRef = useRef(0);
@@ -94,8 +95,17 @@ export function ChatInterface() {
   const { messages, sendMessage, error, status } = useChat<LocalRAGMessage>({
     transport: chatTransport,
     id: chatId,
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    onData: (dataPart) => {
+      if (dataPart.type === "data-retrievalStatus") {
+        setRetrievalStatus(dataPart.data);
+      }
+    },
   });
+
+  if (status === 'ready') {
+    console.log('messages', JSON.stringify(messages, null, 2));
+  }
   
   useEffect(() => {
     if (!autoSpeak) {
@@ -213,6 +223,35 @@ export function ChatInterface() {
       });
   };
 
+  const renderRetrievalStatus = (statusPart: RetrievalStatus) => {
+    const phase = statusPart.phase;
+    const message = statusPart.message;
+    const tookMs = phase === "done" ? statusPart.tookMs : undefined;
+    const resultsCount = phase === "done" ? statusPart.resultsCount : undefined;
+
+    const isLoading = phase === "deciding" || phase === "retrieving";
+    let label = "Retrieval";
+    if (phase === "deciding") label = "Retrieval: deciding";
+    if (phase === "retrieving") label = "Retrieval: searching";
+    if (phase === "skipped") label = "Retrieval: skipped";
+    if (phase === "done") label = "Retrieval: done";
+    if (phase === "error") label = "Retrieval: error";
+
+    const details =
+      phase === "done"
+        ? `${resultsCount ?? 0} source${(resultsCount ?? 0) === 1 ? "" : "s"}${typeof tookMs === "number" ? ` • ${tookMs}ms` : ""}`
+        : undefined;
+
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+        {isLoading && <Loader2Icon className="size-3.5 animate-spin" />}
+        <span className="font-medium">{label}</span>
+        {details && <span>{details}</span>}
+        {message && <span className="truncate">{message}</span>}
+      </div>
+    );
+  };
+
 
   if (isModelAvailable === false) {
     return (
@@ -239,11 +278,18 @@ export function ChatInterface() {
           {messages.map((message) => {
             const attachments = getAttachments(message);
             const copyableText = getCopyableText(message);
+            const isLastMessage = message.id === messages[messages.length - 1]?.id;
+            const showRetrievalStatusInThisMessage =
+              Boolean(retrievalStatus) &&
+              status !== "ready" &&
+              message.role === "assistant" &&
+              isLastMessage;
             return (
               <Message key={message.id} from={message.role}>
                 <MessageContent>
                   {message.parts ? (
                     message.parts.map((part, index) => {
+                      if (part.type === "data-retrievalResults") return null;
                       if (part.type === "text") {
                         return (
                           <MessageResponse key={index}>{part.text}</MessageResponse>
@@ -276,6 +322,9 @@ export function ChatInterface() {
                       ))}
                     </MessageAttachments>
                   )}
+                  {showRetrievalStatusInThisMessage && retrievalStatus && (
+                    <div className="mt-2">{renderRetrievalStatus(retrievalStatus)}</div>
+                  )}
                   {message.role === "assistant" && copyableText && status === "ready" && (
                     <div className="flex items-center gap-2 ml-auto">
                       <SpeakMessage text={copyableText} />
@@ -292,6 +341,15 @@ export function ChatInterface() {
             </Message>
             );
           })}
+          {retrievalStatus &&
+            status !== "ready" &&
+            messages[messages.length - 1]?.role !== "assistant" && (
+              <Message from="assistant">
+                <MessageContent>
+                  <div className="mt-2">{renderRetrievalStatus(retrievalStatus)}</div>
+                </MessageContent>
+              </Message>
+            )}
           {error && (
             <div className="mx-4 my-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
               Error: {error.message}
@@ -311,6 +369,7 @@ export function ChatInterface() {
         <PromptInput
           accept="image/*"
           onSubmit={(message) => {
+            setRetrievalStatus(null);
             const trimmedText = message.text.trim();
             const fileParts = message.files.map((file) => ({
               type: "file" as const,

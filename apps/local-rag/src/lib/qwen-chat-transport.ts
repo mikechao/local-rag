@@ -31,6 +31,12 @@ const retrievalResultSchema = z.object({
   similarity: z.number(),
 }) satisfies z.ZodType<RetrievalResult>;
 
+const callOptionsSchema = z.object({
+  retrievalResults: z.array(retrievalResultSchema).optional(),
+});
+
+type CallOptions = z.infer<typeof callOptionsSchema>;
+
 const shouldRetrieveSchema = z.object({
   shouldRetrieve: z.boolean().describe("Whether the user's question requires retrieval of relevant documents."),
   userQuestion: z.string().describe("The user's question that may require retrieval."),

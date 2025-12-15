@@ -9,7 +9,8 @@ import {
   Output,
   smoothStream,
   createUIMessageStream,
-  InferUIMessageChunk
+  InferUIMessageChunk,
+  UIMessageStreamWriter
 } from "ai";
 import { z } from "zod";
 import { builtInAI } from "@built-in-ai/core";
@@ -146,22 +147,20 @@ export class BuiltInAIChatTransport
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal } = options;
 
-    const retrievalResults: RetrievalResult[] | undefined = await this.getRetrievalResults(
-      messages,
-      abortSignal,
-    );
-
-    const agentStreamPromise = createAgentUIStream({
-      agent: this.chatAgent,
-      messages,
-      options: { retrievalResults },
-      abortSignal,
-      experimental_transform: smoothStream({ delayInMs: 10 }),
-    });
-
     return createUIMessageStream<LocalRAGMessage>({
       execute: async ({ writer }) => {
-        const agentStream = await agentStreamPromise;
+        const retrievalResults: RetrievalResult[] | undefined = await this.getRetrievalResults(
+          messages,
+          abortSignal,
+          writer
+        );
+        const agentStream = await createAgentUIStream({
+          agent: this.chatAgent,
+          messages,
+          options: { retrievalResults },
+          abortSignal,
+          experimental_transform: smoothStream({ delayInMs: 10 }),
+        });
 
         // Forward the agent's stream to the UI stream.
         writer.merge(
@@ -183,11 +182,18 @@ export class BuiltInAIChatTransport
   async getRetrievalResults(
     messages: LocalRAGMessage[],
     abortSignal: AbortSignal | undefined,
+    writer: UIMessageStreamWriter<LocalRAGMessage>
   ): Promise<RetrievalResult[] | undefined> {
     const lastUserMessage = getLatestUserMessage(messages);
     if (lastUserMessage === undefined) {
       return undefined;
     }
+    writer.write({
+      type: "data-retrievalStatus",
+      id: "retrieval",
+      data: { phase: "deciding", message: "Deciding whether to search the knowledge base…" },
+      transient: true,
+    });
     const systemMessage = {
       role: "assistant" as const,
       parts: [
@@ -199,23 +205,64 @@ export class BuiltInAIChatTransport
       ],
       id: "system-message-id"
     };
-    const before = performance.now();
-    const result = await generateText({
-      model: builtInAI(),
-      messages: convertToModelMessages([systemMessage, lastUserMessage]),
-      output: Output.object({
-        schema: shouldRetrieveSchema,
-      }),
-      abortSignal,
-    })
-    const after = performance.now();
-    console.log(`retrieval decision took ${after - before} ms shouldRetrieve: ${result.output.shouldRetrieve} userQuestion: ${result.output.userQuestion}`);
-    const { shouldRetrieve, userQuestion } = result.output;
-    if (!shouldRetrieve) {
+    try {
+      const before = performance.now();
+      const result = await generateText({
+        model: builtInAI(),
+        messages: convertToModelMessages([systemMessage, lastUserMessage]),
+        output: Output.object({
+          schema: shouldRetrieveSchema,
+        }),
+        abortSignal,
+      })
+      const after = performance.now();
+      console.log(`retrieval decision took ${after - before} ms shouldRetrieve: ${result.output.shouldRetrieve} userQuestion: ${result.output.userQuestion}`);
+      const { shouldRetrieve, userQuestion } = result.output;
+      if (!shouldRetrieve) {
+        writer.write({
+          type: "data-retrievalStatus",
+          id: "retrieval",
+          data: { phase: "skipped", message: "No retrieval needed." },
+          transient: true,
+        });
+        return undefined;
+      }
+
+      writer.write({
+        type: "data-retrievalStatus",
+        id: "retrieval",
+        data: { phase: "retrieving", query: userQuestion, message: "Searching the knowledge base…" },
+        transient: true,
+      });
+
+      const retrievalBefore = performance.now();
+      const retrievalResults = await retrieveChunks(userQuestion);
+      const retrievalAfter = performance.now();
+      writer.write({
+        type: "data-retrievalStatus",
+        id: "retrieval",
+        data: {
+          phase: "done",
+          resultsCount: retrievalResults.results.length,
+          tookMs: Math.round(retrievalAfter - retrievalBefore),
+          message:
+            retrievalResults.results.length === 0
+              ? "No relevant sources found."
+              : `Found ${retrievalResults.results.length} source${retrievalResults.results.length === 1 ? "" : "s"}.`,
+        },
+        transient: true,
+      });
+      return retrievalResults.results;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      writer.write({
+        type: "data-retrievalStatus",
+        id: "retrieval",
+        data: { phase: "error", message },
+        transient: true,
+      });
       return undefined;
     }
-    const retrievalResults = await retrieveChunks(userQuestion);
-    return retrievalResults.results;
   }
 
   async reconnectToStream(
