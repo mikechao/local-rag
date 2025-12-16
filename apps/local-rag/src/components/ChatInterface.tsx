@@ -1,5 +1,18 @@
 import { useChat } from "@ai-sdk/react";
-import { BuiltInAIChatTransport } from "@/lib/built-in-ai-chat-transport";
+import { Link } from "@tanstack/react-router";
+import {
+	type FileUIPart,
+	lastAssistantMessageIsCompleteWithToolCalls,
+} from "ai";
+import {
+	AlertCircle,
+	Loader2Icon,
+	MicIcon,
+	Paperclip,
+	Volume2,
+	VolumeX,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import {
 	Conversation,
 	ConversationContent,
@@ -8,55 +21,51 @@ import {
 } from "@/components/ai-elements/conversation";
 import {
 	Message,
+	MessageAttachment,
+	MessageAttachments,
 	MessageContent,
 	MessageResponse,
-	MessageAttachments,
-	MessageAttachment,
 } from "@/components/ai-elements/message";
 import {
 	PromptInput,
-	PromptInputTextarea,
-	PromptInputFooter,
-	PromptInputTools,
-	PromptInputActionMenu,
-	PromptInputActionMenuTrigger,
-	PromptInputActionMenuContent,
 	PromptInputActionAddAttachments,
-	PromptInputSubmit,
-	PromptInputAttachments,
+	PromptInputActionMenu,
+	PromptInputActionMenuContent,
+	PromptInputActionMenuTrigger,
 	PromptInputAttachment,
+	PromptInputAttachments,
+	PromptInputFooter,
+	PromptInputSubmit,
+	PromptInputTextarea,
+	PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
 import {
 	Reasoning,
 	ReasoningContent,
 	ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
-import { useState, useEffect, useRef } from "react";
-import { Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, Paperclip, MicIcon, Loader2Icon } from "lucide-react";
 import { CopyMessage } from "@/components/CopyMessage";
-import { SpeakMessage } from "@/components/SpeakMessage";
 import { LocalModelSelector } from "@/components/LocalModelSelector";
-import { VoiceInput } from "@/components/VoiceInput";
+import { RetrievalResultsCarousel } from "@/components/RetrievalResultsCarousel";
+import { SpeakMessage } from "@/components/SpeakMessage";
+import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { hasCachedWhisperWeights } from "@/lib/models/whisperModel";
+import { VoiceInput } from "@/components/VoiceInput";
+import { useSpeechPlayer } from "@/hooks/use-speech-player";
+import { BuiltInAIChatTransport } from "@/lib/built-in-ai-chat-transport";
+import { warmupEmbeddingModel } from "@/lib/embedding-worker";
+import type { LocalRAGMessage, RetrievalStatus } from "@/lib/local-rag-message";
 import {
 	generateSpeechStream,
-	TextStream,
 	isSpeechModelReadyFlag,
+	TextStream,
 } from "@/lib/models/speechModel";
-import { useSpeechPlayer } from "@/hooks/use-speech-player";
-import { warmupEmbeddingModel } from "@/lib/embedding-worker";
-import { Volume2, VolumeX } from "lucide-react";
-import { type FileUIPart, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import type { LocalRAGMessage, RetrievalStatus } from "@/lib/local-rag-message";
-import { RetrievalResultsCarousel } from "@/components/RetrievalResultsCarousel";
+import { hasCachedWhisperWeights } from "@/lib/models/whisperModel";
 import type { RetrievalResult } from "@/lib/retrieval";
 
 export function ChatInterface() {
@@ -104,7 +113,13 @@ export function ChatInterface() {
 
 	const chatId = `local-chat-${selectedModel}`;
 
-	const { messages, sendMessage, error, status, stop: stopChat } = useChat<LocalRAGMessage>({
+	const {
+		messages,
+		sendMessage,
+		error,
+		status,
+		stop: stopChat,
+	} = useChat<LocalRAGMessage>({
 		transport: chatTransport,
 		id: chatId,
 		sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
@@ -337,9 +352,11 @@ export function ChatInterface() {
 									)}
 									{attachments.length > 0 && (
 										<MessageAttachments className="mt-2">
-											{attachments.map((attachment: FileUIPart, index: number) => (
-												<MessageAttachment data={attachment} key={index} />
-											))}
+											{attachments.map(
+												(attachment: FileUIPart, index: number) => (
+													<MessageAttachment data={attachment} key={index} />
+												),
+											)}
 										</MessageAttachments>
 									)}
 									{message.role === "assistant" &&
@@ -419,34 +436,23 @@ export function ChatInterface() {
 			<div className="border-t bg-background p-4">
 				<PromptInput
 					accept="image/*"
-					onSubmit={(message) => {
+					onSubmit={async (message) => {
 						setRetrievalStatus(null);
 						const trimmedText = message.text.trim();
-						const fileParts = message.files.map((file) => ({
-							type: "file" as const,
-							url: file.url,
-							mediaType: file.mediaType,
-							filename: file.filename,
-						}));
+						const hasFiles = message.files.length > 0;
 
-						const parts = [
-							...(trimmedText ? [{ type: "text", text: trimmedText }] : []),
-							...fileParts,
-						];
-
-						if (parts.length === 0) return; // avoid sending empty messages
-
+						if (!trimmedText && !hasFiles) return; // avoid sending empty messages
+						
 						sendMessage(
-							{
-								role: "user",
-								// @ts-ignore - parts is the v5 way
-								parts: parts,
-							},
-							{
-								body: { modelId: selectedModel },
-							},
+							hasFiles
+							? trimmedText
+							? { text: trimmedText, files: message.files }
+							: { files: message.files }
+							: { text: trimmedText },
+							{ body: { modelId: selectedModel } },
 						);
 						setInput("");
+
 					}}
 				>
 					<PromptInputAttachments>
@@ -536,16 +542,16 @@ export function ChatInterface() {
 												)}
 											</Tooltip>
 										</TooltipProvider>
-											<PromptInputSubmit
-												variant={"noShadow"}
-												status={status}
-												onClick={(e) => {
-													if (status === "streaming") {
-														e.preventDefault();
-														stopChat();
-													}
-												}}
-											/>
+										<PromptInputSubmit
+											variant={"noShadow"}
+											status={status}
+											onClick={(e) => {
+												if (status === "streaming") {
+													e.preventDefault();
+													stopChat();
+												}
+											}}
+										/>
 									</div>
 								</>
 							)}
