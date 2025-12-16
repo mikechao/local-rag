@@ -104,7 +104,7 @@ export function ChatInterface() {
 
 	const chatId = `local-chat-${selectedModel}`;
 
-	const { messages, sendMessage, error, status } = useChat<LocalRAGMessage>({
+	const { messages, sendMessage, error, status, stop: stopChat } = useChat<LocalRAGMessage>({
 		transport: chatTransport,
 		id: chatId,
 		sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
@@ -556,7 +556,16 @@ export function ChatInterface() {
 												)}
 											</Tooltip>
 										</TooltipProvider>
-											<PromptInputSubmit variant={"noShadow"} status={status} />
+											<PromptInputSubmit
+												variant={"noShadow"}
+												status={status}
+												onClick={(e) => {
+													if (status === "streaming") {
+														e.preventDefault();
+														stopChat();
+													}
+												}}
+											/>
 									</div>
 								</>
 							)}
