@@ -9,7 +9,7 @@
     "test": "turbo test"
   },
   "devDependencies": {
-    "turbo": "^2.0.0"
+    "turbo": "^2.6.3"
   },
   "packageManager": "pnpm@10.23.0"
 }
