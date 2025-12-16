@@ -472,7 +472,11 @@ export function ChatInterface() {
 					<PromptInputAttachments>
 						{(attachment) => <PromptInputAttachment data={attachment} />}
 					</PromptInputAttachments>
-					<PromptInputTextarea value={input} onChange={handleInputChange} />
+					<PromptInputTextarea
+						value={input}
+						onChange={handleInputChange}
+						disabled={status !== "ready"}
+					/>
 					<PromptInputFooter>
 						<VoiceInput
 							onTranscription={(text) =>
@@ -552,7 +556,7 @@ export function ChatInterface() {
 												)}
 											</Tooltip>
 										</TooltipProvider>
-										<PromptInputSubmit variant={"noShadow"} />
+											<PromptInputSubmit variant={"noShadow"} disabled={status !== "ready"} />
 									</div>
 								</>
 							)}
