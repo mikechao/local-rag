@@ -54,8 +54,8 @@ import {
 import { useSpeechPlayer } from "@/hooks/use-speech-player";
 import { warmupEmbeddingModel } from "@/lib/embedding-worker";
 import { Volume2, VolumeX } from "lucide-react";
-import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import { LocalRAGMessage, type RetrievalStatus } from "@/lib/local-rag-message";
+import { type FileUIPart, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
+import type { LocalRAGMessage, RetrievalStatus } from "@/lib/local-rag-message";
 import { RetrievalResultsCarousel } from "@/components/RetrievalResultsCarousel";
 import type { RetrievalResult } from "@/lib/retrieval";
 
@@ -114,10 +114,6 @@ export function ChatInterface() {
 			}
 		},
 	});
-
-	if (status === "ready") {
-		console.log("messages", JSON.stringify(messages, null, 2));
-	}
 
 	useEffect(() => {
 		if (!autoSpeak) {
@@ -187,54 +183,38 @@ export function ChatInterface() {
 		setInput(e.target.value);
 	};
 
-	const getMessageText = (message: any) => {
-		if (message.content) return message.content;
+	const getMessageText = (message: LocalRAGMessage) => {
 		if (message.parts) {
 			return message.parts
-				.filter((part: any) => part.type === "text")
-				.map((part: any) => part.text)
+				.filter((part) => part.type === "text")
+				.map((part) => part.text)
 				.join("");
 		}
 		return "";
 	};
 
-	const getCopyableText = (message: any) => {
+	const getCopyableText = (message: LocalRAGMessage) => {
 		if (message.parts) {
 			return message.parts
-				.filter((part: any) => part.type === "text")
-				.map((part: any) => part.text?.trim())
+				.filter((part) => part.type === "text")
+				.map((part) => part.text?.trim())
 				.filter(Boolean)
 				.join("\n\n");
 		}
-
 		return getMessageText(message);
 	};
 
-	const getAttachments = (message: any) => {
+	const getAttachments = (message: LocalRAGMessage) => {
 		if (!message.parts) return [];
 		return message.parts
-			.filter((part: any) => part.type === "file" || part.type === "image")
-			.map((part: any) => {
+			.filter((part) => part.type === "file")
+			.map((part) => {
 				if (part.type === "file") {
 					return {
 						...part,
-						url:
-							part.url ||
-							(part.data
-								? `data:${part.mimeType || part.mediaType};base64,${part.data}`
-								: ""),
-						mediaType: part.mimeType || part.mediaType,
+						url: part.url,
+						mediaType: part.mediaType,
 						filename: part.filename || "Image",
-					};
-				}
-				if (part.type === "image") {
-					return {
-						...part,
-						url:
-							part.url ||
-							(part.image ? `data:${part.mimeType};base64,${part.image}` : ""),
-						mediaType: part.mimeType || "image/jpeg",
-						filename: "Image",
 					};
 				}
 				return part;
@@ -305,7 +285,7 @@ export function ChatInterface() {
 						const isLastAssistantMessage =
 							isLastMessage && message.role === "assistant";
 						const retrievalResultsPart = message.parts?.find?.(
-							(part: any) => part.type === "data-retrievalResults",
+							(part) => part.type === "data-retrievalResults",
 						) as { data?: RetrievalResult[] } | undefined;
 						const retrievalResults = retrievalResultsPart?.data;
 						const sourcesAreOpen =
@@ -357,7 +337,7 @@ export function ChatInterface() {
 									)}
 									{attachments.length > 0 && (
 										<MessageAttachments className="mt-2">
-											{attachments.map((attachment: any, index: number) => (
+											{attachments.map((attachment: FileUIPart, index: number) => (
 												<MessageAttachment data={attachment} key={index} />
 											))}
 										</MessageAttachments>
