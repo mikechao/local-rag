@@ -298,7 +298,7 @@ export function PromptInputAttachment({
               {isImage ? (
                 <img
                   alt={filename || "attachment"}
-                  className="size-5 object-cover"
+                  className="size-5 object-contain"
                   height={20}
                   src={data.url}
                   width={20}
@@ -330,13 +330,11 @@ export function PromptInputAttachment({
       <PromptInputHoverCardContent className="w-auto p-2">
         <div className="w-auto space-y-3">
           {isImage && (
-            <div className="flex max-h-96 w-96 items-center justify-center overflow-hidden rounded-md border">
+            <div className="flex max-h-96 max-w-96 items-center justify-center overflow-hidden rounded-md border">
               <img
                 alt={filename || "attachment preview"}
-                className="max-h-full max-w-full object-contain"
-                height={384}
+                className="max-h-96 max-w-96 object-contain"
                 src={data.url}
-                width={448}
               />
             </div>
           )}

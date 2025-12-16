@@ -342,7 +342,7 @@ export function MessageAttachment({
   return (
     <div
       className={cn(
-        "group relative size-24 overflow-hidden rounded-lg",
+        "group relative size-24 overflow-hidden rounded-lg bg-muted",
         className
       )}
       {...props}
@@ -351,7 +351,7 @@ export function MessageAttachment({
         <>
           <img
             alt={filename || "attachment"}
-            className="size-full object-cover"
+            className="size-full object-contain"
             height={100}
             src={data.url}
             width={100}
