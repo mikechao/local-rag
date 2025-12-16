@@ -1,6 +1,5 @@
 import { useChat } from "@ai-sdk/react";
 import { BuiltInAIChatTransport } from "@/lib/built-in-ai-chat-transport";
-import { QwenChatTransport } from "@/lib/qwen-chat-transport";
 import {
 	Conversation,
 	ConversationContent,
@@ -32,7 +31,7 @@ import {
 	ReasoningContent,
 	ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Paperclip, MicIcon, Loader2Icon } from "lucide-react";
@@ -90,17 +89,15 @@ export function ChatInterface() {
 		warmupEmbeddingModel().catch(console.error);
 	}, []);
 
-	// Choose a transport based on the selected local model
-	const chatTransport = useMemo(() => {
-		if (selectedModel === "qwen3-0.6b") return new QwenChatTransport();
-		return new BuiltInAIChatTransport();
-	}, [selectedModel]);
+	const chatTransportRef = useRef<BuiltInAIChatTransport | null>(null);
+	if (!chatTransportRef.current) {
+		chatTransportRef.current = new BuiltInAIChatTransport();
+	}
+	const chatTransport = chatTransportRef.current;
 
 	// Warm up when the transport supports it (BuiltInAIChatTransport only)
 	useEffect(() => {
-		if (chatTransport instanceof BuiltInAIChatTransport) {
-			chatTransport.warmup().catch(console.error);
-		}
+		chatTransport.warmup().catch(console.error);
 	}, [chatTransport]);
 
 	const [input, setInput] = useState("");
