@@ -556,7 +556,7 @@ export function ChatInterface() {
 												)}
 											</Tooltip>
 										</TooltipProvider>
-											<PromptInputSubmit variant={"noShadow"} disabled={status !== "ready"} />
+											<PromptInputSubmit variant={"noShadow"} status={status} />
 									</div>
 								</>
 							)}
