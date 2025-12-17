@@ -10,6 +10,22 @@ function normalizeScore(value: number): number {
 }
 
 let cachedRerankMinScore: number | null = null;
+let rerankMinScorePromise: Promise<number> | null = null;
+
+export function getRerankMinScoreCached(): number {
+  return cachedRerankMinScore ?? DEFAULT_RERANK_MIN_SCORE;
+}
+
+export function prefetchRerankMinScore(): Promise<number> {
+  if (cachedRerankMinScore !== null)
+    return Promise.resolve(cachedRerankMinScore);
+  if (!rerankMinScorePromise) {
+    rerankMinScorePromise = getRerankMinScore().finally(() => {
+      rerankMinScorePromise = null;
+    });
+  }
+  return rerankMinScorePromise;
+}
 
 export async function getRerankMinScore(): Promise<number> {
   if (cachedRerankMinScore !== null) return cachedRerankMinScore;
@@ -55,4 +71,5 @@ export async function setRerankMinScore(value: number): Promise<number> {
 
 export function resetSettingsCache() {
   cachedRerankMinScore = null;
+  rerankMinScorePromise = null;
 }

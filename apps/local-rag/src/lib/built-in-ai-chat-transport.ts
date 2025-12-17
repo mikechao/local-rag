@@ -17,7 +17,7 @@ import { builtInAI } from "@built-in-ai/core";
 import type { RetrievalResult } from "./retrieval";
 import type { LocalRAGMessage } from "./local-rag-message";
 import { runRetrievalPipeline } from "./retrieval-pipeline";
-import { getRerankMinScore } from "./settings";
+import { getRerankMinScoreCached, prefetchRerankMinScore } from "./settings";
 
 const retrievalResultSchema = z.object({
   chunkIds: z.array(z.string()),
@@ -128,6 +128,11 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
     if (this.warmupPromise) {
       return this.warmupPromise;
     }
+
+    // Prefetch settings so retrieval doesn't block on DB reads.
+    prefetchRerankMinScore().catch((e) => {
+      console.warn("[Warmup] Settings prefetch failed (non-fatal):", e);
+    });
 
     this.warmupPromise = (async () => {
       console.log("[Warmup] Starting chat model warmup...");
@@ -259,7 +264,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
         },
         options: {
           rerankCandidates: 10,
-          rerankMinScore: await getRerankMinScore(),
+          rerankMinScore: getRerankMinScoreCached(),
         },
       });
     } catch (e) {
