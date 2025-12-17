@@ -15,8 +15,8 @@ import {
 import { z } from "zod";
 import { builtInAI } from "@built-in-ai/core";
 import type { RetrievalResult } from "./retrieval";
-import { retrieveChunks } from "./retrieval";
 import { LocalRAGMessage } from "./local-rag-message";
+import { runRetrievalPipeline } from "./retrieval-pipeline";
 
 const retrievalResultSchema = z.object({
   chunkIds: z.array(z.string()),
@@ -26,6 +26,7 @@ const retrievalResultSchema = z.object({
   headingPath: z.string().nullable().optional(),
   text: z.string(),
   similarity: z.number(),
+  rerankScore: z.number().optional(),
 }) satisfies z.ZodType<RetrievalResult>;
 
 const callOptionsSchema = z.object({
@@ -245,35 +246,20 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
         return undefined;
       }
 
-      writer.write({
-        type: "data-retrievalStatus",
-        id: "retrieval",
-        data: {
-          phase: "retrieving",
-          query: userQuestion,
-          message: "Searching the knowledge base…",
+      return await runRetrievalPipeline(userQuestion, {
+        abortSignal,
+        writeStatus: (status) => {
+          writer.write({
+            type: "data-retrievalStatus",
+            id: "retrieval",
+            data: status,
+            transient: true,
+          });
         },
-        transient: true,
-      });
-
-      const retrievalBefore = performance.now();
-      const retrievalResults = await retrieveChunks(userQuestion);
-      const retrievalAfter = performance.now();
-      writer.write({
-        type: "data-retrievalStatus",
-        id: "retrieval",
-        data: {
-          phase: "done",
-          resultsCount: retrievalResults.results.length,
-          tookMs: Math.round(retrievalAfter - retrievalBefore),
-          message:
-            retrievalResults.results.length === 0
-              ? "No relevant sources found."
-              : `Found ${retrievalResults.results.length} source${retrievalResults.results.length === 1 ? "" : "s"}.`,
+        options: {
+          rerankCandidates: 10,
         },
-        transient: true,
       });
-      return retrievalResults.results;
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       writer.write({

@@ -258,10 +258,12 @@ export function ChatInterface() {
     const tookMs = phase === "done" ? statusPart.tookMs : undefined;
     const resultsCount = phase === "done" ? statusPart.resultsCount : undefined;
 
-    const isLoading = phase === "deciding" || phase === "retrieving";
+    const isLoading =
+      phase === "deciding" || phase === "retrieving" || phase === "reranking";
     let label = "Retrieval";
     if (phase === "deciding") label = "Retrieval: deciding";
     if (phase === "retrieving") label = "Retrieval: searching";
+    if (phase === "reranking") label = "Retrieval: reranking";
     if (phase === "skipped") label = "Retrieval: skipped";
     if (phase === "done") label = "Retrieval: done";
     if (phase === "error") label = "Retrieval: error";

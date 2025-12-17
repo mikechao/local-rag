@@ -5,6 +5,7 @@ export type RetrievalStatus =
   | { phase: "deciding"; message?: string }
   | { phase: "skipped"; message?: string }
   | { phase: "retrieving"; query?: string; message?: string }
+  | { phase: "reranking"; query?: string; message?: string }
   | { phase: "done"; resultsCount: number; tookMs?: number; message?: string }
   | { phase: "error"; message: string };
 

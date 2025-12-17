@@ -12,6 +12,7 @@ export type RetrievalResult = {
   headingPath?: string | null;
   text: string;
   similarity: number;
+  rerankScore?: number;
 };
 
 export type RetrievalOptions = {
