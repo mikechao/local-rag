@@ -4,6 +4,7 @@ import { EmbeddingModelDownload } from "@/components/model-download/EmbeddingMod
 import { GeminiNanoDownload } from "@/components/model-download/GeminiNanoDownload";
 import { WhisperDownload } from "@/components/model-download/WhisperDownload";
 import { SpeechDownload } from "@/components/model-download/SpeechDownload";
+import { RerankerDownload } from "@/components/model-download/RerankerDownload";
 import { PageContainer } from "@/components/PageContainer";
 import {
   Card,
@@ -35,7 +36,19 @@ function ModelsPage() {
             <GeminiNanoDownload />
           </CardContent>
         </Card>
-        <EmbeddingModelDownload />
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-2xl">Retrieval Models</CardTitle>
+            <CardDescription>
+              On-device models used for embedding, search, and reranking. All
+              models are cached after download.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid w-full gap-4 md:grid-cols-2">
+            <EmbeddingModelDownload />
+            <RerankerDownload />
+          </CardContent>
+        </Card>
         <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-2xl">Speech Models</CardTitle>
