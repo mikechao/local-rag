@@ -11,6 +11,7 @@ type WriteStatus = (status: RetrievalStatus) => void;
 
 export type RetrievalPipelineOptions = {
   rerankCandidates?: number;
+  rerankMinScore?: number;
 };
 
 export async function runRetrievalPipeline(
@@ -26,6 +27,7 @@ export async function runRetrievalPipeline(
   },
 ): Promise<RetrievalResult[]> {
   const rerankCandidates = options?.rerankCandidates ?? 10;
+  const rerankMinScore = options?.rerankMinScore ?? 0.75;
 
   writeStatus({
     phase: "retrieving",
@@ -69,11 +71,16 @@ export async function runRetrievalPipeline(
 
       const reordered: RetrievalResult[] = [];
       const used = new Set<number>();
+      let filteredCount = 0;
 
       for (const { corpus_id, score } of reranked) {
         const item = candidates[corpus_id];
         if (!item) continue;
         used.add(corpus_id);
+        if (score < rerankMinScore) {
+          filteredCount += 1;
+          continue;
+        }
         reordered.push({ ...item, rerankScore: score });
       }
 
@@ -88,6 +95,11 @@ export async function runRetrievalPipeline(
       console.log(
         `reranking took ${rerankAfter - rerankBefore} ms for ${candidates.length} candidates`,
       );
+      if (filteredCount > 0) {
+        console.log(
+          `[retrieval] filtered ${filteredCount} reranked candidates below rerankMinScore=${rerankMinScore}`,
+        );
+      }
     } catch (e) {
       console.warn("[retrieval] reranking failed (continuing):", e);
     }

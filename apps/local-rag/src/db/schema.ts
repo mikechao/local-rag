@@ -8,6 +8,7 @@ import {
   customType,
   boolean,
   index,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 
 const oid = customType<{ data: number; driverData: number }>({
@@ -75,8 +76,17 @@ export const chunkEmbeddings = pgTable(
   (table) => [primaryKey({ columns: [table.chunkId, table.embeddingModel] })],
 );
 
+export const appSettings = pgTable("app_settings", {
+  id: integer("id").primaryKey().notNull().default(1),
+  rerankMinScore: doublePrecision("rerank_min_score").notNull().default(0.75),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = typeof documents.$inferInsert;
 export type DocumentChunk = typeof documentChunks.$inferSelect;
 export type InsertDocumentChunk = typeof documentChunks.$inferInsert;
 export type ChunkEmbedding = typeof chunkEmbeddings.$inferSelect;
+export type AppSettings = typeof appSettings.$inferSelect;

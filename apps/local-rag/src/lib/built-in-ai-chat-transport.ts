@@ -1,7 +1,7 @@
 import {
-  ChatTransport,
-  UIMessageChunk,
-  ChatRequestOptions,
+  type ChatTransport,
+  type UIMessageChunk,
+  type ChatRequestOptions,
   ToolLoopAgent,
   createAgentUIStream,
   generateText,
@@ -9,14 +9,15 @@ import {
   Output,
   smoothStream,
   createUIMessageStream,
-  InferUIMessageChunk,
-  UIMessageStreamWriter,
+  type InferUIMessageChunk,
+  type UIMessageStreamWriter,
 } from "ai";
 import { z } from "zod";
 import { builtInAI } from "@built-in-ai/core";
 import type { RetrievalResult } from "./retrieval";
-import { LocalRAGMessage } from "./local-rag-message";
+import type { LocalRAGMessage } from "./local-rag-message";
 import { runRetrievalPipeline } from "./retrieval-pipeline";
+import { getRerankMinScore } from "./settings";
 
 const retrievalResultSchema = z.object({
   chunkIds: z.array(z.string()),
@@ -258,6 +259,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
         },
         options: {
           rerankCandidates: 10,
+          rerankMinScore: await getRerankMinScore(),
         },
       });
     } catch (e) {
