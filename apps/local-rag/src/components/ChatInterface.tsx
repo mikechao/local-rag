@@ -84,6 +84,7 @@ export function ChatInterface() {
 	const lastMessageIdRef = useRef<string | null>(null);
 	const lastMessageLengthRef = useRef(0);
 	const textStreamRef = useRef<TextStream | null>(null);
+	const promptAreaRef = useRef<HTMLDivElement | null>(null);
 	const { playStream, stop } = useSpeechPlayer();
 
 	useEffect(() => {
@@ -129,6 +130,21 @@ export function ChatInterface() {
 			}
 		},
 	});
+
+	useEffect(() => {
+		if (status !== "ready") return;
+
+		const root = promptAreaRef.current;
+		const textarea = root?.querySelector?.(
+			'textarea[name="message"]',
+		) as HTMLTextAreaElement | null;
+		if (!root || !textarea) return;
+
+		const active = document.activeElement;
+		if (active && active !== document.body && !root.contains(active)) return;
+
+		requestAnimationFrame(() => textarea.focus());
+	}, [status]);
 
 	useEffect(() => {
 		if (!autoSpeak) {
@@ -434,130 +450,134 @@ export function ChatInterface() {
 			</Conversation>
 
 			<div className="border-t bg-background p-4">
-				<PromptInput
-					accept="image/*"
-					onSubmit={async (message) => {
-						setRetrievalStatus(null);
-						const trimmedText = message.text.trim();
-						const hasFiles = message.files.length > 0;
+				<div ref={promptAreaRef}>
+					<PromptInput
+						accept="image/*"
+						onSubmit={(message) => {
+							setRetrievalStatus(null);
+							const trimmedText = message.text.trim();
+							const hasFiles = message.files.length > 0;
 
-						if (!trimmedText && !hasFiles) return; // avoid sending empty messages
-						
-						sendMessage(
-							hasFiles
-							? trimmedText
-							? { text: trimmedText, files: message.files }
-							: { files: message.files }
-							: { text: trimmedText },
-							{ body: { modelId: selectedModel } },
-						);
-						setInput("");
+							if (!trimmedText && !hasFiles) return; // avoid sending empty messages
 
-					}}
-				>
-					<PromptInputAttachments>
-						{(attachment) => <PromptInputAttachment data={attachment} />}
-					</PromptInputAttachments>
-					<PromptInputTextarea
-						value={input}
-						onChange={handleInputChange}
-						disabled={status !== "ready"}
-					/>
-					<PromptInputFooter>
-						<VoiceInput
-							onTranscription={(text) =>
-								setInput((prev) => prev + (prev ? " " : "") + text)
-							}
-						>
-							{({ startRecording }) => (
-								<>
-									<PromptInputTools>
-										<PromptInputActionMenu>
-											<PromptInputActionMenuTrigger variant={"noShadow"}>
-												<Paperclip className="size-4" />
-											</PromptInputActionMenuTrigger>
-											<PromptInputActionMenuContent>
-												<PromptInputActionAddAttachments label="Attach Photos" />
-											</PromptInputActionMenuContent>
-										</PromptInputActionMenu>
-										<LocalModelSelector
-											value={selectedModel}
-											onValueChange={setSelectedModel}
-										/>
-										<TooltipProvider>
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<Button
-														variant="noShadow"
-														size="sm"
-														className="h-8 gap-2 px-2"
-														onClick={() => setAutoSpeak(!autoSpeak)}
-														disabled={!isSpeechAvailable}
-														type="button"
-													>
-														{autoSpeak ? (
-															<Volume2 className="size-4" />
-														) : (
-															<VolumeX className="size-4 text-muted-foreground" />
-														)}
-														<span className="hidden sm:inline">
-															{autoSpeak ? "Auto-Speak On" : "Auto-Speak Off"}
-														</span>
-													</Button>
-												</TooltipTrigger>
-												<TooltipContent>
-													<p>
-														{!isSpeechAvailable
-															? "Download Speech model to enable auto-speak"
-															: autoSpeak
-																? "Disable Auto-Speak"
-																: "Enable Auto-Speak"}
-													</p>
-												</TooltipContent>
-											</Tooltip>
-										</TooltipProvider>
-									</PromptInputTools>
-									<div className="flex items-center gap-1">
-										<TooltipProvider>
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<span tabIndex={-1}>
+							void sendMessage(
+								hasFiles
+									? trimmedText
+										? { text: trimmedText, files: message.files }
+										: { files: message.files }
+									: { text: trimmedText },
+								{ body: { modelId: selectedModel } },
+							);
+
+							setInput("");
+						}}
+					>
+						<PromptInputAttachments>
+							{(attachment) => <PromptInputAttachment data={attachment} />}
+						</PromptInputAttachments>
+						<PromptInputTextarea
+							value={input}
+							onChange={handleInputChange}
+							disabled={status !== "ready"}
+						/>
+						<PromptInputFooter>
+							<VoiceInput
+								onTranscription={(text) =>
+									setInput((prev) => prev + (prev ? " " : "") + text)
+								}
+							>
+								{({ startRecording }) => (
+									<>
+										<PromptInputTools>
+											<PromptInputActionMenu>
+												<PromptInputActionMenuTrigger variant={"noShadow"}>
+													<Paperclip className="size-4" />
+												</PromptInputActionMenuTrigger>
+												<PromptInputActionMenuContent>
+													<PromptInputActionAddAttachments label="Attach Photos" />
+												</PromptInputActionMenuContent>
+											</PromptInputActionMenu>
+											<LocalModelSelector
+												value={selectedModel}
+												onValueChange={setSelectedModel}
+											/>
+											<TooltipProvider>
+												<Tooltip>
+													<TooltipTrigger asChild>
 														<Button
 															variant="noShadow"
-															size="icon"
-															className="size-8"
-															onClick={startRecording}
-															disabled={!isWhisperAvailable}
+															size="sm"
+															className="h-8 gap-2 px-2"
+															onClick={() => setAutoSpeak(!autoSpeak)}
+															disabled={!isSpeechAvailable}
 															type="button"
 														>
-															<MicIcon className="size-4" />
-															<span className="sr-only">Voice Input</span>
+															{autoSpeak ? (
+																<Volume2 className="size-4" />
+															) : (
+																<VolumeX className="size-4 text-muted-foreground" />
+															)}
+															<span className="hidden sm:inline">
+																{autoSpeak ? "Auto-Speak On" : "Auto-Speak Off"}
+															</span>
 														</Button>
-													</span>
-												</TooltipTrigger>
-												{!isWhisperAvailable && (
+													</TooltipTrigger>
 													<TooltipContent>
-														<p>Download Whisper model to enable voice input</p>
+														<p>
+															{!isSpeechAvailable
+																? "Download Speech model to enable auto-speak"
+																: autoSpeak
+																	? "Disable Auto-Speak"
+																	: "Enable Auto-Speak"}
+														</p>
 													</TooltipContent>
-												)}
-											</Tooltip>
-										</TooltipProvider>
-										<PromptInputSubmit
-											variant={"noShadow"}
-											status={status}
-											onClick={(e) => {
-												if (status === "streaming") {
-													e.preventDefault();
-													stopChat();
-												}
-											}}
-										/>
-									</div>
-								</>
-							)}
-						</VoiceInput>
-					</PromptInputFooter>
-				</PromptInput>
+												</Tooltip>
+											</TooltipProvider>
+										</PromptInputTools>
+										<div className="flex items-center gap-1">
+											<TooltipProvider>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<span tabIndex={-1}>
+															<Button
+																variant="noShadow"
+																size="icon"
+																className="size-8"
+																onClick={startRecording}
+																disabled={!isWhisperAvailable}
+																type="button"
+															>
+																<MicIcon className="size-4" />
+																<span className="sr-only">Voice Input</span>
+															</Button>
+														</span>
+													</TooltipTrigger>
+													{!isWhisperAvailable && (
+														<TooltipContent>
+															<p>
+																Download Whisper model to enable voice input
+															</p>
+														</TooltipContent>
+													)}
+												</Tooltip>
+											</TooltipProvider>
+											<PromptInputSubmit
+												variant={"noShadow"}
+												status={status}
+												onClick={(e) => {
+													if (status === "streaming") {
+														e.preventDefault();
+														stopChat();
+													}
+												}}
+											/>
+										</div>
+									</>
+								)}
+							</VoiceInput>
+						</PromptInputFooter>
+					</PromptInput>
+				</div>
 			</div>
 		</div>
 	);
