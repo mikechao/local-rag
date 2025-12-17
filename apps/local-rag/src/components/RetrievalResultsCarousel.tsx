@@ -23,6 +23,11 @@ function formatSimilarity(similarity: number): string {
   return `${pct.toFixed(1)}%`;
 }
 
+function formatRerankScore(score: number): string {
+  if (!Number.isFinite(score)) return "–";
+  return score.toFixed(3);
+}
+
 export function RetrievalResultsCarousel({
   results,
 }: RetrievalResultsCarouselProps) {
@@ -80,7 +85,7 @@ export function RetrievalResultsCarousel({
                 >
                   <Card className="w-full max-w-full gap-4 py-4">
                     <CardContent className="px-4">
-                      <div className="max-h-48 overflow-auto overflow-x-hidden whitespace-pre-wrap break-words rounded-base border-2 border-border bg-secondary px-3 py-2 text-xs leading-relaxed">
+                      <div className="max-h-48 overflow-auto overflow-x-hidden whitespace-pre-wrap wrap-break-word rounded-base border-2 border-border bg-secondary px-3 py-2 text-xs leading-relaxed">
                         {result.text}
                       </div>
                       <div className="mt-2 flex flex-col gap-1 text-muted-foreground text-[11px]">
@@ -92,6 +97,11 @@ export function RetrievalResultsCarousel({
                           <Badge variant="neutral">{result.docType}</Badge>
                           <span>p. {result.pageNumber}</span>
                           <span>sim {formatSimilarity(result.similarity)}</span>
+                          {typeof result.rerankScore === "number" && (
+                            <span>
+                              rerank {formatRerankScore(result.rerankScore)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </CardContent>
