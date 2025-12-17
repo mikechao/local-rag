@@ -7,6 +7,7 @@ import {
   Moon,
   PanelLeftIcon,
   Sun,
+  Settings2Icon,
 } from "lucide-react";
 import type React from "react";
 
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
   { label: "Documents", to: "/documents", icon: BookText },
   { label: "Models", to: "/models", icon: Bot },
   { label: "Database", to: "/database", icon: Database },
+  { label: "Settings", to: "/settings", icon: Settings2Icon },
 ];
 
 export function SidebarNav() {

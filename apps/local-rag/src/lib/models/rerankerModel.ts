@@ -32,15 +32,20 @@ let tokenizerPromise: Promise<PreTrainedTokenizer> | null = null;
 
 export async function loadRerankerModel(progressCallback?: ProgressCallback) {
   if (!modelPromise) {
-    modelPromise = AutoModelForSequenceClassification.from_pretrained(MODEL_ID, {
-      device: "webgpu",
-      progress_callback: progressCallback,
-    });
+    modelPromise = AutoModelForSequenceClassification.from_pretrained(
+      MODEL_ID,
+      {
+        device: "webgpu",
+        progress_callback: progressCallback,
+      },
+    );
   }
   return modelPromise;
 }
 
-export async function loadRerankerTokenizer(progressCallback?: ProgressCallback) {
+export async function loadRerankerTokenizer(
+  progressCallback?: ProgressCallback,
+) {
   if (!tokenizerPromise) {
     tokenizerPromise = AutoTokenizer.from_pretrained(MODEL_ID, {
       progress_callback: progressCallback,
@@ -60,11 +65,11 @@ export async function warmupReranker(progressCallback?: ProgressCallback) {
     text_pair: ["Hello"],
     padding: true,
     truncation: true,
-  })
+  });
   // output is https://huggingface.co/docs/transformers.js/en/api/models#module_models.SequenceClassifierOutput
   const output = await (model as any)(inputs);
   const logits = output.logits;
-  void logits.data;   // e.g. touch the data / force a real read:
+  void logits.data; // e.g. touch the data / force a real read:
   const scores = logits.sigmoid().tolist();
   console.log("Reranker warmup complete, scores:", scores);
   console.log("logits.data:", logits.data);

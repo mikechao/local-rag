@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ModelsRouteImport } from './routes/models'
 import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as DatabaseRouteImport } from './routes/database'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ModelsRoute = ModelsRouteImport.update({
   id: '/models',
   path: '/models',
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/database': typeof DatabaseRoute
   '/documents': typeof DocumentsRoute
   '/models': typeof ModelsRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/database': typeof DatabaseRoute
   '/documents': typeof DocumentsRoute
   '/models': typeof ModelsRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,27 @@ export interface FileRoutesById {
   '/database': typeof DatabaseRoute
   '/documents': typeof DocumentsRoute
   '/models': typeof ModelsRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chat' | '/database' | '/documents' | '/models'
+  fullPaths:
+    | '/'
+    | '/chat'
+    | '/database'
+    | '/documents'
+    | '/models'
+    | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chat' | '/database' | '/documents' | '/models'
-  id: '__root__' | '/' | '/chat' | '/database' | '/documents' | '/models'
+  to: '/' | '/chat' | '/database' | '/documents' | '/models' | '/settings'
+  id:
+    | '__root__'
+    | '/'
+    | '/chat'
+    | '/database'
+    | '/documents'
+    | '/models'
+    | '/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,10 +99,18 @@ export interface RootRouteChildren {
   DatabaseRoute: typeof DatabaseRoute
   DocumentsRoute: typeof DocumentsRoute
   ModelsRoute: typeof ModelsRoute
+  SettingsRoute: typeof SettingsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/models': {
       id: '/models'
       path: '/models'
@@ -125,6 +155,7 @@ const rootRouteChildren: RootRouteChildren = {
   DatabaseRoute: DatabaseRoute,
   DocumentsRoute: DocumentsRoute,
   ModelsRoute: ModelsRoute,
+  SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
