@@ -29,7 +29,8 @@ export function WhisperDownload() {
       ]}
       clearCacheDescription="This will remove the model files from your browser cache. You will need to download them again to use the model."
       onDownload={async ({ onProgress }) => {
-        const model = getWhisperModel() as unknown as TransformersJSTranscriptionModel;
+        const model =
+          getWhisperModel() as unknown as TransformersJSTranscriptionModel;
         await model.createSessionWithProgress((p) => {
           onProgress(p.progress);
         });
@@ -41,7 +42,8 @@ export function WhisperDownload() {
       hasCached={hasCachedWhisperWeights}
       isReadyFlag={isWhisperModelReadyFlag}
       getAvailability={async () => {
-        const model = getWhisperModel() as unknown as TransformersJSTranscriptionModel;
+        const model =
+          getWhisperModel() as unknown as TransformersJSTranscriptionModel;
         return await model.availability();
       }}
     />

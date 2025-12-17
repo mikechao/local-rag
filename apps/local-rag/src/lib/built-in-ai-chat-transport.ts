@@ -10,7 +10,7 @@ import {
   smoothStream,
   createUIMessageStream,
   InferUIMessageChunk,
-  UIMessageStreamWriter
+  UIMessageStreamWriter,
 } from "ai";
 import { z } from "zod";
 import { builtInAI } from "@built-in-ai/core";
@@ -35,9 +35,15 @@ const callOptionsSchema = z.object({
 type CallOptions = z.infer<typeof callOptionsSchema>;
 
 const shouldRetrieveSchema = z.object({
-  shouldRetrieve: z.boolean().describe("Whether the user's question requires retrieval of relevant documents."),
-  userQuestion: z.string().describe("The user's question that may require retrieval."),
-})
+  shouldRetrieve: z
+    .boolean()
+    .describe(
+      "Whether the user's question requires retrieval of relevant documents.",
+    ),
+  userQuestion: z
+    .string()
+    .describe("The user's question that may require retrieval."),
+});
 
 // Returns the most recent message sent by the user, or undefined if none exist.
 function getLatestUserMessage(
@@ -55,54 +61,59 @@ function getLatestUserMessage(
  *
  * @implements {ChatTransport<LocalRAGMessage>}
  */
-export class BuiltInAIChatTransport
-  implements ChatTransport<LocalRAGMessage>
-{
+export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
   private chatAgent: ToolLoopAgent<CallOptions>;
   private chatModel = builtInAI("text", {
-    expectedInputs: [{ type: "text" }, { type: "image" }]
+    expectedInputs: [{ type: "text" }, { type: "image" }],
   });
   private warmupPromise: Promise<void> | null = null;
 
   constructor() {
     this.chatAgent = new ToolLoopAgent<CallOptions>({
       model: this.chatModel,
-      instructions: 'You are a helpful assistant. Answer user questions the best you can.',
+      instructions:
+        "You are a helpful assistant. Answer user questions the best you can.",
       callOptionsSchema,
       prepareCall: ({ options, prompt, ...settings }) => {
         const retrievalResults = options?.retrievalResults;
-        
+
         // If we have retrieval results, inject them into the conversation as an assistant message
-        if (retrievalResults && retrievalResults.length > 0 && Array.isArray(prompt)) {
+        if (
+          retrievalResults &&
+          retrievalResults.length > 0 &&
+          Array.isArray(prompt)
+        ) {
           const contextText = retrievalResults
             .map((r) => `${r.text}\n(Source: ${r.docId})`)
             .join("\n\n---\n\n");
-          
+
           // Insert an assistant message with the context before the last user message
           const lastIndex = prompt.length - 1;
           const modifiedPrompt = [
             ...prompt.slice(0, lastIndex),
             {
-              role: 'assistant' as const,
+              role: "assistant" as const,
               content: `I found the following relevant information from the knowledge base:\n\n${contextText}\n\nI'll use this information to answer your question.`,
             },
             prompt[lastIndex], // The user's question
           ];
-          
-          console.log('[prepareCall] Injected RAG context as assistant message');
-          
+
+          console.log(
+            "[prepareCall] Injected RAG context as assistant message",
+          );
+
           return {
             ...settings,
             prompt: modifiedPrompt,
           };
         }
-        
+
         return {
           ...settings,
           prompt,
         };
       },
-    })
+    });
   }
 
   /**
@@ -115,7 +126,7 @@ export class BuiltInAIChatTransport
     if (this.warmupPromise) {
       return this.warmupPromise;
     }
-    
+
     this.warmupPromise = (async () => {
       console.log("[Warmup] Starting chat model warmup...");
       const start = performance.now();
@@ -123,15 +134,18 @@ export class BuiltInAIChatTransport
         // Make a minimal call to establish the session with the correct system message
         await generateText({
           model: this.chatModel,
-          system: 'You are a helpful assistant. Answer user questions the best you can.',
-          messages: [{ role: 'user', content: 'hi' }],
+          system:
+            "You are a helpful assistant. Answer user questions the best you can.",
+          messages: [{ role: "user", content: "hi" }],
         });
-        console.log(`[Warmup] Chat model warmed up in ${(performance.now() - start).toFixed(2)}ms`);
+        console.log(
+          `[Warmup] Chat model warmed up in ${(performance.now() - start).toFixed(2)}ms`,
+        );
       } catch (e) {
         console.warn("[Warmup] Chat model warmup failed (non-fatal):", e);
       }
     })();
-    
+
     return this.warmupPromise;
   }
 
@@ -149,11 +163,8 @@ export class BuiltInAIChatTransport
 
     return createUIMessageStream<LocalRAGMessage>({
       execute: async ({ writer }) => {
-        const retrievalResults: RetrievalResult[] | undefined = await this.getRetrievalResults(
-          messages,
-          abortSignal,
-          writer
-        );
+        const retrievalResults: RetrievalResult[] | undefined =
+          await this.getRetrievalResults(messages, abortSignal, writer);
         const agentStream = await createAgentUIStream({
           agent: this.chatAgent,
           messages,
@@ -164,7 +175,7 @@ export class BuiltInAIChatTransport
 
         // Forward the agent's stream to the UI stream.
         writer.merge(
-          agentStream as ReadableStream<InferUIMessageChunk<LocalRAGMessage>>
+          agentStream as ReadableStream<InferUIMessageChunk<LocalRAGMessage>>,
         );
 
         // Send retrieval results as a data part after the model completes.
@@ -182,7 +193,7 @@ export class BuiltInAIChatTransport
   async getRetrievalResults(
     messages: LocalRAGMessage[],
     abortSignal: AbortSignal | undefined,
-    writer: UIMessageStreamWriter<LocalRAGMessage>
+    writer: UIMessageStreamWriter<LocalRAGMessage>,
   ): Promise<RetrievalResult[] | undefined> {
     const lastUserMessage = getLatestUserMessage(messages);
     if (lastUserMessage === undefined) {
@@ -191,7 +202,10 @@ export class BuiltInAIChatTransport
     writer.write({
       type: "data-retrievalStatus",
       id: "retrieval",
-      data: { phase: "deciding", message: "Deciding whether to search the knowledge base…" },
+      data: {
+        phase: "deciding",
+        message: "Deciding whether to search the knowledge base…",
+      },
       transient: true,
     });
     const systemMessage = {
@@ -199,11 +213,12 @@ export class BuiltInAIChatTransport
       parts: [
         {
           type: "text" as const,
-          text: "Determine if the user message requires retrieval from the knowledge base to provide a better answer." 
-            + " The knowledge base contains information about Stargate Atlantis.",
-        }
+          text:
+            "Determine if the user message requires retrieval from the knowledge base to provide a better answer." +
+            " The knowledge base contains information about Stargate Atlantis.",
+        },
       ],
-      id: "system-message-id"
+      id: "system-message-id",
     };
     try {
       const before = performance.now();
@@ -214,9 +229,11 @@ export class BuiltInAIChatTransport
           schema: shouldRetrieveSchema,
         }),
         abortSignal,
-      })
+      });
       const after = performance.now();
-      console.log(`retrieval decision took ${after - before} ms shouldRetrieve: ${result.output.shouldRetrieve} userQuestion: ${result.output.userQuestion}`);
+      console.log(
+        `retrieval decision took ${after - before} ms shouldRetrieve: ${result.output.shouldRetrieve} userQuestion: ${result.output.userQuestion}`,
+      );
       const { shouldRetrieve, userQuestion } = result.output;
       if (!shouldRetrieve) {
         writer.write({
@@ -231,7 +248,11 @@ export class BuiltInAIChatTransport
       writer.write({
         type: "data-retrievalStatus",
         id: "retrieval",
-        data: { phase: "retrieving", query: userQuestion, message: "Searching the knowledge base…" },
+        data: {
+          phase: "retrieving",
+          query: userQuestion,
+          message: "Searching the knowledge base…",
+        },
         transient: true,
       });
 

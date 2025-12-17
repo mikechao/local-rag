@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { PageContainer } from "@/components/PageContainer"
-import { ChatInterface } from "@/components/ChatInterface"
+import { createFileRoute } from "@tanstack/react-router";
+import { PageContainer } from "@/components/PageContainer";
+import { ChatInterface } from "@/components/ChatInterface";
 
-export const Route = createFileRoute("/chat")({ component: ChatPage })
+export const Route = createFileRoute("/chat")({ component: ChatPage });
 
 function ChatPage() {
   return (
@@ -13,5 +13,5 @@ function ChatPage() {
     >
       <ChatInterface />
     </PageContainer>
-  )
+  );
 }

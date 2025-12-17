@@ -1,6 +1,14 @@
-import { Link, useRouterState } from "@tanstack/react-router"
-import { Bot, BookText, Database, MessageSquareQuote, Moon, PanelLeftIcon, Sun } from "lucide-react"
-import type React from "react"
+import { Link, useRouterState } from "@tanstack/react-router";
+import {
+  Bot,
+  BookText,
+  Database,
+  MessageSquareQuote,
+  Moon,
+  PanelLeftIcon,
+  Sun,
+} from "lucide-react";
+import type React from "react";
 
 import {
   Sidebar,
@@ -15,32 +23,32 @@ import {
   SidebarMenuItem,
   SidebarRail,
   useSidebar,
-} from "@/components/ui/sidebar"
-import { Button } from "./ui/button"
-import { useTheme } from "@/providers/theme"
+} from "@/components/ui/sidebar";
+import { Button } from "./ui/button";
+import { useTheme } from "@/providers/theme";
 
 type NavItem = {
-  label: string
-  to: string
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-}
+  label: string;
+  to: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+};
 
 const navItems: NavItem[] = [
   { label: "Chat", to: "/chat", icon: MessageSquareQuote },
   { label: "Documents", to: "/documents", icon: BookText },
   { label: "Models", to: "/models", icon: Bot },
   { label: "Database", to: "/database", icon: Database },
-]
+];
 
 export function SidebarNav() {
-  const { location } = useRouterState()
-  const { toggleSidebar, isMobile, setOpenMobile } = useSidebar()
-  const { theme, toggleTheme } = useTheme()
+  const { location } = useRouterState();
+  const { toggleSidebar, isMobile, setOpenMobile } = useSidebar();
+  const { theme, toggleTheme } = useTheme();
 
   const handleToggleTheme = () => {
-    toggleTheme()
-    if (isMobile) setOpenMobile(false)
-  }
+    toggleTheme();
+    if (isMobile) setOpenMobile(false);
+  };
 
   return (
     <Sidebar side="left" collapsible="icon">
@@ -64,18 +72,27 @@ export function SidebarNav() {
               {navItems.map((item) => {
                 const isActive =
                   location.pathname === item.to ||
-                  (item.to !== "/" && location.pathname.startsWith(`${item.to}/`))
+                  (item.to !== "/" &&
+                    location.pathname.startsWith(`${item.to}/`));
 
                 return (
                   <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                      <Link to={item.to} preload="intent" aria-current={isActive ? "page" : undefined}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.label}
+                    >
+                      <Link
+                        to={item.to}
+                        preload="intent"
+                        aria-current={isActive ? "page" : undefined}
+                      >
                         <item.icon />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                )
+                );
               })}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -95,5 +112,5 @@ export function SidebarNav() {
         </Button>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

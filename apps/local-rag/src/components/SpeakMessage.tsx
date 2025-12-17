@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
-import { MessageActions, MessageAction } from "@/components/ai-elements/message";
+import {
+  MessageActions,
+  MessageAction,
+} from "@/components/ai-elements/message";
 import { MegaphoneIcon, Loader2Icon } from "lucide-react";
 import {
   generateSpeech,
   isSpeechModelReadyFlag,
   hasCachedSpeechWeights,
 } from "@/lib/models/speechModel";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Link } from "@tanstack/react-router";
 
 type SpeakMessageProps = {
@@ -36,21 +44,21 @@ export function SpeakMessage({ text, className = "" }: SpeakMessageProps) {
 
     try {
       setIsGenerating(true);
-      
+
       const before = performance.now();
       const blob = await generateSpeech(text);
       const after = performance.now();
       console.log(`Speech generation took ${(after - before).toFixed(2)} ms`);
 
       const url = URL.createObjectURL(blob);
-      
+
       const audioEl = new Audio(url);
-      
+
       audioEl.onended = () => {
         URL.revokeObjectURL(url);
         setIsGenerating(false);
       };
-      
+
       audioEl.onerror = (e) => {
         console.error("Audio playback error:", e);
         URL.revokeObjectURL(url);

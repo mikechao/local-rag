@@ -12,7 +12,12 @@ interface VoiceInputProps {
 
 export function VoiceInput({ onTranscription, children }: VoiceInputProps) {
   const controls = useVoiceVisualizer();
-  const { isRecordingInProgress, isPausedRecording, formattedRecordingTime, recordedBlob } = controls;
+  const {
+    isRecordingInProgress,
+    isPausedRecording,
+    formattedRecordingTime,
+    recordedBlob,
+  } = controls;
   const [isTranscribing, setIsTranscribing] = useState(false);
 
   useEffect(() => {
@@ -25,7 +30,7 @@ export function VoiceInput({ onTranscription, children }: VoiceInputProps) {
     setIsTranscribing(true);
     try {
       const arrayBuffer = await blob.arrayBuffer();
-      
+
       const transcript = await transcribe({
         model: getWhisperModel(),
         audio: arrayBuffer,
@@ -63,38 +68,34 @@ export function VoiceInput({ onTranscription, children }: VoiceInputProps) {
     return (
       <div className="flex w-full items-center gap-2">
         <div className="flex-1 overflow-hidden rounded-md border bg-background/50">
-            <VoiceVisualizer 
-                controls={controls} 
-                height={40}
-                width="100%"
-                mainBarColor="currentColor"
-                secondaryBarColor="currentColor"
-                barWidth={3}
-                gap={2}
-                isControlPanelShown={false}
-            />
+          <VoiceVisualizer
+            controls={controls}
+            height={40}
+            width="100%"
+            mainBarColor="currentColor"
+            secondaryBarColor="currentColor"
+            barWidth={3}
+            gap={2}
+            isControlPanelShown={false}
+          />
         </div>
         <div className="flex items-center gap-1">
-            <span className="text-xs font-mono w-12 text-center">
-                {formattedRecordingTime}
-            </span>
-            <Button
+          <span className="text-xs font-mono w-12 text-center">
+            {formattedRecordingTime}
+          </span>
+          <Button
             variant="neutral"
             size="icon"
             className="size-8"
             onClick={handleStopRecording}
             title="Stop and Transcribe"
-            >
+          >
             <SquareIcon className="size-4" />
-            </Button>
+          </Button>
         </div>
       </div>
     );
   }
 
-  return (
-    <>
-      {children({ startRecording: handleStartRecording })}
-    </>
-  );
+  return <>{children({ startRecording: handleStartRecording })}</>;
 }

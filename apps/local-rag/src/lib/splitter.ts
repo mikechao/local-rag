@@ -5,7 +5,10 @@
  * @param c The character to test.
  * @param includeNewlines Whether to treat newlines as terminators.
  */
-function isSentenceTerminator(c: string, includeNewlines: boolean = true): boolean {
+function isSentenceTerminator(
+  c: string,
+  includeNewlines: boolean = true,
+): boolean {
   return ".!?…。？！".includes(c) || (includeNewlines && c === "\n");
 }
 
@@ -126,7 +129,12 @@ const OPENING: Set<string> = new Set(MATCHING.values());
  * @param i The index of the character in the buffer.
  * @param buffer The full text being processed.
  */
-function updateStack(c: string, stack: string[], i: number, buffer: string): void {
+function updateStack(
+  c: string,
+  stack: string[],
+  i: number,
+  buffer: string,
+): void {
   // Handle standard quotes.
   if (c === '"' || c === "'") {
     // Ignore an apostrophe if it's between letters (e.g., in contractions).
@@ -141,7 +149,12 @@ function updateStack(c: string, stack: string[], i: number, buffer: string): voi
     }
 
     // Ignore an apostrophe if it's at the end of a word (e.g., possessive "wives'").
-    if (c === "'" && i > 0 && /[A-Za-z]/.test(buffer[i - 1]) && (!stack.length || stack.at(-1) !== "'")) {
+    if (
+      c === "'" &&
+      i > 0 &&
+      /[A-Za-z]/.test(buffer[i - 1]) &&
+      (!stack.length || stack.at(-1) !== "'")
+    ) {
       return;
     }
 
@@ -175,7 +188,9 @@ function updateStack(c: string, stack: string[], i: number, buffer: string): voi
 /**
  * A simple stream-based text splitter that emits complete sentences.
  */
-export class TextSplitterStream implements AsyncIterable<string>, Iterable<string> {
+export class TextSplitterStream
+  implements AsyncIterable<string>, Iterable<string>
+{
   private _buffer: string;
   private _sentences: string[];
   private _resolver: (() => void) | null;
@@ -247,7 +262,9 @@ export class TextSplitterStream implements AsyncIterable<string>, Iterable<strin
     let stack: string[] = [];
 
     // Helper to scan from the current index over trailing terminators and punctuation.
-    const scanBoundary = (idx: number): { end: number; nextNonSpace: number } => {
+    const scanBoundary = (
+      idx: number,
+    ): { end: number; nextNonSpace: number } => {
       let end = idx;
       // Consume contiguous sentence terminators (excluding newlines).
       while (end + 1 < len && isSentenceTerminator(buffer[end + 1], false)) {
@@ -324,7 +341,11 @@ export class TextSplitterStream implements AsyncIterable<string>, Iterable<strin
         // --- Middle initials heuristic ---
         // If the token is a series of single-letter initials (each ending in a period)
         // and is followed by a capitalized word, assume it's part of a name.
-        if (/^([A-Za-z]\.)+$/.test(token) && nextNonSpace < len && /[A-Z]/.test(buffer[nextNonSpace])) {
+        if (
+          /^([A-Za-z]\.)+$/.test(token) &&
+          nextNonSpace < len &&
+          /[A-Z]/.test(buffer[nextNonSpace])
+        ) {
           ++i;
           continue;
         }
@@ -332,13 +353,19 @@ export class TextSplitterStream implements AsyncIterable<string>, Iterable<strin
         // --- Lookahead heuristic ---
         // If the terminator is a period and the next non–whitespace character is lowercase,
         // assume it is not the end of a sentence.
-        if (c === "." && nextNonSpace < len && /[a-z]/.test(buffer[nextNonSpace])) {
+        if (
+          c === "." &&
+          nextNonSpace < len &&
+          /[a-z]/.test(buffer[nextNonSpace])
+        ) {
           ++i;
           continue;
         }
 
         // Special case: ellipsis that stands alone should be merged with the following sentence.
-        const sentence = buffer.substring(sentenceStart, boundaryEnd + 1).trim();
+        const sentence = buffer
+          .substring(sentenceStart, boundaryEnd + 1)
+          .trim();
         if (sentence === "..." || sentence === "…") {
           ++i;
           continue;

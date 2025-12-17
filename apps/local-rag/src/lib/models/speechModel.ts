@@ -35,7 +35,7 @@ export async function loadSpeechPipeline(
         num_inference_steps: 1,
         speed: 1.0,
       });
-      console.log('after warmup');
+      console.log("after warmup");
       return tts;
     })();
   }
@@ -92,7 +92,10 @@ function splitWithConstraints(
   return result;
 }
 
-export async function generateSpeech(text: string, voice: "Female" | "Male" = "Female") {
+export async function generateSpeech(
+  text: string,
+  voice: "Female" | "Male" = "Female",
+) {
   const [tts, embeddings] = await Promise.all([
     loadSpeechPipeline(),
     loadSpeakerEmbeddings(),
@@ -116,9 +119,9 @@ export async function generateSpeech(text: string, voice: "Female" | "Male" = "F
     const output = (await tts(chunk, {
       speaker_embeddings,
       num_inference_steps: 5,
-      speed: 1.05
+      speed: 1.05,
     })) as RawAudioType;
-    
+
     sampling_rate = output.sampling_rate;
 
     // No added silence; speed responsiveness
@@ -166,7 +169,7 @@ export async function* generateSpeechStream(
     const output = (await tts(sentence, {
       speaker_embeddings,
       num_inference_steps: 5,
-      speed: 1.05
+      speed: 1.05,
     })) as RawAudio;
 
     yield {

@@ -1,6 +1,6 @@
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/")({ component: App })
+export const Route = createFileRoute("/")({ component: App });
 
 function App() {
   return (
@@ -9,7 +9,8 @@ function App() {
         <p className="text-sm font-semibold tracking-wide text-main">Welcome</p>
         <h1 className="text-3xl font-heading">Local RAG starter</h1>
         <p className="text-foreground/80">
-          Get set up by downloading an embedding model, then come back for chat and documents soon.
+          Get set up by downloading an embedding model, then come back for chat
+          and documents soon.
         </p>
       </div>
 
@@ -21,5 +22,5 @@ function App() {
         Go to Models
       </Link>
     </div>
-  )
+  );
 }

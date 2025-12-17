@@ -1,11 +1,11 @@
-import { Separator } from "@/components/ui/separator"
+import { Separator } from "@/components/ui/separator";
 
 interface PageContainerProps {
-  label: string
-  title: string
-  description?: React.ReactNode
-  children: React.ReactNode
-  actions?: React.ReactNode
+  label: string;
+  title: string;
+  description?: React.ReactNode;
+  children: React.ReactNode;
+  actions?: React.ReactNode;
 }
 
 export function PageContainer({
@@ -23,20 +23,14 @@ export function PageContainer({
           <div className="space-y-1">
             <h1 className="text-3xl font-heading">{title}</h1>
             {description && (
-              <div className="text-foreground/80">
-                {description}
-              </div>
+              <div className="text-foreground/80">{description}</div>
             )}
           </div>
         </div>
       </div>
-      {actions && (
-        <div className="flex items-center gap-3">
-          {actions}
-        </div>
-      )}
+      {actions && <div className="flex items-center gap-3">{actions}</div>}
       <Separator />
       {children}
     </div>
-  )
+  );
 }

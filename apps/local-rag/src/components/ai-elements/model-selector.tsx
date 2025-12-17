@@ -166,10 +166,11 @@ export type ModelSelectorLogoProps = Omit<
 };
 
 // Local offline fallbacks for providers we bundle assets for.
-const localLogos: Partial<Record<ModelSelectorLogoProps["provider"], string>> = {
-  google: "/logos/google.svg",
-  alibaba: "/logos/alibaba.svg",
-};
+const localLogos: Partial<Record<ModelSelectorLogoProps["provider"], string>> =
+  {
+    google: "/logos/google.svg",
+    alibaba: "/logos/alibaba.svg",
+  };
 
 export const ModelSelectorLogo = ({
   provider,
@@ -206,7 +207,7 @@ export const ModelSelectorLogoGroup = ({
   <div
     className={cn(
       "-space-x-1 flex shrink-0 items-center [&>img]:rounded-full [&>img]:bg-background [&>img]:p-px [&>img]:ring-1 dark:[&>img]:bg-foreground",
-      className
+      className,
     )}
     {...props}
   />

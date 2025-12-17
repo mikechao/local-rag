@@ -11,8 +11,8 @@ export type RetrievalStatus =
 // UI message shape for the chat UI. Adds a data part for retrieval results.
 export type LocalRAGMessage = UIMessage<
   never, // metadata
-  { 
-    retrievalResults: RetrievalResult[],
-    retrievalStatus: RetrievalStatus,
+  {
+    retrievalResults: RetrievalResult[];
+    retrievalStatus: RetrievalStatus;
   } // data parts
 >;

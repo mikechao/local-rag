@@ -4,7 +4,7 @@ export async function cleanClearCahce(modelId: string, localReadyKey: string) {
   }
 
   if (typeof window !== "undefined" && typeof caches !== "undefined") {
-    const cache = await caches.open('transformers-cache');
+    const cache = await caches.open("transformers-cache");
     const entries = await cache.keys();
     for (const req of entries) {
       if (req.url.includes(modelId)) {

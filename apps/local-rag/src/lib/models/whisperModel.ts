@@ -9,7 +9,8 @@ export function getWhisperModel() {
 }
 
 export async function hasCachedWhisperWeights(): Promise<boolean> {
-  if (typeof window === "undefined" || typeof caches === "undefined") return false;
+  if (typeof window === "undefined" || typeof caches === "undefined")
+    return false;
   const keys = await caches.keys();
   for (const key of keys) {
     if (!key.includes("transformers")) continue;
@@ -21,7 +22,8 @@ export async function hasCachedWhisperWeights(): Promise<boolean> {
 }
 
 export function isWhisperModelReadyFlag(): boolean {
-  if (typeof window === "undefined" || typeof localStorage === "undefined") return false;
+  if (typeof window === "undefined" || typeof localStorage === "undefined")
+    return false;
   return localStorage.getItem(LOCAL_READY_KEY) === "true";
 }
 

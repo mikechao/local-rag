@@ -1,1 +1,1 @@
-export { useDocumentUpload } from "@/providers/document-upload"
+export { useDocumentUpload } from "@/providers/document-upload";
