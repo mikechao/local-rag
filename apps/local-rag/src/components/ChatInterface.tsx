@@ -86,6 +86,7 @@ export function ChatInterface() {
   const textStreamRef = useRef<TextStream | null>(null);
   const promptAreaRef = useRef<HTMLDivElement | null>(null);
   const { playStream, stop } = useSpeechPlayer();
+  const [chatId] = useState(() => `local-chat-${new Date().toISOString()}`);
 
   useEffect(() => {
     const checkModels = async () => {
@@ -111,8 +112,6 @@ export function ChatInterface() {
   }, [chatTransport]);
 
   const [input, setInput] = useState("");
-
-  const chatId = `local-chat-${selectedModel}`;
 
   const {
     messages,

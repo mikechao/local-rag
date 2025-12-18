@@ -9,8 +9,11 @@ import {
   Output,
   smoothStream,
   createUIMessageStream,
+  generateId,
+  createIdGenerator,
   type InferUIMessageChunk,
   type UIMessageStreamWriter,
+  IdGenerator,
 } from "ai";
 import { z } from "zod";
 import { builtInAI } from "@built-in-ai/core";
@@ -65,12 +68,14 @@ function getLatestUserMessage(
  */
 export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
   private chatAgent: ToolLoopAgent<CallOptions>;
+  private messageIdGenerator: IdGenerator;
   private chatModel = builtInAI("text", {
     expectedInputs: [{ type: "text" }, { type: "image" }],
   });
   private warmupPromise: Promise<void> | null = null;
 
   constructor() {
+    this.messageIdGenerator = createIdGenerator({ prefix: "msg", separator: "-" , size: 16});
     this.chatAgent = new ToolLoopAgent<CallOptions>({
       model: this.chatModel,
       instructions:
@@ -178,6 +183,10 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
           options: { retrievalResults },
           abortSignal,
           experimental_transform: smoothStream({ delayInMs: 10 }),
+          generateMessageId: this.messageIdGenerator,
+          onFinish: ({ responseMessage }) => {
+            
+          }
         });
 
         // Forward the agent's stream to the UI stream.
