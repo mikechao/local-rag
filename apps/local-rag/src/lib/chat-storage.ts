@@ -9,6 +9,7 @@ import {
   type InsertChatMessagePart,
 } from "@/db/schema";
 import { ensureDbReady, getDb } from "@/lib/db";
+import type { UIMessage } from "ai";
 import type { LocalRAGMessage } from "@/lib/local-rag-message";
 import type { RetrievalResult } from "@/lib/retrieval";
 
@@ -22,6 +23,7 @@ type DbTransaction = Parameters<DbClient["transaction"]>[0] extends (
   ? TX
   : never;
 type LocalRAGMessagePart = NonNullable<LocalRAGMessage["parts"]>[number];
+type PersistableMessage = UIMessage;
 
 export type ChatSummary = Pick<Chat, "id" | "title" | "createdAt" | "updatedAt">;
 
@@ -84,8 +86,8 @@ function getMessageText(message: LocalRAGMessage) {
     .join("");
 }
 
-function serializeMessageParts(message: LocalRAGMessage) {
-  return message.parts ?? [];
+function serializeMessageParts(message: PersistableMessage) {
+  return (message.parts ?? []) as LocalRAGMessage["parts"];
 }
 
 async function mapUIMessagePartsToDBParts(
@@ -244,7 +246,7 @@ export async function deleteChat(chatId: string) {
 
 export async function upsertMessage(params: {
   chatId: string;
-  message: LocalRAGMessage;
+  message: PersistableMessage;
 }) {
   await ensureDbReady();
   const db = await getDb();
