@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import {
   chatMessageParts,
@@ -206,7 +206,7 @@ export async function getChats(): Promise<ChatSummary[]> {
       updatedAt: chats.updatedAt,
     })
     .from(chats)
-    .orderBy(asc(chats.createdAt));
+    .orderBy(desc(chats.createdAt));
 }
 
 export async function updateChatTitle(chatId: string, title: string) {

@@ -330,8 +330,7 @@ export function ChatInterface() {
       }
 
       setChats(existingChats);
-      const initialChat =
-        existingChats[existingChats.length - 1] ?? existingChats[0];
+      const initialChat = existingChats[0];
       if (!initialChat) {
         setIsChatLoading(false);
         return;
