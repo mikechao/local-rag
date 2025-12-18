@@ -21,6 +21,7 @@ import type { RetrievalResult } from "./retrieval";
 import type { LocalRAGMessage } from "./local-rag-message";
 import { runRetrievalPipeline } from "./retrieval-pipeline";
 import { getRerankMinScoreCached, prefetchRerankMinScore } from "./settings";
+import { upsertMessage } from "@/lib/chat-storage";
 
 const retrievalResultSchema = z.object({
   chunkIds: z.array(z.string()),
@@ -75,7 +76,11 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
   private warmupPromise: Promise<void> | null = null;
 
   constructor() {
-    this.messageIdGenerator = createIdGenerator({ prefix: "msg", separator: "-" , size: 16});
+    this.messageIdGenerator = createIdGenerator({
+      prefix: "msg",
+      separator: "-",
+      size: 16,
+    });
     this.chatAgent = new ToolLoopAgent<CallOptions>({
       model: this.chatModel,
       instructions:
@@ -175,6 +180,18 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
 
     return createUIMessageStream<LocalRAGMessage>({
       execute: async ({ writer }) => {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage?.role === "user") {
+          try {
+            await upsertMessage({
+              chatId: options.chatId,
+              message: lastMessage,
+            });
+          } catch (error) {
+            console.warn("[ChatStorage] Failed to persist user message", error);
+          }
+        }
+
         const retrievalResults: RetrievalResult[] | undefined =
           await this.getRetrievalResults(messages, abortSignal, writer);
         const agentStream = await createAgentUIStream({
@@ -185,7 +202,15 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
           experimental_transform: smoothStream({ delayInMs: 10 }),
           generateMessageId: this.messageIdGenerator,
           onFinish: ({ responseMessage }) => {
-            
+            upsertMessage({
+              chatId: options.chatId,
+              message: responseMessage,
+            }).catch((error) => {
+              console.warn(
+                "[ChatStorage] Failed to persist assistant message",
+                error,
+              );
+            });
           }
         });
 

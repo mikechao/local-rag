@@ -9,10 +9,13 @@ import {
   Loader2Icon,
   MicIcon,
   Paperclip,
+  PanelLeftIcon,
+  PlusIcon,
+  Trash2Icon,
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -35,6 +38,7 @@ import {
   PromptInputAttachment,
   PromptInputAttachments,
   PromptInputFooter,
+  PromptInputHeader,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
@@ -50,6 +54,19 @@ import { RetrievalResultsCarousel } from "@/components/RetrievalResultsCarousel"
 import { SpeakMessage } from "@/components/SpeakMessage";
 import { Button } from "@/components/ui/button";
 import {
+  Collapsible,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -58,6 +75,17 @@ import {
 import { VoiceInput } from "@/components/VoiceInput";
 import { useSpeechPlayer } from "@/hooks/use-speech-player";
 import { BuiltInAIChatTransport } from "@/lib/built-in-ai-chat-transport";
+import {
+  createChat,
+  deleteChat,
+  getChats,
+  getDefaultChatTitle,
+  hasUserMessages,
+  loadChat,
+  updateChatTitle,
+  type ChatSummary,
+} from "@/lib/chat-storage";
+import { generateChatTitle } from "@/lib/chat-title";
 import { warmupEmbeddingModel } from "@/lib/embedding-worker";
 import type { LocalRAGMessage, RetrievalStatus } from "@/lib/local-rag-message";
 import {
@@ -75,6 +103,11 @@ export function ChatInterface() {
   const [isSpeechAvailable, setIsSpeechAvailable] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [autoSpeak, setAutoSpeak] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [chats, setChats] = useState<ChatSummary[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [isChatLoading, setIsChatLoading] = useState(true);
+  const [chatToDelete, setChatToDelete] = useState<ChatSummary | null>(null);
   const [retrievalStatus, setRetrievalStatus] =
     useState<RetrievalStatus | null>(null);
   const [sourcesOpenByMessageId, setSourcesOpenByMessageId] = useState<
@@ -85,8 +118,9 @@ export function ChatInterface() {
   const lastMessageLengthRef = useRef(0);
   const textStreamRef = useRef<TextStream | null>(null);
   const promptAreaRef = useRef<HTMLDivElement | null>(null);
+  const attachmentUrlsRef = useRef<string[]>([]);
+  const pendingMessagesRef = useRef<LocalRAGMessage[] | null>(null);
   const { playStream, stop } = useSpeechPlayer();
-  const [chatId] = useState(() => `local-chat-${new Date().toISOString()}`);
 
   useEffect(() => {
     const checkModels = async () => {
@@ -115,13 +149,14 @@ export function ChatInterface() {
 
   const {
     messages,
+    setMessages,
     sendMessage,
     error,
     status,
     stop: stopChat,
   } = useChat<LocalRAGMessage>({
     transport: chatTransport,
-    id: chatId,
+    id: activeChatId ?? "pending-chat",
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onData: (dataPart) => {
       if (dataPart.type === "data-retrievalStatus") {
@@ -209,9 +244,138 @@ export function ChatInterface() {
     }
   }, [messages, status, autoSpeak, playStream, stop]);
 
+  const revokeAttachmentUrls = useCallback(() => {
+    for (const url of attachmentUrlsRef.current) {
+      URL.revokeObjectURL(url);
+    }
+    attachmentUrlsRef.current = [];
+  }, []);
+
+  const applyPendingMessages = useCallback(() => {
+    if (!pendingMessagesRef.current) return;
+    setMessages(pendingMessagesRef.current);
+    pendingMessagesRef.current = null;
+  }, [setMessages]);
+
+  useEffect(() => {
+    if (!activeChatId) return;
+    applyPendingMessages();
+  }, [activeChatId, applyPendingMessages]);
+
+  const loadChatAndActivate = useCallback(
+    async (chatId: string) => {
+      setIsChatLoading(true);
+      const { messages: loadedMessages, attachmentUrls } = await loadChat(chatId);
+      revokeAttachmentUrls();
+      attachmentUrlsRef.current = attachmentUrls;
+      pendingMessagesRef.current = loadedMessages;
+      setActiveChatId(chatId);
+      setRetrievalStatus(null);
+      setSourcesOpenByMessageId({});
+      setIsChatLoading(false);
+    },
+    [revokeAttachmentUrls],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const init = async () => {
+      setIsChatLoading(true);
+      const existingChats = await getChats();
+      if (cancelled) return;
+
+      if (existingChats.length === 0) {
+        const newChat = await createChat();
+        if (cancelled) return;
+        setChats([newChat]);
+        pendingMessagesRef.current = [];
+        setActiveChatId(newChat.id);
+        setIsChatLoading(false);
+        return;
+      }
+
+      setChats(existingChats);
+      const initialChat =
+        existingChats[existingChats.length - 1] ?? existingChats[0];
+      if (!initialChat) {
+        setIsChatLoading(false);
+        return;
+      }
+      await loadChatAndActivate(initialChat.id);
+    };
+
+    init().catch((error) => {
+      console.warn("[ChatStorage] Failed to load chats", error);
+      setIsChatLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+      revokeAttachmentUrls();
+    };
+  }, [loadChatAndActivate, revokeAttachmentUrls]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
   };
+
+  const handleNewChat = useCallback(async () => {
+    if (status !== "ready") return;
+    if (!activeChatId) return;
+    if (!hasUserMessages(messages)) return;
+
+    const title = await generateChatTitle(messages);
+    if (title) {
+      await updateChatTitle(activeChatId, title);
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === activeChatId ? { ...chat, title } : chat,
+        ),
+      );
+    }
+
+    const newChat = await createChat(getDefaultChatTitle());
+    setChats((prev) => prev.concat(newChat));
+    revokeAttachmentUrls();
+    pendingMessagesRef.current = [];
+    setActiveChatId(newChat.id);
+    setRetrievalStatus(null);
+    setSourcesOpenByMessageId({});
+    setInput("");
+  }, [status, activeChatId, messages, revokeAttachmentUrls]);
+
+  const handleSelectChat = useCallback(
+    async (chatId: string) => {
+      if (chatId === activeChatId) return;
+      try {
+        await loadChatAndActivate(chatId);
+      } catch (error) {
+        console.warn("[ChatStorage] Failed to switch chat", error);
+        setIsChatLoading(false);
+      }
+    },
+    [activeChatId, loadChatAndActivate],
+  );
+
+  const confirmDeleteChat = useCallback(async () => {
+    if (!chatToDelete) return;
+    const targetId = chatToDelete.id;
+    setChatToDelete(null);
+    await deleteChat(targetId);
+    setChats((prev) => prev.filter((chat) => chat.id !== targetId));
+
+    if (targetId === activeChatId) {
+      const newChat = await createChat(getDefaultChatTitle());
+      setChats((prev) => prev.concat(newChat));
+      revokeAttachmentUrls();
+      pendingMessagesRef.current = [];
+      setActiveChatId(newChat.id);
+      setRetrievalStatus(null);
+      setSourcesOpenByMessageId({});
+      setInput("");
+    }
+  }, [activeChatId, chatToDelete, revokeAttachmentUrls]);
 
   const getMessageText = (message: LocalRAGMessage) => {
     if (message.parts) {
@@ -301,285 +465,418 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-14rem)] flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
-      <Conversation className="flex-1">
-        <ConversationContent>
-          {messages.map((message) => {
-            const attachments = getAttachments(message);
-            const copyableText = getCopyableText(message);
-            const isLastMessage =
-              message.id === messages[messages.length - 1]?.id;
-            const showRetrievalStatusInThisMessage =
-              Boolean(retrievalStatus) &&
-              status !== "ready" &&
-              message.role === "assistant" &&
-              isLastMessage;
-            const isLastAssistantMessage =
-              isLastMessage && message.role === "assistant";
-            const retrievalResultsPart = message.parts?.find?.(
-              (part) => part.type === "data-retrievalResults",
-            ) as { data?: RetrievalResult[] } | undefined;
-            const retrievalResults = retrievalResultsPart?.data;
-            const sourcesAreOpen =
-              Boolean(retrievalResults?.length) &&
-              Boolean(sourcesOpenByMessageId[message.id]);
-            const showRetrievalResultsCarousel =
-              message.role === "assistant" &&
-              Boolean(retrievalResults?.length) &&
-              (!isLastAssistantMessage || status === "ready") &&
-              sourcesAreOpen;
-            return (
-              <Message key={message.id} from={message.role}>
-                <MessageContent
-                  className={
-                    showRetrievalResultsCarousel
-                      ? "w-full max-w-full min-w-0"
-                      : undefined
-                  }
-                >
-                  {message.parts ? (
-                    message.parts.map((part, index) => {
-                      if (part.type === "data-retrievalResults") return null;
-                      if (part.type === "text") {
-                        return (
-                          <MessageResponse key={index}>
-                            {part.text}
-                          </MessageResponse>
-                        );
-                      }
-                      if (part.type === "reasoning") {
-                        return (
-                          <Reasoning
-                            key={index}
-                            isStreaming={
-                              status === "streaming" &&
-                              index === message.parts.length - 1 &&
-                              message.id === messages[messages.length - 1].id
-                            }
-                          >
-                            <ReasoningTrigger />
-                            <ReasoningContent>{part.text}</ReasoningContent>
-                          </Reasoning>
-                        );
-                      }
-                      return null;
-                    })
-                  ) : (
-                    <MessageResponse>{getMessageText(message)}</MessageResponse>
-                  )}
-                  {attachments.length > 0 && (
-                    <MessageAttachments className="mt-2">
-                      {attachments.map(
-                        (attachment: FileUIPart, index: number) => (
-                          <MessageAttachment data={attachment} key={index} />
-                        ),
-                      )}
-                    </MessageAttachments>
-                  )}
-                  {message.role === "assistant" &&
-                    showRetrievalResultsCarousel &&
-                    retrievalResults && (
-                      <div className="mt-3">
-                        <RetrievalResultsCarousel results={retrievalResults} />
-                      </div>
-                    )}
-                  {showRetrievalStatusInThisMessage && retrievalStatus && (
-                    <div className="mt-2">
-                      {renderRetrievalStatus(retrievalStatus)}
-                    </div>
-                  )}
-                  {message.role === "assistant" &&
-                    copyableText &&
-                    status === "ready" && (
-                      <div className="flex items-center gap-2 ml-auto">
-                        {retrievalResults?.length ? (
-                          <Button
-                            variant="noShadow"
-                            size="sm"
-                            className="h-8 px-2"
-                            type="button"
-                            onClick={() =>
-                              setSourcesOpenByMessageId((prev) => ({
-                                ...prev,
-                                [message.id]: !prev[message.id],
-                              }))
-                            }
-                          >
-                            {sourcesOpenByMessageId[message.id]
-                              ? "Hide Sources"
-                              : "Show sources"}
-                          </Button>
-                        ) : null}
-                        <SpeakMessage text={copyableText} />
-                        <CopyMessage
-                          messageId={message.id}
-                          copyableText={copyableText}
-                          copiedMessageId={copiedMessageId}
-                          setCopiedMessageId={setCopiedMessageId}
-                          className=""
-                        />
-                      </div>
-                    )}
-                </MessageContent>
-              </Message>
-            );
-          })}
-          {retrievalStatus &&
-            status !== "ready" &&
-            messages[messages.length - 1]?.role !== "assistant" && (
-              <Message from="assistant">
-                <MessageContent>
-                  <div className="mt-2">
-                    {renderRetrievalStatus(retrievalStatus)}
-                  </div>
-                </MessageContent>
-              </Message>
-            )}
-          {error && (
-            <div className="mx-4 my-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              Error: {error.message}
+    <div className="flex h-[calc(100vh-14rem)] overflow-hidden rounded-lg border bg-background shadow-sm">
+      <Collapsible
+        open={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
+        className="flex flex-1"
+      >
+        <CollapsibleContent
+          forceMount
+          className="flex h-full overflow-hidden transition-[width] duration-200 ease-out data-[state=closed]:w-0 data-[state=closed]:border-r-0 data-[state=open]:w-72"
+        >
+          <div className="flex h-full w-72 flex-col border-r bg-muted/30">
+            <div className="flex items-center justify-between px-3 py-3">
+              <span className="text-xs font-semibold uppercase text-muted-foreground">
+                Chat History
+              </span>
             </div>
-          )}
-          {messages.length === 0 && !error && (
-            <ConversationEmptyState
-              title="Start a conversation"
-              description="Chat with the local AI model"
-            />
-          )}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
+            <ScrollArea className="flex-1">
+              <div className="flex flex-col gap-1 p-2">
+                {isChatLoading ? (
+                  <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
+                    <Loader2Icon className="size-4 animate-spin" />
+                    Loading chats...
+                  </div>
+                ) : chats.length === 0 ? (
+                  <div className="px-2 py-3 text-sm text-muted-foreground">
+                    No chats yet.
+                  </div>
+                ) : (
+                  chats.map((chat) => (
+                    <button
+                      key={chat.id}
+                      className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors ${
+                        chat.id === activeChatId
+                          ? "bg-muted text-foreground"
+                          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                      }`}
+                      type="button"
+                      onClick={() => handleSelectChat(chat.id)}
+                    >
+                      <span className="truncate">
+                        {chat.title || getDefaultChatTitle()}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 text-muted-foreground hover:text-foreground"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setChatToDelete(chat);
+                        }}
+                      >
+                        <Trash2Icon className="size-4" />
+                        <span className="sr-only">Delete chat</span>
+                      </Button>
+                    </button>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        </CollapsibleContent>
 
-      <div className="border-t bg-background p-4">
-        <div ref={promptAreaRef}>
-          <PromptInput
-            accept="image/*"
-            onSubmit={(message) => {
-              setRetrievalStatus(null);
-              const trimmedText = message.text.trim();
-              const hasFiles = message.files.length > 0;
-
-              if (!trimmedText && !hasFiles) return; // avoid sending empty messages
-
-              void sendMessage(
-                hasFiles
-                  ? trimmedText
-                    ? { text: trimmedText, files: message.files }
-                    : { files: message.files }
-                  : { text: trimmedText },
-                { body: { modelId: selectedModel } },
-              );
-
-              setInput("");
-            }}
-          >
-            <PromptInputAttachments>
-              {(attachment) => <PromptInputAttachment data={attachment} />}
-            </PromptInputAttachments>
-            <PromptInputTextarea
-              value={input}
-              onChange={handleInputChange}
-              disabled={status !== "ready"}
-            />
-            <PromptInputFooter>
-              <VoiceInput
-                onTranscription={(text) =>
-                  setInput((prev) => prev + (prev ? " " : "") + text)
-                }
-              >
-                {({ startRecording }) => (
-                  <>
-                    <PromptInputTools>
-                      <PromptInputActionMenu>
-                        <PromptInputActionMenuTrigger variant={"noShadow"}>
-                          <Paperclip className="size-4" />
-                        </PromptInputActionMenuTrigger>
-                        <PromptInputActionMenuContent>
-                          <PromptInputActionAddAttachments label="Attach Photos" />
-                        </PromptInputActionMenuContent>
-                      </PromptInputActionMenu>
-                      <LocalModelSelector
-                        value={selectedModel}
-                        onValueChange={setSelectedModel}
-                      />
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="noShadow"
-                              size="sm"
-                              className="h-8 gap-2 px-2"
-                              onClick={() => setAutoSpeak(!autoSpeak)}
-                              disabled={!isSpeechAvailable}
-                              type="button"
-                            >
-                              {autoSpeak ? (
-                                <Volume2 className="size-4" />
-                              ) : (
-                                <VolumeX className="size-4 text-muted-foreground" />
-                              )}
-                              <span className="hidden sm:inline">
-                                {autoSpeak ? "Auto-Speak On" : "Auto-Speak Off"}
-                              </span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              {!isSpeechAvailable
-                                ? "Download Speech model to enable auto-speak"
-                                : autoSpeak
-                                  ? "Disable Auto-Speak"
-                                  : "Enable Auto-Speak"}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </PromptInputTools>
-                    <div className="flex items-center gap-1">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span tabIndex={-1}>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Conversation className="flex-1">
+            <ConversationContent>
+              {messages.map((message) => {
+                const attachments = getAttachments(message);
+                const copyableText = getCopyableText(message);
+                const isLastMessage =
+                  message.id === messages[messages.length - 1]?.id;
+                const showRetrievalStatusInThisMessage =
+                  Boolean(retrievalStatus) &&
+                  status !== "ready" &&
+                  message.role === "assistant" &&
+                  isLastMessage;
+                const isLastAssistantMessage =
+                  isLastMessage && message.role === "assistant";
+                const retrievalResultsPart = message.parts?.find?.(
+                  (part) => part.type === "data-retrievalResults",
+                ) as { data?: RetrievalResult[] } | undefined;
+                const retrievalResults = retrievalResultsPart?.data;
+                const sourcesAreOpen =
+                  Boolean(retrievalResults?.length) &&
+                  Boolean(sourcesOpenByMessageId[message.id]);
+                const showRetrievalResultsCarousel =
+                  message.role === "assistant" &&
+                  Boolean(retrievalResults?.length) &&
+                  (!isLastAssistantMessage || status === "ready") &&
+                  sourcesAreOpen;
+                return (
+                  <Message key={message.id} from={message.role}>
+                    <MessageContent
+                      className={
+                        showRetrievalResultsCarousel
+                          ? "w-full max-w-full min-w-0"
+                          : undefined
+                      }
+                    >
+                      {message.parts ? (
+                        message.parts.map((part, index) => {
+                          if (part.type === "data-retrievalResults") return null;
+                          if (part.type === "text") {
+                            return (
+                              <MessageResponse key={index}>
+                                {part.text}
+                              </MessageResponse>
+                            );
+                          }
+                          if (part.type === "reasoning") {
+                            return (
+                              <Reasoning
+                                key={index}
+                                isStreaming={
+                                  status === "streaming" &&
+                                  index === message.parts.length - 1 &&
+                                  message.id === messages[messages.length - 1].id
+                                }
+                              >
+                                <ReasoningTrigger />
+                                <ReasoningContent>{part.text}</ReasoningContent>
+                              </Reasoning>
+                            );
+                          }
+                          return null;
+                        })
+                      ) : (
+                        <MessageResponse>
+                          {getMessageText(message)}
+                        </MessageResponse>
+                      )}
+                      {attachments.length > 0 && (
+                        <MessageAttachments className="mt-2">
+                          {attachments.map(
+                            (attachment: FileUIPart, index: number) => (
+                              <MessageAttachment data={attachment} key={index} />
+                            ),
+                          )}
+                        </MessageAttachments>
+                      )}
+                      {message.role === "assistant" &&
+                        showRetrievalResultsCarousel &&
+                        retrievalResults && (
+                          <div className="mt-3">
+                            <RetrievalResultsCarousel results={retrievalResults} />
+                          </div>
+                        )}
+                      {showRetrievalStatusInThisMessage && retrievalStatus && (
+                        <div className="mt-2">
+                          {renderRetrievalStatus(retrievalStatus)}
+                        </div>
+                      )}
+                      {message.role === "assistant" &&
+                        copyableText &&
+                        status === "ready" && (
+                          <div className="flex items-center gap-2 ml-auto">
+                            {retrievalResults?.length ? (
                               <Button
                                 variant="noShadow"
-                                size="icon"
-                                className="size-8"
-                                onClick={startRecording}
-                                disabled={!isWhisperAvailable}
+                                size="sm"
+                                className="h-8 px-2"
                                 type="button"
+                                onClick={() =>
+                                  setSourcesOpenByMessageId((prev) => ({
+                                    ...prev,
+                                    [message.id]: !prev[message.id],
+                                  }))
+                                }
                               >
-                                <MicIcon className="size-4" />
-                                <span className="sr-only">Voice Input</span>
+                                {sourcesOpenByMessageId[message.id]
+                                  ? "Hide Sources"
+                                  : "Show sources"}
                               </Button>
-                            </span>
-                          </TooltipTrigger>
-                          {!isWhisperAvailable && (
-                            <TooltipContent>
-                              <p>
-                                Download Whisper model to enable voice input
-                              </p>
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
-                      <PromptInputSubmit
-                        variant={"noShadow"}
-                        status={status}
-                        onClick={(e) => {
-                          if (status === "streaming") {
-                            e.preventDefault();
-                            stopChat();
-                          }
-                        }}
-                      />
-                    </div>
-                  </>
+                            ) : null}
+                            <SpeakMessage text={copyableText} />
+                            <CopyMessage
+                              messageId={message.id}
+                              copyableText={copyableText}
+                              copiedMessageId={copiedMessageId}
+                              setCopiedMessageId={setCopiedMessageId}
+                              className=""
+                            />
+                          </div>
+                        )}
+                    </MessageContent>
+                  </Message>
+                );
+              })}
+              {retrievalStatus &&
+                status !== "ready" &&
+                messages[messages.length - 1]?.role !== "assistant" && (
+                  <Message from="assistant">
+                    <MessageContent>
+                      <div className="mt-2">
+                        {renderRetrievalStatus(retrievalStatus)}
+                      </div>
+                    </MessageContent>
+                  </Message>
                 )}
-              </VoiceInput>
-            </PromptInputFooter>
-          </PromptInput>
+              {error && (
+                <div className="mx-4 my-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  Error: {error.message}
+                </div>
+              )}
+              {messages.length === 0 && !error && (
+                <ConversationEmptyState
+                  title="Start a conversation"
+                  description="Chat with the local AI model"
+                />
+              )}
+            </ConversationContent>
+            <ConversationScrollButton />
+          </Conversation>
+
+          <div className="border-t bg-background p-4">
+            <div ref={promptAreaRef}>
+              <PromptInput
+                accept="image/*"
+                onSubmit={(message) => {
+                  if (!activeChatId || isChatLoading) return;
+                  setRetrievalStatus(null);
+                  const trimmedText = message.text.trim();
+                  const hasFiles = message.files.length > 0;
+
+                  if (!trimmedText && !hasFiles) return; // avoid sending empty messages
+
+                  void sendMessage(
+                    hasFiles
+                      ? trimmedText
+                        ? { text: trimmedText, files: message.files }
+                        : { files: message.files }
+                      : { text: trimmedText },
+                    { body: { modelId: selectedModel } },
+                  );
+
+                  setInput("");
+                }}
+              >
+                <PromptInputHeader className="w-full items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="noShadow"
+                      size="sm"
+                      className="h-8 gap-2 px-2"
+                      onClick={handleNewChat}
+                      disabled={
+                        status !== "ready" || isChatLoading || !activeChatId
+                      }
+                      type="button"
+                    >
+                      <PlusIcon className="size-4" />
+                      New Chat
+                    </Button>
+                    <Button
+                      variant="noShadow"
+                      size="sm"
+                      className="h-8 gap-2 px-2"
+                      onClick={() => setIsHistoryOpen((prev) => !prev)}
+                      type="button"
+                    >
+                      <PanelLeftIcon className="size-4" />
+                      Chat History
+                    </Button>
+                  </div>
+                </PromptInputHeader>
+                <PromptInputAttachments>
+                  {(attachment) => <PromptInputAttachment data={attachment} />}
+                </PromptInputAttachments>
+                <PromptInputTextarea
+                  value={input}
+                  onChange={handleInputChange}
+                  disabled={
+                    status !== "ready" || isChatLoading || !activeChatId
+                  }
+                />
+                <PromptInputFooter>
+                  <VoiceInput
+                    onTranscription={(text) =>
+                      setInput((prev) => prev + (prev ? " " : "") + text)
+                    }
+                  >
+                    {({ startRecording }) => (
+                      <>
+                        <PromptInputTools>
+                          <PromptInputActionMenu>
+                            <PromptInputActionMenuTrigger variant={"noShadow"}>
+                              <Paperclip className="size-4" />
+                            </PromptInputActionMenuTrigger>
+                            <PromptInputActionMenuContent>
+                              <PromptInputActionAddAttachments label="Attach Photos" />
+                            </PromptInputActionMenuContent>
+                          </PromptInputActionMenu>
+                          <LocalModelSelector
+                            value={selectedModel}
+                            onValueChange={setSelectedModel}
+                          />
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="noShadow"
+                                  size="sm"
+                                  className="h-8 gap-2 px-2"
+                                  onClick={() => setAutoSpeak(!autoSpeak)}
+                                  disabled={!isSpeechAvailable}
+                                  type="button"
+                                >
+                                  {autoSpeak ? (
+                                    <Volume2 className="size-4" />
+                                  ) : (
+                                    <VolumeX className="size-4 text-muted-foreground" />
+                                  )}
+                                  <span className="hidden sm:inline">
+                                    {autoSpeak
+                                      ? "Auto-Speak On"
+                                      : "Auto-Speak Off"}
+                                  </span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {!isSpeechAvailable
+                                    ? "Download Speech model to enable auto-speak"
+                                    : autoSpeak
+                                      ? "Disable Auto-Speak"
+                                      : "Enable Auto-Speak"}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </PromptInputTools>
+                        <div className="flex items-center gap-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={-1}>
+                                  <Button
+                                    variant="noShadow"
+                                    size="icon"
+                                    className="size-8"
+                                    onClick={startRecording}
+                                    disabled={!isWhisperAvailable}
+                                    type="button"
+                                  >
+                                    <MicIcon className="size-4" />
+                                    <span className="sr-only">Voice Input</span>
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {!isWhisperAvailable && (
+                                <TooltipContent>
+                                  <p>
+                                    Download Whisper model to enable voice input
+                                  </p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                          <PromptInputSubmit
+                            variant={"noShadow"}
+                            status={status}
+                            disabled={!activeChatId || isChatLoading}
+                            onClick={(e) => {
+                              if (status === "streaming") {
+                                e.preventDefault();
+                                stopChat();
+                              }
+                            }}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </VoiceInput>
+                </PromptInputFooter>
+              </PromptInput>
+            </div>
+          </div>
         </div>
-      </div>
+      </Collapsible>
+
+      <Dialog
+        open={Boolean(chatToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setChatToDelete(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete chat?</DialogTitle>
+            <DialogDescription>
+              This will remove the chat and its messages. This can't be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => setChatToDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              className="border-destructive text-destructive hover:bg-destructive/10"
+              type="button"
+              onClick={confirmDeleteChat}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
