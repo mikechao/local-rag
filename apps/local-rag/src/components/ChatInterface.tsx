@@ -529,7 +529,7 @@ export function ChatInterface() {
                   chats.map((chat) => (
                     <div
                       key={chat.id}
-                      className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors ${
+                      className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 overflow-hidden rounded-md px-2 py-2 text-left text-sm transition-colors ${
                         chat.id === activeChatId
                           ? "bg-muted text-foreground"
                           : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
@@ -544,13 +544,13 @@ export function ChatInterface() {
                         }
                       }}
                     >
-                      <span className="truncate">
+                      <span className="min-w-0 flex-1 truncate">
                         {chat.title || getDefaultChatTitle()}
                       </span>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-7 text-muted-foreground hover:text-foreground"
+                        className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation();
