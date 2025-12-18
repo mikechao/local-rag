@@ -53,10 +53,7 @@ import { LocalModelSelector } from "@/components/LocalModelSelector";
 import { RetrievalResultsCarousel } from "@/components/RetrievalResultsCarousel";
 import { SpeakMessage } from "@/components/SpeakMessage";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -299,7 +296,8 @@ export function ChatInterface() {
   const loadChatAndActivate = useCallback(
     async (chatId: string) => {
       setIsChatLoading(true);
-      const { messages: loadedMessages, attachmentUrls } = await loadChat(chatId);
+      const { messages: loadedMessages, attachmentUrls } =
+        await loadChat(chatId);
       revokeAttachmentUrls();
       attachmentUrlsRef.current = attachmentUrls;
       pendingMessagesRef.current = loadedMessages;
@@ -606,7 +604,8 @@ export function ChatInterface() {
                     >
                       {message.parts ? (
                         message.parts.map((part, index) => {
-                          if (part.type === "data-retrievalResults") return null;
+                          if (part.type === "data-retrievalResults")
+                            return null;
                           if (part.type === "text") {
                             return (
                               <MessageResponse key={index}>
@@ -621,7 +620,8 @@ export function ChatInterface() {
                                 isStreaming={
                                   status === "streaming" &&
                                   index === message.parts.length - 1 &&
-                                  message.id === messages[messages.length - 1].id
+                                  message.id ===
+                                    messages[messages.length - 1].id
                                 }
                               >
                                 <ReasoningTrigger />
@@ -640,7 +640,10 @@ export function ChatInterface() {
                         <MessageAttachments className="mt-2">
                           {attachments.map(
                             (attachment: FileUIPart, index: number) => (
-                              <MessageAttachment data={attachment} key={index} />
+                              <MessageAttachment
+                                data={attachment}
+                                key={index}
+                              />
                             ),
                           )}
                         </MessageAttachments>
@@ -649,7 +652,9 @@ export function ChatInterface() {
                         showRetrievalResultsCarousel &&
                         retrievalResults && (
                           <div className="mt-3">
-                            <RetrievalResultsCarousel results={retrievalResults} />
+                            <RetrievalResultsCarousel
+                              results={retrievalResults}
+                            />
                           </div>
                         )}
                       {showRetrievalStatusInThisMessage && retrievalStatus && (

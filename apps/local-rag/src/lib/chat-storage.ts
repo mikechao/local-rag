@@ -25,7 +25,10 @@ type DbTransaction = Parameters<DbClient["transaction"]>[0] extends (
 type LocalRAGMessagePart = NonNullable<LocalRAGMessage["parts"]>[number];
 type PersistableMessage = UIMessage;
 
-export type ChatSummary = Pick<Chat, "id" | "title" | "createdAt" | "updatedAt">;
+export type ChatSummary = Pick<
+  Chat,
+  "id" | "title" | "createdAt" | "updatedAt"
+>;
 
 function* chunkBuffer(bytes: Uint8Array, chunkSize = ATTACHMENT_CHUNK_BYTES) {
   for (let offset = 0; offset < bytes.length; offset += chunkSize) {
@@ -229,7 +232,10 @@ export async function deleteChat(chatId: string) {
       .from(chatMessageParts)
       .innerJoin(chatMessages, eq(chatMessageParts.messageId, chatMessages.id))
       .where(
-        and(eq(chatMessages.chatId, chatId), isNotNull(chatMessageParts.fileBlobOid)),
+        and(
+          eq(chatMessages.chatId, chatId),
+          isNotNull(chatMessageParts.fileBlobOid),
+        ),
       );
 
     const blobOids = partsWithBlobs

@@ -9,7 +9,6 @@ import {
   Output,
   smoothStream,
   createUIMessageStream,
-  generateId,
   createIdGenerator,
   type InferUIMessageChunk,
   type UIMessageStreamWriter,
@@ -225,7 +224,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
                 error,
               );
             });
-          }
+          },
         });
 
         // Forward the agent's stream to the UI stream.
