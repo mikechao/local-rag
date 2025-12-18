@@ -120,6 +120,7 @@ export function ChatInterface() {
   const promptAreaRef = useRef<HTMLDivElement | null>(null);
   const attachmentUrlsRef = useRef<string[]>([]);
   const pendingMessagesRef = useRef<LocalRAGMessage[] | null>(null);
+  const titleGenerationRef = useRef<Set<string>>(new Set());
   const { playStream, stop } = useSpeechPlayer();
 
   useEffect(() => {
@@ -243,6 +244,39 @@ export function ChatInterface() {
       textStreamRef.current = null;
     }
   }, [messages, status, autoSpeak, playStream, stop]);
+
+  useEffect(() => {
+    if (status !== "ready") return;
+    if (!activeChatId) return;
+    if (isChatLoading) return;
+
+    const activeChat = chats.find((chat) => chat.id === activeChatId);
+    if (!activeChat) return;
+    if (activeChat.title !== getDefaultChatTitle()) return;
+    if (titleGenerationRef.current.has(activeChatId)) return;
+
+    const hasAssistantReply = messages.some(
+      (message) => message.role === "assistant",
+    );
+    if (!hasAssistantReply) return;
+    if (!hasUserMessages(messages)) return;
+
+    titleGenerationRef.current.add(activeChatId);
+    generateChatTitle(messages)
+      .then((title) => {
+        if (!title) return;
+        return updateChatTitle(activeChatId, title).then(() => {
+          setChats((prev) =>
+            prev.map((chat) =>
+              chat.id === activeChatId ? { ...chat, title } : chat,
+            ),
+          );
+        });
+      })
+      .catch((error) => {
+        console.warn("[ChatTitle] Failed to auto-generate title", error);
+      });
+  }, [activeChatId, chats, isChatLoading, messages, status]);
 
   const revokeAttachmentUrls = useCallback(() => {
     for (const url of attachmentUrlsRef.current) {
