@@ -494,15 +494,22 @@ export function ChatInterface() {
                   </div>
                 ) : (
                   chats.map((chat) => (
-                    <button
+                    <div
                       key={chat.id}
                       className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors ${
                         chat.id === activeChatId
                           ? "bg-muted text-foreground"
                           : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                       }`}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleSelectChat(chat.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleSelectChat(chat.id);
+                        }
+                      }}
                     >
                       <span className="truncate">
                         {chat.title || getDefaultChatTitle()}
@@ -520,7 +527,7 @@ export function ChatInterface() {
                         <Trash2Icon className="size-4" />
                         <span className="sr-only">Delete chat</span>
                       </Button>
-                    </button>
+                    </div>
                   ))
                 )}
               </div>
