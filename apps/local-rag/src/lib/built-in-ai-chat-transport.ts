@@ -202,9 +202,23 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
           experimental_transform: smoothStream({ delayInMs: 10 }),
           generateMessageId: this.messageIdGenerator,
           onFinish: ({ responseMessage }) => {
+            const messageWithResults =
+              retrievalResults && retrievalResults.length > 0
+                ? {
+                    ...responseMessage,
+                    parts: [
+                      ...(responseMessage.parts ?? []),
+                      {
+                        type: "data-retrievalResults" as const,
+                        data: retrievalResults,
+                      },
+                    ],
+                  }
+                : responseMessage;
+
             upsertMessage({
               chatId: options.chatId,
-              message: responseMessage,
+              message: messageWithResults,
             }).catch((error) => {
               console.warn(
                 "[ChatStorage] Failed to persist assistant message",
