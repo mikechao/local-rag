@@ -70,7 +70,8 @@ export function ChatInterface() {
     resetInput: () => setInput(""),
   });
 
-  const chatTransport = useChatTransport(activeChatId);
+  const { chatTransport, isWarming: isCreatingModel } =
+    useChatTransport(activeChatId);
 
   const {
     messages,
@@ -229,6 +230,7 @@ export function ChatInterface() {
             setAutoSpeak={setAutoSpeak}
             isSpeechAvailable={isSpeechAvailable}
             isWhisperAvailable={isWhisperAvailable}
+            isCreatingModel={isCreatingModel}
             promptAreaRef={promptAreaRef}
             onStopChat={stopChat}
           />

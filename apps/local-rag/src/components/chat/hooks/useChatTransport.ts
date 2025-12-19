@@ -5,23 +5,32 @@ export function useChatTransport(sessionKey?: string | null) {
   const [chatTransport, setChatTransport] = useState(
     () => new BuiltInAIChatTransport(),
   );
+  const [isWarming, setIsWarming] = useState(true);
   const lastSessionKeyRef = useRef<string | null | undefined>(sessionKey);
 
   useEffect(() => {
     if (lastSessionKeyRef.current === sessionKey) return;
     lastSessionKeyRef.current = sessionKey;
+    setIsWarming(true);
     setChatTransport(new BuiltInAIChatTransport());
   }, [sessionKey]);
 
   useEffect(() => {
-    chatTransport.warmup().catch(console.error);
-  }, [chatTransport]);
-
-  useEffect(() => {
+    let cancelled = false;
+    setIsWarming(true);
+    chatTransport
+      .warmup()
+      .catch(console.error)
+      .finally(() => {
+        if (!cancelled) {
+          setIsWarming(false);
+        }
+      });
     return () => {
+      cancelled = true;
       chatTransport.destroy();
     };
   }, [chatTransport]);
 
-  return chatTransport;
+  return { chatTransport, isWarming };
 }

@@ -1,5 +1,6 @@
 import type { ChatStatus } from "ai";
 import {
+  Loader2Icon,
   MicIcon,
   Paperclip,
   PanelLeftIcon,
@@ -48,6 +49,7 @@ type ChatComposerProps = {
   setAutoSpeak: (value: boolean) => void;
   isSpeechAvailable: boolean;
   isWhisperAvailable: boolean;
+  isCreatingModel: boolean;
   promptAreaRef: React.RefObject<HTMLDivElement | null>;
   onStopChat: () => void;
 };
@@ -68,6 +70,7 @@ export function ChatComposer({
   setAutoSpeak,
   isSpeechAvailable,
   isWhisperAvailable,
+  isCreatingModel,
   promptAreaRef,
   onStopChat,
 }: ChatComposerProps) {
@@ -99,6 +102,12 @@ export function ChatComposer({
                 Chat History
               </Button>
             </div>
+            {isCreatingModel ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2Icon className="size-3.5 animate-spin" />
+                <span>Creating a new model...</span>
+              </div>
+            ) : null}
           </PromptInputHeader>
           <PromptInputAttachments>
             {(attachment) => <PromptInputAttachment data={attachment} />}
