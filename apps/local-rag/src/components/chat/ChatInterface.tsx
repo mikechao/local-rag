@@ -52,8 +52,6 @@ export function ChatInterface() {
     warmupEmbeddingModel().catch(console.error);
   }, []);
 
-  const chatTransport = useChatTransport();
-
   const {
     chats,
     setChats,
@@ -71,6 +69,8 @@ export function ChatInterface() {
     setSourcesOpenByMessageId,
     resetInput: () => setInput(""),
   });
+
+  const chatTransport = useChatTransport(activeChatId);
 
   const {
     messages,

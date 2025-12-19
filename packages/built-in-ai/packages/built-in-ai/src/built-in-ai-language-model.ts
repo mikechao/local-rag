@@ -94,7 +94,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
   readonly provider = "browser-ai";
 
   private readonly config: BuiltInAIConfig;
-  private session!: LanguageModel;
+  private session: LanguageModel | null = null;
 
   constructor(
     modelId: BuiltInAIChatModelId,
@@ -272,6 +272,12 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
         ? getExpectedInputs(prompt)
         : undefined,
     };
+  }
+
+  public destroy(): void {
+    if (!this.session) return;
+    this.session.destroy();
+    this.session = null;
   }
 
   /**

@@ -15,7 +15,7 @@ import {
   IdGenerator,
 } from "ai";
 import { z } from "zod";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI, type BuiltInAIChatLanguageModel } from "@built-in-ai/core";
 import type { RetrievalResult } from "./retrieval";
 import type { LocalRAGMessage } from "./local-rag-message";
 import { runRetrievalPipeline } from "./retrieval-pipeline";
@@ -69,12 +69,13 @@ function getLatestUserMessage(
 export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
   private chatAgent: ToolLoopAgent<CallOptions>;
   private messageIdGenerator: IdGenerator;
-  private chatModel = builtInAI("text", {
-    expectedInputs: [{ type: "text" }, { type: "image" }],
-  });
+  private chatModel: BuiltInAIChatLanguageModel;
   private warmupPromise: Promise<void> | null = null;
 
   constructor() {
+    this.chatModel = builtInAI("text", {
+      expectedInputs: [{ type: "text" }, { type: "image" }],
+    });
     this.messageIdGenerator = createIdGenerator({
       prefix: "msg",
       separator: "-",
@@ -125,6 +126,11 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
         };
       },
     });
+  }
+
+  destroy(): void {
+    this.chatModel.destroy();
+    this.warmupPromise = null;
   }
 
   /**
