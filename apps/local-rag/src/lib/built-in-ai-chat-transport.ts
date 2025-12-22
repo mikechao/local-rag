@@ -199,9 +199,9 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
 
         const retrievalResults: RetrievalResult[] | undefined =
           await this.getRetrievalResults(messages, abortSignal, writer);
-        const agentStream = await createAgentUIStream({
+        const agentStream = await createAgentUIStream<CallOptions>({
           agent: this.chatAgent,
-          messages,
+          uiMessages: messages,
           options: { retrievalResults },
           abortSignal,
           experimental_transform: smoothStream({ delayInMs: 10 }),
@@ -282,9 +282,13 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
     };
     try {
       const before = performance.now();
+      const messages = await convertToModelMessages([
+        systemMessage,
+        lastUserMessage,
+      ]);
       const result = await generateText({
         model: builtInAI(),
-        messages: convertToModelMessages([systemMessage, lastUserMessage]),
+        messages,
         output: Output.object({
           schema: shouldRetrieveSchema,
         }),
