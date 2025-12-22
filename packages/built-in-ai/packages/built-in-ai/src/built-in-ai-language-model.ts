@@ -8,6 +8,8 @@ import {
   LanguageModelV3StreamPart,
   LoadSettingError,
   JSONValue,
+  LanguageModelV3GenerateResult,
+  LanguageModelV3StreamResult,
 } from "@ai-sdk/provider"
 import { convertToBuiltInAIMessages } from "./convert-to-built-in-ai-messages";
 
@@ -287,7 +289,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
    * @throws {LoadSettingError} When the Prompt API is not available or model needs to be downloaded
    * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
-  public async doGenerate(options: LanguageModelV3CallOptions) {
+  public async doGenerate(options: LanguageModelV3CallOptions): Promise<LanguageModelV3GenerateResult> {
     const converted = this.getArgs(options);
     const { systemMessage, messages, warnings, promptOptions, expectedInputs } =
       converted;
@@ -309,11 +311,19 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
 
     return {
       content,
-      finishReason: "stop" as LanguageModelV3FinishReason,
+      finishReason: { unified: 'stop', raw: 'stop'},
       usage: {
-        inputTokens: undefined,
-        outputTokens: undefined,
-        totalTokens: undefined,
+        inputTokens: {
+          total: undefined,
+          noCache: undefined,
+          cacheRead: undefined,
+          cacheWrite: undefined,
+        },
+        outputTokens: {
+          total: undefined,
+          text: undefined,
+          reasoning: undefined,
+        },
       },
       request: { body: { messages, options: promptOptions } },
       warnings,
@@ -360,7 +370,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
    * @throws {LoadSettingError} When the Prompt API is not available or model needs to be downloaded
    * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
-  public async doStream(options: LanguageModelV3CallOptions) {
+  public async doStream(options: LanguageModelV3CallOptions): Promise<LanguageModelV3StreamResult> {
     const converted = this.getArgs(options);
     const {
       systemMessage,
@@ -433,11 +443,19 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
           // Send finish event
           controller.enqueue({
             type: "finish",
-            finishReason: "stop" as LanguageModelV3FinishReason,
+            finishReason: { unified: 'stop', raw: 'stop'},
             usage: {
-              inputTokens: session.inputUsage,
-              outputTokens: undefined,
-              totalTokens: undefined,
+              inputTokens: {
+                total: session.inputUsage,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: undefined,
+                text: undefined,
+                reasoning: undefined,
+              },
             },
           });
         },
