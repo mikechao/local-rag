@@ -1,4 +1,9 @@
-import { EmbeddingModelV3, EmbeddingModelV3Embedding } from "@ai-sdk/provider";
+import {
+  EmbeddingModelV3,
+  EmbeddingModelV3CallOptions,
+  EmbeddingModelV3Embedding,
+  EmbeddingModelV3Result,
+} from "@ai-sdk/provider";
 import { TextEmbedder } from "@mediapipe/tasks-text";
 
 export interface BuiltInAIEmbeddingModelSettings {
@@ -88,13 +93,9 @@ export class BuiltInAIEmbeddingModel implements EmbeddingModelV3 {
     );
   };
 
-  public doEmbed = async (options: {
-    values: string[];
-    abortSignal?: AbortSignal;
-  }): Promise<{
-    embeddings: Array<EmbeddingModelV3Embedding>;
-    rawResponse?: Record<PropertyKey, any>;
-  }> => {
+  public doEmbed = async (
+    options: EmbeddingModelV3CallOptions,
+  ): Promise<EmbeddingModelV3Result> => {
     // Note: abortSignal is not supported by MediaPipe TextEmbedder
     if (options.abortSignal?.aborted) {
       throw new Error("Operation was aborted");
@@ -109,11 +110,14 @@ export class BuiltInAIEmbeddingModel implements EmbeddingModelV3 {
 
     return {
       embeddings,
-      rawResponse: {
-        model: "universal_sentence_encoder",
-        provider: "google-mediapipe",
-        processed_texts: options.values.length,
+      providerMetadata: {
+        mediapipe: {
+          model: "universal_sentence_encoder",
+          provider: "google-mediapipe",
+          processed_texts: options.values.length,
+        },
       },
+      warnings: [],
     };
   };
 }
