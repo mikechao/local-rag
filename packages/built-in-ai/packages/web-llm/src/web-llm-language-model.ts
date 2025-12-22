@@ -8,6 +8,7 @@ import {
   LanguageModelV3StreamPart,
   LanguageModelV3ToolCall,
   LoadSettingError,
+  LanguageModelV3GenerateResult,
 } from "@ai-sdk/provider";
 import { convertToWebLLMMessages } from "./convert-to-webllm-messages";
 
@@ -368,7 +369,7 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
    * @throws {LoadSettingError} When WebLLM is not available or model needs to be downloaded
    * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
-  public async doGenerate(options: LanguageModelV3CallOptions) {
+  public async doGenerate(options: LanguageModelV3CallOptions): Promise<LanguageModelV3GenerateResult> {
     const converted = this.getArgs(options);
     const { messages, warnings, requestOptions, functionTools } = converted;
 
@@ -444,11 +445,23 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
 
         return {
           content: parts,
-          finishReason: "tool-calls" as LanguageModelV3FinishReason,
+          finishReason: { unified: "tool-calls", raw: choice.finish_reason || "tool-calls" },
           usage: {
-            inputTokens: response.usage?.prompt_tokens,
-            outputTokens: response.usage?.completion_tokens,
-            totalTokens: response.usage?.total_tokens,
+            inputTokens: {
+              total: response.usage?.prompt_tokens,
+              noCache: undefined,
+              cacheRead: undefined,
+              cacheWrite: undefined,
+            },
+            outputTokens: {
+              total: response.usage?.completion_tokens,
+              text: undefined,
+              reasoning: undefined,
+            },
+            raw: {
+              totalTokens: response.usage?.total_tokens,
+              extra: response.usage?.extra
+            },
           },
           request: { body: { messages: promptMessages, ...requestOptions } },
           warnings,
@@ -462,18 +475,33 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
         },
       ];
 
-      let finishReason: LanguageModelV3FinishReason = "stop";
+      let finishReason: LanguageModelV3FinishReason = {unified: "stop", raw: choice.finish_reason || "stop" };
       if (choice.finish_reason === "abort") {
-        finishReason = "other";
+        finishReason = {unified: "other", raw: "abort"};
       }
 
       return {
         content,
         finishReason,
         usage: {
-          inputTokens: response.usage?.prompt_tokens,
-          outputTokens: response.usage?.completion_tokens,
-          totalTokens: response.usage?.total_tokens,
+          inputTokens: {
+            
+            total: response.usage?.prompt_tokens,
+            noCache: undefined,
+            cacheRead: undefined,
+            cacheWrite: undefined,
+          },
+          outputTokens: {
+            
+            total: response.usage?.completion_tokens,
+            text: undefined,
+            reasoning: undefined,
+          },
+          raw: {
+            
+            totalTokens: response.usage?.total_tokens,
+            extra: response.usage?.extra
+          },
         },
         request: { body: { messages: promptMessages, ...requestOptions } },
         warnings,
@@ -627,9 +655,20 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
             type: "finish",
             finishReason,
             usage: {
-              inputTokens: usage?.prompt_tokens,
-              outputTokens: usage?.completion_tokens,
-              totalTokens: usage?.total_tokens,
+              inputTokens: {
+                total: usage?.prompt_tokens,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: usage?.completion_tokens,
+                text: undefined,
+                reasoning: undefined,
+              },
+              raw: {
+                totalTokens: usage?.total_tokens,
+              },
             },
           });
           controller.close();
@@ -876,14 +915,14 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
                 fenceDetector.clearBuffer();
               }
 
-              let finishReason: LanguageModelV3FinishReason = "stop";
+              let finishReason: LanguageModelV3FinishReason = {unified: "stop", raw: choice.finish_reason || "stop" };
               if (choice.finish_reason === "abort") {
-                finishReason = "other";
+                finishReason = {unified: "other", raw: "abort"};
               } else {
                 // Check if we detected any tool calls
                 const { toolCalls } = parseJsonFunctionCalls(accumulatedText);
                 if (toolCalls.length > 0) {
-                  finishReason = "tool-calls";
+                  finishReason = {unified: "tool-calls", raw: "tool-calls"};
                 }
               }
 
@@ -892,7 +931,7 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
           }
 
           if (!finished) {
-            finishStream("stop");
+            finishStream({unified: "stop", raw: "stop"});
           }
         } catch (error) {
           // Propagate all other errors.
