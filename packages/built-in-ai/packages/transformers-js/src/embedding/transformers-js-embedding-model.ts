@@ -2,6 +2,8 @@ import {
   EmbeddingModelV3,
   TooManyEmbeddingValuesForCallError,
   LoadSettingError,
+  EmbeddingModelV3CallOptions,
+  EmbeddingModelV3Result,
 } from "@ai-sdk/provider";
 import {
   pipeline,
@@ -292,13 +294,7 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV3 {
     return this;
   }
 
-  async doEmbed(options: {
-    values: string[];
-    headers?: Record<string, string | undefined>;
-  }): Promise<{
-    embeddings: number[][];
-    usage?: { tokens: number };
-  }> {
+  async doEmbed(options: EmbeddingModelV3CallOptions):Promise<EmbeddingModelV3Result>  {
     const { values } = options;
 
     if (values.length > this.maxEmbeddingsPerCall) {
@@ -429,6 +425,7 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV3 {
     return {
       embeddings: embeddings.map(({ embedding }) => embedding),
       usage: { tokens: totalTokens },
+      warnings: [],
     };
   }
 }
