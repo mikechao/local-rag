@@ -1,7 +1,7 @@
 {
   "name": "@built-in-ai/web-llm",
   "version": "0.3.1",
-  "description": "WebLLM provider for Vercel AI SDK v6 beta (High-performance in-browser LLM inference)",
+  "description": "WebLLM provider for Vercel AI SDK v6 (High-performance in-browser LLM inference)",
   "author": {
     "name": "Jakob Hoeg Mørk",
     "url": "https://jakobhoeg.dev"
@@ -54,13 +54,13 @@
     "@mlc-ai/web-llm": "^0.2.79"
   },
   "peerDependencies": {
-    "ai": "^6.0.0-beta.131"
+    "ai": "^6.0.0"
   },
   "devDependencies": {
-    "@ai-sdk/provider": "3.0.0-beta.23",
+    "@ai-sdk/provider": "3.0.0",
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^1.0.0",
-    "ai": "6.0.0-beta.131",
+    "ai": "6.0.0",
     "jsdom": "^26.1.0",
     "rimraf": "^5.0.0",
     "tsup": "^8.0.0",
