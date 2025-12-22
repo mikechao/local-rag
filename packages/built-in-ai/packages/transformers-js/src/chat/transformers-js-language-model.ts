@@ -8,6 +8,7 @@ import {
   LanguageModelV3StreamPart,
   LanguageModelV3ToolCall,
   LoadSettingError,
+  LanguageModelV3GenerateResult,
 } from "@ai-sdk/provider";
 import {
   AutoTokenizer,
@@ -604,7 +605,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
   /**
    * Generates a complete text response using TransformersJS
    */
-  public async doGenerate(options: LanguageModelV3CallOptions) {
+  public async doGenerate(options: LanguageModelV3CallOptions): Promise<LanguageModelV3GenerateResult> {
     const { messages, warnings, generationOptions, functionTools, jsonSchema } =
       this.getArgs(options);
 
@@ -728,17 +729,33 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         
                     return {
                       content: [{ type: "text", text: extractedJson }] as LanguageModelV3Content[],
-                      finishReason: "stop" as LanguageModelV3FinishReason,
+                      finishReason: { unified: "stop", raw: "stop" },
                       usage: isVision
                         ? {
-                            inputTokens: undefined,
-                            outputTokens: undefined,
-                            totalTokens: undefined,
+                            inputTokens: {
+                              total: undefined,
+                              noCache: undefined,
+                              cacheRead: undefined,
+                              cacheWrite: undefined,
+                            },
+                            outputTokens: {
+                              total: undefined,
+                              text: undefined,
+                              reasoning: undefined
+                            },
                           }
                         : {
-                            inputTokens: inputLength,
-                            outputTokens: extractedJson.length,
-                            totalTokens: inputLength + extractedJson.length,
+                            inputTokens: {
+                              total: inputLength,
+                              noCache: undefined,
+                              cacheRead: undefined,
+                              cacheWrite: undefined,
+                            },
+                            outputTokens: {
+                              total: inputLength + extractedJson.length,
+                              text: extractedJson.length,
+                              reasoning: undefined
+                            },
                           },
                       request: { body: { messages: promptMessages, ...generationOptions } },
                       warnings,
@@ -798,17 +815,33 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
 
         return {
           content: parts,
-          finishReason: "tool-calls" as LanguageModelV3FinishReason,
+          finishReason: {unified: "tool-calls", raw: "tool-calls"},
           usage: isVision
             ? {
-                inputTokens: undefined,
-                outputTokens: undefined,
-                totalTokens: undefined,
+                inputTokens: {
+                  total: undefined,
+                  noCache: undefined,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: {
+                  total: undefined,
+                  text: undefined,
+                  reasoning: undefined
+                },
               }
             : {
-                inputTokens: inputLength,
-                outputTokens: generatedText.length,
-                totalTokens: inputLength + generatedText.length,
+                inputTokens: {
+                  total: inputLength,
+                  noCache: undefined,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: {
+                  total: inputLength + generatedText.length,
+                  text: generatedText.length,
+                  reasoning: undefined
+                },
               },
           request: { body: { messages: promptMessages, ...generationOptions } },
           warnings,
@@ -824,17 +857,33 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
 
       return {
         content,
-        finishReason: "stop" as LanguageModelV3FinishReason,
+        finishReason: { unified: "stop", raw: "stop" },
         usage: isVision
           ? {
-              inputTokens: undefined,
-              outputTokens: undefined,
-              totalTokens: undefined,
+              inputTokens: {
+                total: undefined,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: undefined,
+                text: undefined,
+                reasoning: undefined
+              },
             }
           : {
-              inputTokens: inputLength,
-              outputTokens: generatedText.length,
-              totalTokens: inputLength + generatedText.length,
+              inputTokens: {
+                total: inputLength,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: inputLength + generatedText.length,
+                text: generatedText.length,
+                reasoning: undefined
+              },
             },
         request: { body: { messages: promptMessages, ...generationOptions } },
         warnings,
@@ -856,7 +905,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
     functionTools: ToolDefinition[],
     jsonSchema?: string,
     responseFormatFailHard?: boolean,
-  ) {
+  ): Promise<LanguageModelV3GenerateResult> {
     const worker = this.config.worker!;
 
     await this.initializeWorker();
@@ -932,11 +981,19 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
 
       return {
         content: parts,
-        finishReason: "tool-calls" as LanguageModelV3FinishReason,
+        finishReason: {unified: "tool-calls", raw: "tool-calls"},
         usage: {
-          inputTokens: undefined,
-          outputTokens: undefined,
-          totalTokens: undefined,
+          inputTokens: {
+            total: undefined,
+            noCache: undefined,
+            cacheRead: undefined,
+            cacheWrite: undefined,
+          },
+          outputTokens: {
+            total: undefined,
+            text: undefined,
+            reasoning: undefined
+          },
         },
         request: { body: { messages, ...generationOptions } },
         warnings,
@@ -948,11 +1005,19 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
     ];
     return {
       content,
-      finishReason: "stop" as LanguageModelV3FinishReason,
+      finishReason: { unified: "stop", raw: "stop" },
       usage: {
-        inputTokens: undefined,
-        outputTokens: undefined,
-        totalTokens: undefined,
+        inputTokens: {
+          total: undefined,
+          noCache: undefined,
+          cacheRead: undefined,
+          cacheWrite: undefined,
+        },
+        outputTokens: {
+          total: undefined,
+          text: undefined,
+          reasoning: undefined
+        },
       },
       request: { body: { messages, ...generationOptions } },
       warnings,
@@ -1124,9 +1189,17 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
             type: "finish",
             finishReason,
             usage: {
-              inputTokens: inputLength,
-              outputTokens,
-              totalTokens: inputLength + outputTokens,
+              inputTokens: {
+                total: inputLength,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: inputLength + outputTokens,
+                text: outputTokens,
+                reasoning: undefined
+              },
             },
           });
           controller.close();
@@ -1470,11 +1543,11 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           }
 
           // Check if we detected any tool calls or if JSON was extracted
-          const finishReason = toolCallDetected
-            ? "tool-calls"
+          const finishReason: LanguageModelV3FinishReason = toolCallDetected
+            ? { unified: "tool-calls", raw: "tool-calls" }
             : jsonExtractedComplete
-              ? "stop" // Assuming JSON extraction also leads to a stop reason
-              : "stop";
+              ? { unified: "stop", raw: "stop" } // JSON extraction also leads to a stop reason
+              : { unified: "stop", raw: "stop" };
 
           finishStream(finishReason, inputLength, outputTokens);
         } catch (error) {
@@ -1592,12 +1665,15 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
             if (!isFirst) controller.enqueue({ type: "text-end", id: textId });
 
             // Check for tool calls or if JSON was extracted
-            let finishReason: LanguageModelV3FinishReason = "stop";
+            let finishReason: LanguageModelV3FinishReason = {
+              unified: "stop",
+              raw: "stop",
+            };
 
             if (msg.toolCalls && msg.toolCalls.length > 0) {
-              finishReason = "tool-calls";
+              finishReason = { unified: "tool-calls", raw: "tool-calls" };
             } else if (jsonExtractedComplete) {
-              finishReason = "stop"; // JSON extraction is considered a stop event
+              finishReason = { unified: "stop", raw: "stop" }; // JSON extraction is a stop event
             }
 
             // Emit tool calls if present
@@ -1642,9 +1718,17 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
               type: "finish",
               finishReason,
               usage: {
-                inputTokens: undefined,
-                outputTokens: msg.numTokens,
-                totalTokens: undefined,
+                inputTokens: {
+                  total: msg.inputTokens,
+                  noCache: undefined,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: {
+                  total: msg.inputTokens! + msg.outputTokens!,
+                  text: msg.outputTokens!,
+                  reasoning: undefined
+                },
               },
             });
             worker.removeEventListener("message", onMessage);
