@@ -90,7 +90,9 @@ export function ChatInterface() {
       }
     },
   });
-
+  if (status === "ready") {
+    console.log("Chat ready, messages:", messages);
+  }
   useEffect(() => {
     if (pendingMessages === null) return;
     setMessages(pendingMessages);

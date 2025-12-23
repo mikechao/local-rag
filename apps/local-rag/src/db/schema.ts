@@ -139,6 +139,7 @@ export const chatMessageParts = pgTable(
     fileSize: integer("file_size"),
 
     dataRetrievalResults: jsonb("data_retrieval_results"),
+    dataModelUsage: jsonb("data_model_usage"),
   },
   (table) => [
     index("chat_message_parts_message_id_idx").on(table.messageId),

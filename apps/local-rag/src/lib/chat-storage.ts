@@ -10,7 +10,7 @@ import {
 } from "@/db/schema";
 import { ensureDbReady, getDb } from "@/lib/db";
 import type { UIMessage } from "ai";
-import type { LocalRAGMessage } from "@/lib/local-rag-message";
+import type { LocalRAGMessage, ModelUsage } from "@/lib/local-rag-message";
 import type { RetrievalResult } from "@/lib/retrieval";
 
 const ATTACHMENT_CHUNK_BYTES = 1024 * 1024;
@@ -153,6 +153,17 @@ async function mapUIMessagePartsToDBParts(
       });
       continue;
     }
+
+    if (part.type === "data-modelUsage") {
+      mapped.push({
+        id: crypto.randomUUID(),
+        messageId,
+        order: index,
+        type: part.type,
+        dataModelUsage: part.data as ModelUsage,
+      });
+      continue;
+    }
   }
 
   return mapped;
@@ -185,6 +196,11 @@ async function mapDBPartToUIMessagePart(
       return {
         type: "data-retrievalResults",
         data: (part.dataRetrievalResults ?? []) as RetrievalResult[],
+      };
+    case "data-modelUsage":
+      return {
+        type: "data-modelUsage",
+        data: (part.dataModelUsage ?? {}) as ModelUsage,
       };
     default:
       return null;

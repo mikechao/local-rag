@@ -207,19 +207,36 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
           experimental_transform: smoothStream({ delayInMs: 10 }),
           generateMessageId: this.messageIdGenerator,
           onFinish: ({ responseMessage }) => {
+            const inputUsage = this.chatModel.getInputUsage();
+            const inputQuota = this.chatModel.getInputQuota();
+            const hasModelUsage =
+              inputUsage !== undefined || inputQuota !== undefined;
+
+            const baseParts = (responseMessage.parts ?? []) as NonNullable<
+              LocalRAGMessage["parts"]
+            >;
+            const parts: NonNullable<LocalRAGMessage["parts"]> = [
+              ...baseParts,
+            ];
+
+            if (retrievalResults && retrievalResults.length > 0) {
+              parts.push({
+                type: "data-retrievalResults" as const,
+                data: retrievalResults,
+              });
+            }
+
+            if (hasModelUsage) {
+              parts.push({
+                type: "data-modelUsage" as const,
+                data: { inputUsage, inputQuota },
+              });
+            }
+
             const messageWithResults =
-              retrievalResults && retrievalResults.length > 0
-                ? {
-                    ...responseMessage,
-                    parts: [
-                      ...(responseMessage.parts ?? []),
-                      {
-                        type: "data-retrievalResults" as const,
-                        data: retrievalResults,
-                      },
-                    ],
-                  }
-                : responseMessage;
+              parts.length > 0
+                ? ({ ...responseMessage, parts } as LocalRAGMessage)
+                : (responseMessage as LocalRAGMessage);
 
             upsertMessage({
               chatId: options.chatId,
@@ -230,6 +247,14 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
                 error,
               );
             });
+
+            if (hasModelUsage) {
+              writer.write({
+                type: "data-modelUsage",
+                data: { inputUsage, inputQuota },
+                transient: false,
+              });
+            }
           },
         });
 

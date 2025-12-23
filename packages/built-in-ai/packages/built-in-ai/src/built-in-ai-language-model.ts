@@ -282,6 +282,14 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
     this.session = null;
   }
 
+  public getInputUsage(): number | undefined {
+    return this.session?.inputUsage;
+  }
+
+  public getInputQuota(): number | undefined {
+    return this.session?.inputQuota;
+  }
+
   /**
    * Generates a complete text response using the browser's built-in Prompt API
    * @param options
