@@ -191,9 +191,7 @@ export function ChatComposer({
                         </TooltipTrigger>
                         {!isWhisperAvailable && (
                           <TooltipContent>
-                            <p>
-                              Download Whisper model to enable voice input
-                            </p>
+                            <p>Download Whisper model to enable voice input</p>
                           </TooltipContent>
                         )}
                       </Tooltip>

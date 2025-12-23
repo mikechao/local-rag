@@ -90,7 +90,8 @@ export function ChatMessageList({
         {messages.map((message) => {
           const attachments = getAttachments(message);
           const copyableText = getCopyableText(message);
-          const isLastMessage = message.id === messages[messages.length - 1]?.id;
+          const isLastMessage =
+            message.id === messages[messages.length - 1]?.id;
           const showRetrievalStatusInThisMessage =
             Boolean(retrievalStatus) &&
             status !== "ready" &&
@@ -124,7 +125,9 @@ export function ChatMessageList({
                     if (part.type === "data-retrievalResults") return null;
                     if (part.type === "text") {
                       return (
-                        <MessageResponse key={index}>{part.text}</MessageResponse>
+                        <MessageResponse key={index}>
+                          {part.text}
+                        </MessageResponse>
                       );
                     }
                     if (part.type === "reasoning") {

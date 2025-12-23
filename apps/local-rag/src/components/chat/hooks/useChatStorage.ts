@@ -130,12 +130,7 @@ export function useChatStorage({
       resetChatIndicators();
       resetInput();
     },
-    [
-      activeChatId,
-      resetChatIndicators,
-      resetInput,
-      revokeAttachmentUrls,
-    ],
+    [activeChatId, resetChatIndicators, resetInput, revokeAttachmentUrls],
   );
 
   const handleSelectChat = useCallback(
