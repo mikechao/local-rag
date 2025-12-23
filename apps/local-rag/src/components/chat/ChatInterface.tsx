@@ -16,7 +16,11 @@ import {
   updateChatTitle,
 } from "@/lib/chat-storage";
 import { warmupEmbeddingModel } from "@/lib/embedding-worker";
-import type { LocalRAGMessage, RetrievalStatus } from "@/lib/local-rag-message";
+import type {
+  LocalRAGMessage,
+  ModelUsage,
+  RetrievalStatus,
+} from "@/lib/local-rag-message";
 import { isSpeechModelReadyFlag } from "@/lib/models/speechModel";
 import { hasCachedWhisperWeights } from "@/lib/models/whisperModel";
 import { useAutoSpeak } from "@/components/chat/hooks/useAutoSpeak";
@@ -70,8 +74,7 @@ export function ChatInterface() {
     resetInput: () => setInput(""),
   });
 
-  const { chatTransport, isWarming: isCreatingModel } =
-    useChatTransport(activeChatId);
+  const { chatTransport } = useChatTransport(activeChatId);
 
   const {
     messages,
@@ -98,6 +101,29 @@ export function ChatInterface() {
     setMessages(pendingMessages);
     clearPendingMessages();
   }, [clearPendingMessages, pendingMessages, setMessages]);
+
+  const latestModelUsage = (() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const parts = messages[i]?.parts;
+      if (!parts) continue;
+      for (let j = parts.length - 1; j >= 0; j -= 1) {
+        const part = parts[j];
+        if (part.type !== "data-modelUsage") continue;
+        const data = part.data as ModelUsage | undefined;
+        const usedTokens = data?.inputUsage;
+        const maxTokens = data?.inputQuota;
+        if (typeof usedTokens !== "number" || typeof maxTokens !== "number") {
+          return null;
+        }
+        if (!Number.isFinite(usedTokens) || !Number.isFinite(maxTokens)) {
+          return null;
+        }
+        if (maxTokens <= 0) return null;
+        return { usedTokens, maxTokens };
+      }
+    }
+    return null;
+  })();
 
   const { autoSpeak, setAutoSpeak } = useAutoSpeak({ messages, status });
 
@@ -232,7 +258,7 @@ export function ChatInterface() {
             setAutoSpeak={setAutoSpeak}
             isSpeechAvailable={isSpeechAvailable}
             isWhisperAvailable={isWhisperAvailable}
-            isCreatingModel={isCreatingModel}
+            latestModelUsage={latestModelUsage}
             promptAreaRef={promptAreaRef}
             onStopChat={stopChat}
           />
