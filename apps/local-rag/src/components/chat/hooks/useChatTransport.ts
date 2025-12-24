@@ -1,9 +1,28 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BuiltInAIChatTransport } from "@/lib/built-in-ai-chat-transport";
 
-export function useChatTransport(sessionKey?: string | null) {
+type UseChatTransportOptions = {
+  onQuotaOverflow?: (event: Event) => void;
+};
+
+export function useChatTransport(
+  sessionKey?: string | null,
+  options: UseChatTransportOptions = {},
+) {
+  const [quotaOverflow, setQuotaOverflow] = useState(false);
+  const onQuotaOverflowRef = useRef(options.onQuotaOverflow);
+  onQuotaOverflowRef.current = options.onQuotaOverflow;
+
+  const handleQuotaOverflow = useCallback((event: Event) => {
+    setQuotaOverflow(true);
+    onQuotaOverflowRef.current?.(event);
+  }, []);
+
   const [chatTransport, setChatTransport] = useState(
-    () => new BuiltInAIChatTransport(),
+    () =>
+      new BuiltInAIChatTransport({
+        onQuotaOverflow: handleQuotaOverflow,
+      }),
   );
   const [isWarming, setIsWarming] = useState(true);
   const lastSessionKeyRef = useRef<string | null | undefined>(sessionKey);
@@ -12,8 +31,12 @@ export function useChatTransport(sessionKey?: string | null) {
     if (lastSessionKeyRef.current === sessionKey) return;
     lastSessionKeyRef.current = sessionKey;
     setIsWarming(true);
-    setChatTransport(new BuiltInAIChatTransport());
-  }, [sessionKey]);
+    setChatTransport(
+      new BuiltInAIChatTransport({
+        onQuotaOverflow: handleQuotaOverflow,
+      }),
+    );
+  }, [handleQuotaOverflow, sessionKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,5 +55,10 @@ export function useChatTransport(sessionKey?: string | null) {
     };
   }, [chatTransport]);
 
-  return { chatTransport, isWarming };
+  return {
+    chatTransport,
+    isWarming,
+    quotaOverflow,
+    clearQuotaOverflow: () => setQuotaOverflow(false),
+  };
 }
