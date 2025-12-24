@@ -74,7 +74,8 @@ export function ChatInterface() {
     resetInput: () => setInput(""),
   });
 
-  const { chatTransport } = useChatTransport(activeChatId);
+  const { chatTransport, quotaOverflow, clearQuotaOverflow } =
+    useChatTransport(activeChatId);
 
   const {
     messages,
@@ -211,6 +212,23 @@ export function ChatInterface() {
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
+          {quotaOverflow ? (
+            <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="size-4" />
+                  <span>
+                    The built-in AI model quota has been exceeded. The AI
+                    might start forgetting previous messages and responses
+                    might be slower.
+                  </span>
+                </div>
+                <Button size="sm" variant="ghost" onClick={clearQuotaOverflow}>
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <ChatMessageList
             messages={messages}
             status={status}
