@@ -60,6 +60,10 @@ function getLatestUserMessage(
   return undefined;
 }
 
+export interface BuiltInAIChatTransportOptions {
+  onQuotaOverflow?: (event: Event) => void;
+}
+
 /**
  * Client-side chat transport AI SDK implementation that handles AI model communication
  * with in-browser AI capabilities.
@@ -72,9 +76,12 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
   private chatModel: BuiltInAIChatLanguageModel;
   private warmupPromise: Promise<void> | null = null;
 
-  constructor() {
+  constructor(options: BuiltInAIChatTransportOptions = {}) {
     this.chatModel = builtInAI("text", {
       expectedInputs: [{ type: "text" }, { type: "image" }],
+      ...(options.onQuotaOverflow
+        ? { onQuotaOverflow: options.onQuotaOverflow }
+        : {}),
     });
     this.messageIdGenerator = createIdGenerator({
       prefix: "msg",
@@ -215,9 +222,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
             const baseParts = (responseMessage.parts ?? []) as NonNullable<
               LocalRAGMessage["parts"]
             >;
-            const parts: NonNullable<LocalRAGMessage["parts"]> = [
-              ...baseParts,
-            ];
+            const parts: NonNullable<LocalRAGMessage["parts"]> = [...baseParts];
 
             if (retrievalResults && retrievalResults.length > 0) {
               parts.push({
