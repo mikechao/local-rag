@@ -23,6 +23,13 @@ export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {
     type: "text" | "image" | "audio";
     languages?: string[];
   }>;
+
+  /**
+   * Callback invoked when the model quota is exceeded
+   * @param event 
+   * @returns 
+   */
+  onQuotaOverflow?: (event: Event) => void;
 }
 
 /**
@@ -161,9 +168,15 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
         });
       };
     }
-
-    this.session = await LanguageModel.create(mergedOptions);
-
+    const { onQuotaOverflow, ...createOptions } = mergedOptions;
+    this.session = await LanguageModel.create(createOptions);
+    this.session.addEventListener("quotaoverflow", (ev: Event) => {
+      if (onQuotaOverflow) {
+        onQuotaOverflow(ev);
+      } else {
+        console.warn("Model quota exceeded");
+      }
+    })
     return this.session;
   }
 
