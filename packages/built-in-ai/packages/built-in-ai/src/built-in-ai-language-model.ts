@@ -321,7 +321,13 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
       systemMessage,
     );
 
-    const text = await session.prompt(messages, promptOptions);
+    let text: string;
+    try {
+      text = await session.prompt(messages, promptOptions);
+    } catch (error) {
+      console.error("[BuiltInAI] prompt failed", error);
+      throw error;
+    }
 
     const content: LanguageModelV3Content[] = [
       {
@@ -414,7 +420,13 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
       signal: options.abortSignal,
     };
 
-    const promptStream = session.promptStreaming(messages, streamOptions);
+    let promptStream: ReadableStream<string>;
+    try {
+      promptStream = session.promptStreaming(messages, streamOptions);
+    } catch (error) {
+      console.error("[BuiltInAI] promptStreaming failed", error);
+      throw error;
+    }
 
     let isFirstChunk = true;
     const textId = "text-0";
@@ -437,48 +449,58 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
         },
 
         transform(chunk, controller) {
-          if (isFirstChunk) {
-            // Send text start event
-            controller.enqueue({
-              type: "text-start",
-              id: textId,
-            });
-            isFirstChunk = false;
-          }
+          try {
+            if (isFirstChunk) {
+              // Send text start event
+              controller.enqueue({
+                type: "text-start",
+                id: textId,
+              });
+              isFirstChunk = false;
+            }
 
-          // Send text delta
-          controller.enqueue({
-            type: "text-delta",
-            id: textId,
-            delta: chunk,
-          });
+            // Send text delta
+            controller.enqueue({
+              type: "text-delta",
+              id: textId,
+              delta: chunk,
+            });
+          } catch (error) {
+            console.error("[BuiltInAI] stream transform failed", error);
+            throw error;
+          }
         },
 
         flush(controller) {
-          // Send text end event
-          controller.enqueue({
-            type: "text-end",
-            id: textId,
-          });
+          try {
+            // Send text end event
+            controller.enqueue({
+              type: "text-end",
+              id: textId,
+            });
 
-          // Send finish event
-          controller.enqueue({
-            type: "finish",
-            finishReason: { unified: 'stop', raw: 'stop'},
-            usage: {
-              inputTokens: {
-                total: session.inputUsage,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
+            // Send finish event
+            controller.enqueue({
+              type: "finish",
+              finishReason: { unified: 'stop', raw: 'stop'},
+              usage: {
+                inputTokens: {
+                  total: session.inputUsage,
+                  noCache: undefined,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: {
+                  total: undefined,
+                  text: undefined,
+                  reasoning: undefined,
+                },
               },
-              outputTokens: {
-                total: undefined,
-                text: undefined,
-                reasoning: undefined,
-              },
-            },
-          });
+            });
+          } catch (error) {
+            console.error("[BuiltInAI] stream flush failed", error);
+            throw error;
+          }
         },
       }),
     );
