@@ -192,89 +192,96 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
 
     return createUIMessageStream<LocalRAGMessage>({
       execute: async ({ writer }) => {
-        const lastMessage = messages[messages.length - 1];
-        if (lastMessage?.role === "user") {
-          try {
-            await upsertMessage({
-              chatId: options.chatId,
-              message: lastMessage,
-            });
-          } catch (error) {
-            console.warn("[ChatStorage] Failed to persist user message", error);
+        try {
+          const lastMessage = messages[messages.length - 1];
+          if (lastMessage?.role === "user") {
+            try {
+              await upsertMessage({
+                chatId: options.chatId,
+                message: lastMessage,
+              });
+            } catch (error) {
+              console.warn("[ChatStorage] Failed to persist user message", error);
+            }
           }
-        }
 
-        const retrievalResults: RetrievalResult[] | undefined =
-          await this.getRetrievalResults(messages, abortSignal, writer);
-        const agentStream = await createAgentUIStream<CallOptions>({
-          agent: this.chatAgent,
-          uiMessages: messages,
-          options: { retrievalResults },
-          abortSignal,
-          experimental_transform: smoothStream({ delayInMs: 10 }),
-          generateMessageId: this.messageIdGenerator,
-          onFinish: ({ responseMessage }) => {
-            const inputUsage = this.chatModel.getInputUsage();
-            const inputQuota = this.chatModel.getInputQuota();
-            const hasModelUsage =
-              inputUsage !== undefined || inputQuota !== undefined;
+          const retrievalResults: RetrievalResult[] | undefined =
+            await this.getRetrievalResults(messages, abortSignal, writer);
+          const agentStream = await createAgentUIStream<CallOptions>({
+            agent: this.chatAgent,
+            uiMessages: messages,
+            options: { retrievalResults },
+            abortSignal,
+            experimental_transform: smoothStream({ delayInMs: 10 }),
+            generateMessageId: this.messageIdGenerator,
+            onFinish: ({ responseMessage }) => {
+              const inputUsage = this.chatModel.getInputUsage();
+              const inputQuota = this.chatModel.getInputQuota();
+              const hasModelUsage =
+                inputUsage !== undefined || inputQuota !== undefined;
 
-            const baseParts = (responseMessage.parts ?? []) as NonNullable<
-              LocalRAGMessage["parts"]
-            >;
-            const parts: NonNullable<LocalRAGMessage["parts"]> = [...baseParts];
+              const baseParts = (responseMessage.parts ?? []) as NonNullable<
+                LocalRAGMessage["parts"]
+              >;
+              const parts: NonNullable<LocalRAGMessage["parts"]> = [
+                ...baseParts,
+              ];
 
-            if (retrievalResults && retrievalResults.length > 0) {
-              parts.push({
-                type: "data-retrievalResults" as const,
-                data: retrievalResults,
+              if (retrievalResults && retrievalResults.length > 0) {
+                parts.push({
+                  type: "data-retrievalResults" as const,
+                  data: retrievalResults,
+                });
+              }
+
+              if (hasModelUsage) {
+                parts.push({
+                  type: "data-modelUsage" as const,
+                  data: { inputUsage, inputQuota },
+                });
+              }
+
+              const messageWithResults =
+                parts.length > 0
+                  ? ({ ...responseMessage, parts } as LocalRAGMessage)
+                  : (responseMessage as LocalRAGMessage);
+
+              upsertMessage({
+                chatId: options.chatId,
+                message: messageWithResults,
+              }).catch((error) => {
+                console.warn(
+                  "[ChatStorage] Failed to persist assistant message",
+                  error,
+                );
               });
-            }
 
-            if (hasModelUsage) {
-              parts.push({
-                type: "data-modelUsage" as const,
-                data: { inputUsage, inputQuota },
-              });
-            }
-
-            const messageWithResults =
-              parts.length > 0
-                ? ({ ...responseMessage, parts } as LocalRAGMessage)
-                : (responseMessage as LocalRAGMessage);
-
-            upsertMessage({
-              chatId: options.chatId,
-              message: messageWithResults,
-            }).catch((error) => {
-              console.warn(
-                "[ChatStorage] Failed to persist assistant message",
-                error,
-              );
-            });
-
-            if (hasModelUsage) {
-              writer.write({
-                type: "data-modelUsage",
-                data: { inputUsage, inputQuota },
-                transient: false,
-              });
-            }
-          },
-        });
-
-        // Forward the agent's stream to the UI stream.
-        writer.merge(
-          agentStream as ReadableStream<InferUIMessageChunk<LocalRAGMessage>>,
-        );
-
-        // Send retrieval results as a data part after the model completes.
-        if (retrievalResults?.length) {
-          writer.write({
-            type: "data-retrievalResults",
-            data: retrievalResults,
-            transient: false,
+              if (hasModelUsage) {
+                writer.write({
+                  type: "data-modelUsage",
+                  data: { inputUsage, inputQuota },
+                  transient: false,
+                });
+              }
+            },
           });
+
+          // Forward the agent's stream to the UI stream.
+          writer.merge(
+            agentStream as ReadableStream<InferUIMessageChunk<LocalRAGMessage>>,
+          );
+
+          // Send retrieval results as a data part after the model completes.
+          if (retrievalResults?.length) {
+            writer.write({
+              type: "data-retrievalResults",
+              data: retrievalResults,
+              transient: false,
+            });
+          }
+        } catch (error) {
+          console.error("[ChatTransport] sendMessages execute failed", error);
+          throw error;
         }
       },
     });

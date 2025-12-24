@@ -93,6 +93,9 @@ export function ChatInterface() {
         setRetrievalStatus(dataPart.data);
       }
     },
+    onError: (err) => {
+      console.error("ChatInterface chat error:", err);
+    }
   });
 
   useEffect(() => {
