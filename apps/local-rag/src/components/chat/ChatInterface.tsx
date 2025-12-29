@@ -151,17 +151,6 @@ export function ChatInterface() {
       // Generate summary
       const summary = await summarizeChat(messages);
 
-      // Generate and save title for current chat
-      const title = await generateChatTitle(messages);
-      if (title) {
-        await updateChatTitle(activeChatId, title);
-        setChats((prev) =>
-          prev.map((chat) =>
-            chat.id === activeChatId ? { ...chat, title } : chat,
-          ),
-        );
-      }
-
       // Create new chat
       const newChat = await createChat(getDefaultChatTitle());
 
@@ -180,7 +169,7 @@ export function ChatInterface() {
       // Save the summary message
       await saveMessage(newChat.id, summaryMessage);
 
-      // Update UI state
+      // Update UI state first to switch to new chat
       setChats((prev) => prev.concat(newChat));
       setPendingMessages([summaryMessage]);
       setActiveChatId(newChat.id);
@@ -189,7 +178,6 @@ export function ChatInterface() {
       setInput("");
       setLoadedQuotaOverflowState(false);
       clearQuotaOverflow();
-
       setIsSummarizing(false);
     } catch (error) {
       console.error("Failed to summarize chat:", error);
