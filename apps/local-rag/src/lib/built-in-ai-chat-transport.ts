@@ -201,7 +201,10 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
                 message: lastMessage,
               });
             } catch (error) {
-              console.warn("[ChatStorage] Failed to persist user message", error);
+              console.warn(
+                "[ChatStorage] Failed to persist user message",
+                error,
+              );
             }
           }
 

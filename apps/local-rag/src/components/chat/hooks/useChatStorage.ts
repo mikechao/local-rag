@@ -38,6 +38,8 @@ export function useChatStorage({
   const [pendingMessages, setPendingMessages] = useState<
     LocalRAGMessage[] | null
   >(null);
+  const [loadedQuotaOverflowState, setLoadedQuotaOverflowState] =
+    useState(false);
 
   const attachmentUrlsRef = useRef<string[]>([]);
 
@@ -56,12 +58,16 @@ export function useChatStorage({
   const loadChatAndActivate = useCallback(
     async (chatId: string) => {
       setIsChatLoading(true);
-      const { messages: loadedMessages, attachmentUrls } =
-        await loadChat(chatId);
+      const {
+        messages: loadedMessages,
+        attachmentUrls,
+        quotaOverflowState,
+      } = await loadChat(chatId);
       revokeAttachmentUrls();
       attachmentUrlsRef.current = attachmentUrls;
       setPendingMessages(loadedMessages);
       setActiveChatId(chatId);
+      setLoadedQuotaOverflowState(quotaOverflowState);
       resetChatIndicators();
       setIsChatLoading(false);
     },
@@ -82,6 +88,7 @@ export function useChatStorage({
         setChats([newChat]);
         setPendingMessages([]);
         setActiveChatId(newChat.id);
+        setLoadedQuotaOverflowState(false);
         setIsChatLoading(false);
         return;
       }
@@ -127,6 +134,7 @@ export function useChatStorage({
       revokeAttachmentUrls();
       setPendingMessages([]);
       setActiveChatId(newChat.id);
+      setLoadedQuotaOverflowState(false);
       resetChatIndicators();
       resetInput();
     },
@@ -159,6 +167,7 @@ export function useChatStorage({
       revokeAttachmentUrls();
       setPendingMessages([]);
       setActiveChatId(newChat.id);
+      setLoadedQuotaOverflowState(false);
       resetChatIndicators();
       resetInput();
     }
@@ -178,13 +187,17 @@ export function useChatStorage({
     chats,
     setChats,
     activeChatId,
+    setActiveChatId,
     isChatLoading,
     chatToDelete,
     setChatToDelete,
     pendingMessages,
+    setPendingMessages,
     clearPendingMessages,
     handleNewChat,
     handleSelectChat,
     confirmDeleteChat,
+    loadedQuotaOverflowState,
+    setLoadedQuotaOverflowState,
   };
 }

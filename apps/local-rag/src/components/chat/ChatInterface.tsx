@@ -1,20 +1,31 @@
 import { useChat } from "@ai-sdk/react";
 import { Link } from "@tanstack/react-router";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import { AlertCircle } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { ChatHistoryPanel } from "@/components/chat/ChatHistoryPanel";
 import { ChatMessageList } from "@/components/chat/ChatMessageList";
 import { DeleteChatDialog } from "@/components/chat/DeleteChatDialog";
 import { Button } from "@/components/ui/button";
 import { Collapsible } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { generateChatTitle } from "@/lib/chat-title";
 import {
+  createChat,
   getDefaultChatTitle,
   hasUserMessages,
+  saveMessage,
   updateChatTitle,
 } from "@/lib/chat-storage";
+import { summarizeChat } from "@/lib/chat-summarize";
 import { warmupEmbeddingModel } from "@/lib/embedding-worker";
 import type {
   LocalRAGMessage,
@@ -40,6 +51,10 @@ export function ChatInterface() {
     Record<string, boolean>
   >({});
   const [input, setInput] = useState("");
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summarizationError, setSummarizationError] = useState<string | null>(
+    null,
+  );
 
   const promptAreaRef = useRef<HTMLDivElement | null>(null);
   const titleGenerationRef = useRef<Set<string>>(new Set());
@@ -60,22 +75,28 @@ export function ChatInterface() {
     chats,
     setChats,
     activeChatId,
+    setActiveChatId,
     isChatLoading,
     chatToDelete,
     setChatToDelete,
     pendingMessages,
+    setPendingMessages,
     clearPendingMessages,
     handleNewChat,
     handleSelectChat,
     confirmDeleteChat,
+    loadedQuotaOverflowState,
+    setLoadedQuotaOverflowState,
   } = useChatStorage({
     setRetrievalStatus,
     setSourcesOpenByMessageId,
     resetInput: () => setInput(""),
   });
 
-  const { chatTransport, quotaOverflow, clearQuotaOverflow } =
-    useChatTransport(activeChatId);
+  const { chatTransport, quotaOverflow, clearQuotaOverflow } = useChatTransport(
+    activeChatId,
+    { activeChatId },
+  );
 
   const {
     messages,
@@ -95,7 +116,7 @@ export function ChatInterface() {
     },
     onError: (err) => {
       console.error("ChatInterface chat error:", err);
-    }
+    },
   });
 
   useEffect(() => {
@@ -103,6 +124,139 @@ export function ChatInterface() {
     setMessages(pendingMessages);
     clearPendingMessages();
   }, [clearPendingMessages, pendingMessages, setMessages]);
+
+  // Update chats list when quota overflow happens
+  useEffect(() => {
+    if (quotaOverflow && activeChatId) {
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === activeChatId
+            ? { ...chat, quotaOverflowState: true }
+            : chat,
+        ),
+      );
+    }
+  }, [quotaOverflow, activeChatId, setChats]);
+
+  // Combine quota overflow state from transport and loaded state
+  const isQuotaOverflowed = quotaOverflow || loadedQuotaOverflowState;
+
+  const handleNewChatWithSummary = useCallback(async () => {
+    if (!activeChatId || messages.length === 0) return;
+
+    setIsSummarizing(true);
+    setSummarizationError(null);
+
+    try {
+      // Generate summary
+      const summary = await summarizeChat(messages);
+
+      // Generate and save title for current chat
+      const title = await generateChatTitle(messages);
+      if (title) {
+        await updateChatTitle(activeChatId, title);
+        setChats((prev) =>
+          prev.map((chat) =>
+            chat.id === activeChatId ? { ...chat, title } : chat,
+          ),
+        );
+      }
+
+      // Create new chat
+      const newChat = await createChat(getDefaultChatTitle());
+
+      // Create first message with summary
+      const summaryMessage: LocalRAGMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        parts: [
+          {
+            type: "text",
+            text: `Summary of previous chat:\n\n${summary}`,
+          },
+        ],
+      };
+
+      // Save the summary message
+      await saveMessage(newChat.id, summaryMessage);
+
+      // Update UI state
+      setChats((prev) => prev.concat(newChat));
+      setPendingMessages([summaryMessage]);
+      setActiveChatId(newChat.id);
+      setRetrievalStatus(null);
+      setSourcesOpenByMessageId({});
+      setInput("");
+      setLoadedQuotaOverflowState(false);
+      clearQuotaOverflow();
+
+      setIsSummarizing(false);
+    } catch (error) {
+      console.error("Failed to summarize chat:", error);
+      setSummarizationError(
+        error instanceof Error ? error.message : "Failed to summarize chat",
+      );
+      setIsSummarizing(false);
+    }
+  }, [
+    activeChatId,
+    messages,
+    setChats,
+    setPendingMessages,
+    setActiveChatId,
+    setRetrievalStatus,
+    setSourcesOpenByMessageId,
+    setInput,
+    setLoadedQuotaOverflowState,
+    clearQuotaOverflow,
+  ]);
+
+  const handleNewChatWithoutSummary = useCallback(async () => {
+    if (!activeChatId) return;
+
+    try {
+      setSummarizationError(null);
+
+      // Generate and save title for current chat if it has messages
+      if (hasUserMessages(messages)) {
+        const title = await generateChatTitle(messages);
+        if (title) {
+          await updateChatTitle(activeChatId, title);
+          setChats((prev) =>
+            prev.map((chat) =>
+              chat.id === activeChatId ? { ...chat, title } : chat,
+            ),
+          );
+        }
+      }
+
+      // Create new chat
+      const newChat = await createChat(getDefaultChatTitle());
+
+      // Update UI state
+      setChats((prev) => prev.concat(newChat));
+      setPendingMessages([]);
+      setActiveChatId(newChat.id);
+      setRetrievalStatus(null);
+      setSourcesOpenByMessageId({});
+      setInput("");
+      setLoadedQuotaOverflowState(false);
+      clearQuotaOverflow();
+    } catch (error) {
+      console.error("Failed to create new chat:", error);
+    }
+  }, [
+    activeChatId,
+    messages,
+    setChats,
+    setPendingMessages,
+    setActiveChatId,
+    setRetrievalStatus,
+    setSourcesOpenByMessageId,
+    setInput,
+    setLoadedQuotaOverflowState,
+    clearQuotaOverflow,
+  ]);
 
   const latestModelUsage = (() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -215,20 +369,34 @@ export function ChatInterface() {
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {quotaOverflow ? (
-            <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+          {isQuotaOverflowed ? (
+            <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="size-4" />
+                  <AlertCircle className="size-4 shrink-0" />
                   <span>
-                    The built-in AI model quota has been exceeded. The AI
-                    might start forgetting previous messages and responses
-                    might be slower.
+                    The built-in AI model quota has been exceeded. You can start
+                    a new chat, or use &quot;Summarize + New Chat&quot; which
+                    will create a concise summary of this conversation and start
+                    fresh with that context.
                   </span>
                 </div>
-                <Button size="sm" variant="ghost" onClick={clearQuotaOverflow}>
-                  Dismiss
-                </Button>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={handleNewChatWithoutSummary}
+                  >
+                    New Chat
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={handleNewChatWithSummary}
+                  >
+                    Summarize + New Chat
+                  </Button>
+                </div>
               </div>
             </div>
           ) : null}
@@ -280,6 +448,7 @@ export function ChatInterface() {
             latestModelUsage={latestModelUsage}
             promptAreaRef={promptAreaRef}
             onStopChat={stopChat}
+            quotaOverflow={isQuotaOverflowed}
           />
         </div>
       </Collapsible>
@@ -289,6 +458,62 @@ export function ChatInterface() {
         onCancel={() => setChatToDelete(null)}
         onConfirm={confirmDeleteChat}
       />
+
+      {/* Summarization Loading Dialog */}
+      <Dialog open={isSummarizing} onOpenChange={() => {}}>
+        <DialogContent
+          className="sm:max-w-md"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>Summarizing...</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="size-8 animate-spin text-muted-foreground" />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Summarization Error Dialog */}
+      <Dialog
+        open={!!summarizationError}
+        onOpenChange={(open) => {
+          if (!open) setSummarizationError(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Summarization Failed</DialogTitle>
+            <DialogDescription>
+              {summarizationError ||
+                "An error occurred while summarizing the chat."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={handleNewChatWithoutSummary}
+              className="w-full sm:w-auto"
+            >
+              New Chat Without Summary
+            </Button>
+            <Button
+              onClick={() => {
+                setSummarizationError(null);
+                handleNewChatWithSummary();
+              }}
+              className="w-full sm:w-auto"
+            >
+              Retry
+            </Button>
+          </DialogFooter>
+          <p className="text-xs text-muted-foreground">
+            Starting a new chat without summary will lose the conversation
+            context.
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

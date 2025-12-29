@@ -27,7 +27,7 @@ type PersistableMessage = UIMessage;
 
 export type ChatSummary = Pick<
   Chat,
-  "id" | "title" | "createdAt" | "updatedAt"
+  "id" | "title" | "createdAt" | "updatedAt" | "quotaOverflowState"
 >;
 
 function* chunkBuffer(bytes: Uint8Array, chunkSize = ATTACHMENT_CHUNK_BYTES) {
@@ -213,7 +213,13 @@ export async function createChat(title = DEFAULT_TITLE): Promise<ChatSummary> {
   const id = crypto.randomUUID();
   const now = new Date();
   await db.insert(chats).values({ id, title, createdAt: now, updatedAt: now });
-  return { id, title, createdAt: now, updatedAt: now };
+  return {
+    id,
+    title,
+    createdAt: now,
+    updatedAt: now,
+    quotaOverflowState: false,
+  };
 }
 
 export async function getChats(): Promise<ChatSummary[]> {
@@ -225,6 +231,7 @@ export async function getChats(): Promise<ChatSummary[]> {
       title: chats.title,
       createdAt: chats.createdAt,
       updatedAt: chats.updatedAt,
+      quotaOverflowState: chats.quotaOverflowState,
     })
     .from(chats)
     .orderBy(desc(chats.createdAt));
@@ -324,12 +331,30 @@ export async function upsertMessage(params: {
   });
 }
 
+export async function saveMessage(
+  chatId: string,
+  message: LocalRAGMessage,
+): Promise<void> {
+  await upsertMessage({ chatId, message });
+}
+
 export async function loadChat(chatId: string): Promise<{
   messages: LocalRAGMessage[];
   attachmentUrls: string[];
+  quotaOverflowState: boolean;
 }> {
   await ensureDbReady();
   const db = await getDb();
+
+  // Get chat metadata including quota overflow state
+  const chatResult = await db
+    .select({ quotaOverflowState: chats.quotaOverflowState })
+    .from(chats)
+    .where(eq(chats.id, chatId))
+    .limit(1);
+
+  const quotaOverflowState = chatResult[0]?.quotaOverflowState ?? false;
+
   const messageRows = await db
     .select()
     .from(chatMessages)
@@ -337,7 +362,7 @@ export async function loadChat(chatId: string): Promise<{
     .orderBy(asc(chatMessages.createdAt));
 
   if (messageRows.length === 0) {
-    return { messages: [], attachmentUrls: [] };
+    return { messages: [], attachmentUrls: [], quotaOverflowState };
   }
 
   const messageIds = messageRows.map((row) => row.id);
@@ -374,7 +399,7 @@ export async function loadChat(chatId: string): Promise<{
     });
   }
 
-  return { messages, attachmentUrls };
+  return { messages, attachmentUrls, quotaOverflowState };
 }
 
 export function hasUserMessages(messages: LocalRAGMessage[]) {
@@ -392,4 +417,27 @@ export function buildChatSummary(messages: LocalRAGMessage[]) {
 
 export function getDefaultChatTitle() {
   return DEFAULT_TITLE;
+}
+
+export async function updateChatQuotaOverflowState(
+  chatId: string,
+  state: boolean,
+) {
+  await ensureDbReady();
+  const db = await getDb();
+  await db
+    .update(chats)
+    .set({ quotaOverflowState: state, updatedAt: new Date() })
+    .where(eq(chats.id, chatId));
+}
+
+export async function getChatQuotaState(chatId: string): Promise<boolean> {
+  await ensureDbReady();
+  const db = await getDb();
+  const result = await db
+    .select({ quotaOverflowState: chats.quotaOverflowState })
+    .from(chats)
+    .where(eq(chats.id, chatId))
+    .limit(1);
+  return result[0]?.quotaOverflowState ?? false;
 }

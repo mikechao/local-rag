@@ -1,4 +1,4 @@
-import { Loader2Icon, Trash2Icon } from "lucide-react";
+import { Loader2Icon, Lock, Trash2Icon } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { CollapsibleContent } from "@/components/ui/collapsible";
@@ -60,9 +60,14 @@ export function ChatHistoryPanel({
                     }
                   }}
                 >
-                  <span className="min-w-0 flex-1 truncate">
-                    {chat.title || getDefaultChatTitle()}
-                  </span>
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    {chat.quotaOverflowState && (
+                      <Lock className="size-3 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className="min-w-0 flex-1 truncate">
+                      {chat.title || getDefaultChatTitle()}
+                    </span>
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"

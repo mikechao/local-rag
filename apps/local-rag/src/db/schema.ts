@@ -94,6 +94,7 @@ export const chats = pgTable("chats", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
+  quotaOverflowState: boolean("quota_overflow_state").notNull().default(false),
 });
 
 export const chatMessages = pgTable(

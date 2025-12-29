@@ -58,6 +58,7 @@ type ChatComposerProps = {
   latestModelUsage: { usedTokens: number; maxTokens: number } | null;
   promptAreaRef: React.RefObject<HTMLDivElement | null>;
   onStopChat: () => void;
+  quotaOverflow?: boolean;
 };
 
 export function ChatComposer({
@@ -79,6 +80,7 @@ export function ChatComposer({
   latestModelUsage,
   promptAreaRef,
   onStopChat,
+  quotaOverflow = false,
 }: ChatComposerProps) {
   return (
     <div className="border-t bg-background p-4">
@@ -91,7 +93,12 @@ export function ChatComposer({
                 size="sm"
                 className="h-8 gap-2 px-2"
                 onClick={onNewChat}
-                disabled={status !== "ready" || isChatLoading || !activeChatId}
+                disabled={
+                  status !== "ready" ||
+                  isChatLoading ||
+                  !activeChatId ||
+                  quotaOverflow
+                }
                 type="button"
               >
                 <PlusIcon className="size-4" />
@@ -140,7 +147,12 @@ export function ChatComposer({
           <PromptInputTextarea
             value={input}
             onChange={onInputChange}
-            disabled={status !== "ready" || isChatLoading || !activeChatId}
+            disabled={
+              status !== "ready" ||
+              isChatLoading ||
+              !activeChatId ||
+              quotaOverflow
+            }
           />
           <PromptInputFooter>
             <VoiceInput
@@ -152,7 +164,10 @@ export function ChatComposer({
                 <>
                   <PromptInputTools>
                     <PromptInputActionMenu>
-                      <PromptInputActionMenuTrigger variant={"noShadow"}>
+                      <PromptInputActionMenuTrigger
+                        variant={"noShadow"}
+                        disabled={quotaOverflow}
+                      >
                         <Paperclip className="size-4" />
                       </PromptInputActionMenuTrigger>
                       <PromptInputActionMenuContent>
@@ -206,7 +221,7 @@ export function ChatComposer({
                               size="icon"
                               className="size-8"
                               onClick={startRecording}
-                              disabled={!isWhisperAvailable}
+                              disabled={!isWhisperAvailable || quotaOverflow}
                               type="button"
                             >
                               <MicIcon className="size-4" />
@@ -224,7 +239,7 @@ export function ChatComposer({
                     <PromptInputSubmit
                       variant={"noShadow"}
                       status={status}
-                      disabled={!activeChatId || isChatLoading}
+                      disabled={!activeChatId || isChatLoading || quotaOverflow}
                       onClick={(event) => {
                         if (status === "streaming") {
                           event.preventDefault();
