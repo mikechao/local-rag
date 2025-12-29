@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { generateChatTitle } from "@/lib/chat-title";
 import {
   createChat,
@@ -55,9 +56,18 @@ export function ChatInterface() {
   const [summarizationError, setSummarizationError] = useState<string | null>(
     null,
   );
+  const [generatedSummary, setGeneratedSummary] = useState<string | null>(null);
+  const [summaryInputValue, setSummaryInputValue] = useState("");
 
   const promptAreaRef = useRef<HTMLDivElement | null>(null);
   const titleGenerationRef = useRef<Set<string>>(new Set());
+
+  // Sync summary input value with generated summary
+  useEffect(() => {
+    if (generatedSummary !== null) {
+      setSummaryInputValue(generatedSummary);
+    }
+  }, [generatedSummary]);
 
   useEffect(() => {
     const checkModels = async () => {
@@ -151,33 +161,8 @@ export function ChatInterface() {
       // Generate summary
       const summary = await summarizeChat(messages);
 
-      // Create new chat
-      const newChat = await createChat(getDefaultChatTitle());
-
-      // Create first message with summary
-      const summaryMessage: LocalRAGMessage = {
-        id: crypto.randomUUID(),
-        role: "user",
-        parts: [
-          {
-            type: "text",
-            text: `Summary of previous chat:\n\n${summary}`,
-          },
-        ],
-      };
-
-      // Save the summary message
-      await saveMessage(newChat.id, summaryMessage);
-
-      // Update UI state first to switch to new chat
-      setChats((prev) => prev.concat(newChat));
-      setPendingMessages([summaryMessage]);
-      setActiveChatId(newChat.id);
-      setRetrievalStatus(null);
-      setSourcesOpenByMessageId({});
-      setInput("");
-      setLoadedQuotaOverflowState(false);
-      clearQuotaOverflow();
+      // Show summary for review
+      setGeneratedSummary(summary);
       setIsSummarizing(false);
     } catch (error) {
       console.error("Failed to summarize chat:", error);
@@ -186,9 +171,69 @@ export function ChatInterface() {
       );
       setIsSummarizing(false);
     }
+  }, [activeChatId, messages]);
+
+  const handleRegenerateSummary = useCallback(async () => {
+    if (!activeChatId || messages.length === 0) return;
+
+    setGeneratedSummary(null);
+    setIsSummarizing(true);
+    setSummarizationError(null);
+
+    try {
+      const summary = await summarizeChat(messages);
+      setGeneratedSummary(summary);
+      setIsSummarizing(false);
+    } catch (error) {
+      console.error("Failed to regenerate summary:", error);
+      setSummarizationError(
+        error instanceof Error ? error.message : "Failed to regenerate summary",
+      );
+      setIsSummarizing(false);
+      setGeneratedSummary(null);
+    }
+  }, [activeChatId, messages]);
+
+  const handleProceedWithSummary = useCallback(async () => {
+    if (!activeChatId || !summaryInputValue.trim()) return;
+
+    try {
+      // Create new chat
+      const newChat = await createChat(getDefaultChatTitle());
+
+      // Create first message with edited summary
+      const summaryMessage: LocalRAGMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        parts: [
+          {
+            type: "text",
+            text: `Summary of previous chat:\n\n${summaryInputValue.trim()}`,
+          },
+        ],
+      };
+
+      // Save the summary message
+      await saveMessage(newChat.id, summaryMessage);
+
+      // Update UI state to switch to new chat
+      setChats((prev) => prev.concat(newChat));
+      setPendingMessages([summaryMessage]);
+      setActiveChatId(newChat.id);
+      setRetrievalStatus(null);
+      setSourcesOpenByMessageId({});
+      setInput("");
+      setLoadedQuotaOverflowState(false);
+      clearQuotaOverflow();
+      setGeneratedSummary(null);
+      setSummaryInputValue("");
+    } catch (error) {
+      console.error("Failed to proceed with summary:", error);
+      // Keep the dialog open on error so user doesn't lose their edits
+    }
   }, [
     activeChatId,
-    messages,
+    summaryInputValue,
     setChats,
     setPendingMessages,
     setActiveChatId,
@@ -460,6 +505,44 @@ export function ChatInterface() {
           <div className="flex items-center justify-center py-6">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Summary Review Dialog */}
+      <Dialog open={generatedSummary !== null} onOpenChange={() => {}}>
+        <DialogContent
+          className="max-w-2xl"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>Review Summary</DialogTitle>
+            <DialogDescription>
+              Review and edit the summary before starting a new chat.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={summaryInputValue}
+            onChange={(e) => setSummaryInputValue(e.target.value)}
+            placeholder="Edit summary before proceeding..."
+            className="min-h-[200px] resize-none"
+          />
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={handleRegenerateSummary}
+              className="w-full sm:w-auto"
+            >
+              Regenerate Summary
+            </Button>
+            <Button
+              onClick={handleProceedWithSummary}
+              disabled={!summaryInputValue.trim()}
+              className="w-full sm:w-auto"
+            >
+              Proceed with Summary
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
