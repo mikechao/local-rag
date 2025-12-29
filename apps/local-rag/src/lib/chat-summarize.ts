@@ -25,20 +25,36 @@ export async function summarizeChat(
     throw new Error("No text content to summarize");
   }
 
+  console.log("[ChatSummarize] Conversation length:", conversationText.length, "chars");
+  console.log("[ChatSummarize] Message count:", messages.length);
+  
+  // Truncate if too long (Gemini Nano has token limits)
+  const MAX_CHARS = 4000;
+  const truncatedText = conversationText.length > MAX_CHARS 
+    ? conversationText.substring(0, MAX_CHARS) + "\n\n[...conversation truncated...]"
+    : conversationText;
+
+  console.log("[ChatSummarize] Using text length:", truncatedText.length, "chars");
+
   const result = await generateText({
-    model: builtInAI("text"),
+    model: builtInAI("text", {
+      expectedInputs: [{ type: "text" }],
+    }),
     messages: [
       {
         role: "system",
         content:
-          "Provide a concise summary of the conversation, highlighting key topics discussed, questions asked, and important information shared. Keep it under 100 words.",
+          "You are a summarization assistant. Extract and summarize the key information from the conversation. Focus on main topics, important facts, names, places, and questions asked. Do NOT provide commentary or evaluation. Keep under 100 words.",
       },
       {
         role: "user",
-        content: conversationText,
+        content: truncatedText,
       },
     ],
   });
-
+  
+  console.log("[ChatSummarize] Result:", result);
+  console.log("[ChatSummarize] Generated summary:", result.text);
+  
   return result.text.trim();
 }
