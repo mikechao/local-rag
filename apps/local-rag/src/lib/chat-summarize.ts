@@ -106,7 +106,7 @@ export async function summarizeChat(
   if (messages.length === 0) {
     throw new Error("No messages to summarize");
   }
-
+  const before = performance.now();
   const conversationText = messages
     .map((message) => {
       const text = getMessageText(message);
@@ -119,7 +119,7 @@ export async function summarizeChat(
     throw new Error("No text content to summarize");
   }
 
-  const MAX_CHARS_PER_CHUNK = 3500; // Leave room for prompt
+  const MAX_CHARS_PER_CHUNK = 5000; // Larger chunks = fewer AI calls for faster summarization
 
   // Always use hierarchical summarization since this is called on quota overflow (long conversations)
   const chunks = chunkMessages(messages, MAX_CHARS_PER_CHUNK);
@@ -155,6 +155,11 @@ export async function summarizeChat(
       },
     ],
   });
-
+  const after = performance.now();
+  console.log(
+    `[Chat Summarization] Summarized ${messages.length} messages in ${
+      ((after - before) / 1000).toFixed(2)
+    } seconds using ${chunks.length} chunks.`,
+  );
   return finalResult.text.trim();
 }
