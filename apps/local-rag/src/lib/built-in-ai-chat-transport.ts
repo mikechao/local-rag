@@ -54,10 +54,7 @@ const shouldRetrieveSchema = z.object({
 function getLatestUserMessage(
   messages: LocalRAGMessage[],
 ): LocalRAGMessage | undefined {
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    if (messages[i].role === "user") return messages[i];
-  }
-  return undefined;
+  return messages.findLast((msg) => msg.role === "user");
 }
 
 export interface BuiltInAIChatTransportOptions {
