@@ -43,7 +43,10 @@ function normalizeTitle(raw: string) {
 export async function generateChatTitle(
   messages: LocalRAGMessage[],
 ): Promise<string | null> {
-  const conversationText = messages
+  // Limit to first 2 messages (typically user + assistant) for focused titles
+  const relevantMessages = messages.slice(0, 2);
+  
+  const conversationText = relevantMessages
     .map((message) => getMessageText(message))
     .filter(Boolean)
     .join("\n");
