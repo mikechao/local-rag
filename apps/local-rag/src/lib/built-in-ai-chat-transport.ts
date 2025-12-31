@@ -195,17 +195,15 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
         try {
           const lastMessage = messages[messages.length - 1];
           if (lastMessage?.role === "user") {
-            try {
-              await upsertMessage({
-                chatId: options.chatId,
-                message: lastMessage,
-              });
-            } catch (error) {
+            upsertMessage({
+              chatId: options.chatId,
+              message: lastMessage,
+            }).catch((error) => {
               console.warn(
                 "[ChatStorage] Failed to persist user message",
                 error,
               );
-            }
+            });
           }
 
           const retrievalResults: RetrievalResult[] | undefined =
