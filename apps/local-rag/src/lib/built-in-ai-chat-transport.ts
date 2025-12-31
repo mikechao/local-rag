@@ -5,8 +5,6 @@ import {
   ToolLoopAgent,
   createAgentUIStream,
   generateText,
-  convertToModelMessages,
-  Output,
   smoothStream,
   createUIMessageStream,
   createIdGenerator,
@@ -18,6 +16,7 @@ import { z } from "zod";
 import { builtInAI, type BuiltInAIChatLanguageModel } from "@built-in-ai/core";
 import type { RetrievalResult } from "./retrieval";
 import type { LocalRAGMessage } from "./local-rag-message";
+import { warmupReranker } from "./models/rerankerModel";
 import { runRetrievalPipeline } from "./retrieval-pipeline";
 import { getRerankMinScoreCached, prefetchRerankMinScore } from "./settings";
 import { upsertMessage } from "@/lib/chat-storage";
@@ -38,17 +37,6 @@ const callOptionsSchema = z.object({
 });
 
 type CallOptions = z.infer<typeof callOptionsSchema>;
-
-const shouldRetrieveSchema = z.object({
-  shouldRetrieve: z
-    .boolean()
-    .describe(
-      "Whether the user's question requires retrieval of relevant documents.",
-    ),
-  userQuestion: z
-    .string()
-    .describe("The user's question that may require retrieval."),
-});
 
 // Returns the most recent message sent by the user, or undefined if none exist.
 function getLatestUserMessage(
@@ -71,7 +59,6 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
   private chatAgent: ToolLoopAgent<CallOptions>;
   private messageIdGenerator: IdGenerator;
   private chatModel: BuiltInAIChatLanguageModel;
-  private retrievalDecisionModel: BuiltInAIChatLanguageModel;
   private warmupPromise: Promise<void> | null = null;
 
   constructor(options: BuiltInAIChatTransportOptions = {}) {
@@ -80,9 +67,6 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
       ...(options.onQuotaOverflow
         ? { onQuotaOverflow: options.onQuotaOverflow }
         : {}),
-    });
-    this.retrievalDecisionModel = builtInAI("text", {
-      expectedInputs: [{ type: "text" }],
     });
     this.messageIdGenerator = createIdGenerator({
       prefix: "msg",
@@ -138,7 +122,6 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
 
   destroy(): void {
     this.chatModel.destroy();
-    this.retrievalDecisionModel.destroy();
     this.warmupPromise = null;
   }
 
@@ -176,24 +159,14 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
         console.warn("[Warmup] Chat model warmup failed (non-fatal):", e);
       }
 
-      // Also warm the retrieval decision model
       try {
-        const retrievalStart = performance.now();
-        await generateText({
-          model: this.retrievalDecisionModel,
-          messages: [{ role: "user", content: "test" }],
-          output: Output.object({
-            schema: shouldRetrieveSchema,
-          }),
-        });
+        const rerankerStart = performance.now();
+        await warmupReranker();
         console.log(
-          `[Warmup] Retrieval decision model warmed up in ${(performance.now() - retrievalStart).toFixed(2)}ms`,
+          `[Warmup] Reranker warmed up in ${(performance.now() - rerankerStart).toFixed(2)}ms`,
         );
       } catch (e) {
-        console.warn(
-          "[Warmup] Retrieval decision model warmup failed (non-fatal):",
-          e,
-        );
+        console.warn("[Warmup] Reranker warmup failed (non-fatal):", e);
       }
     })();
 
@@ -319,56 +292,18 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
     if (lastUserMessage === undefined) {
       return undefined;
     }
-    writer.write({
-      type: "data-retrievalStatus",
-      id: "retrieval",
-      data: {
-        phase: "deciding",
-        message: "Deciding whether to search the knowledge base…",
-      },
-      transient: true,
-    });
-    const systemMessage = {
-      role: "assistant" as const,
-      parts: [
-        {
-          type: "text" as const,
-          text:
-            "Determine if the user message requires retrieval from the knowledge base to provide a better answer." +
-            " The knowledge base contains information about Stargate Atlantis.",
-        },
-      ],
-      id: "system-message-id",
-    };
-    try {
-      const before = performance.now();
-      const messages = await convertToModelMessages([
-        systemMessage,
-        lastUserMessage,
-      ]);
-      const result = await generateText({
-        model: this.retrievalDecisionModel,
-        messages,
-        output: Output.object({
-          schema: shouldRetrieveSchema,
-        }),
-        abortSignal,
-      });
-      const after = performance.now();
-      console.log(
-        `retrieval decision took ${after - before} ms shouldRetrieve: ${result.output.shouldRetrieve} userQuestion: ${result.output.userQuestion}`,
-      );
-      const { shouldRetrieve, userQuestion } = result.output;
-      if (!shouldRetrieve) {
-        writer.write({
-          type: "data-retrievalStatus",
-          id: "retrieval",
-          data: { phase: "skipped", message: "No retrieval needed." },
-          transient: true,
-        });
-        return undefined;
-      }
 
+    // Extract text content from the user message parts
+    const userQuestion = lastUserMessage.parts
+      ?.filter((p) => p.type === "text")
+      .map((p) => p.text)
+      .join(" ") || "";
+
+    if (!userQuestion.trim()) {
+      return undefined;
+    }
+
+    try {
       return await runRetrievalPipeline(userQuestion, {
         abortSignal,
         writeStatus: (status) => {
