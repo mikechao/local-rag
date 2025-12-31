@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type ReactNode } from "react";
+import { memo, type ReactNode, type ComponentProps } from "react";
 import { Streamdown } from "streamdown";
 import { cn } from "@/lib/utils";
 import type { RetrievalResult } from "@/lib/retrieval";
@@ -22,15 +22,16 @@ export type CitationMarkdownProps = {
  * Parses text content and replaces citation markers [1], [2], etc. with
  * InlineCitation hover cards that display the corresponding retrieval result.
  */
-function parseCitations(
+function parseCitationsInText(
   text: string,
   retrievalResults: RetrievalResult[],
-): ReactNode[] {
-  const parts: ReactNode[] = [];
+): ReactNode {
   // Match citation markers like [1], [2], etc.
   const citationRegex = /\[(\d+)\]/g;
+  const parts: ReactNode[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
+  let hasCitations = false;
 
   while ((match = citationRegex.exec(text)) !== null) {
     // Add text before the citation
@@ -44,6 +45,7 @@ function parseCitations(
     const result = retrievalResults[resultIndex];
 
     if (result) {
+      hasCitations = true;
       // Valid citation - render as hover card
       parts.push(
         <InlineCitation key={`citation-${match.index}`}>
@@ -70,8 +72,10 @@ function parseCitations(
           </InlineCitationCard>
         </InlineCitation>,
       );
+    } else {
+      // Invalid citation - keep the original text
+      parts.push(match[0]);
     }
-    // If no valid result, silently skip the marker (don't render anything)
 
     lastIndex = match.index + match[0].length;
   }
@@ -81,76 +85,92 @@ function parseCitations(
     parts.push(text.slice(lastIndex));
   }
 
-  return parts;
+  // If no citations were found, return original text
+  if (!hasCitations) {
+    return text;
+  }
+
+  return <>{parts}</>;
+}
+
+/**
+ * Creates custom components for Streamdown that handle citation markers.
+ * This approach ensures citations appear inline within the markdown structure.
+ */
+function createCitationComponents(
+  retrievalResults: RetrievalResult[],
+): ComponentProps<typeof Streamdown>["components"] {
+  return {
+    // Override paragraph to handle citations in text
+    p: ({ children, ...props }) => {
+      const processedChildren = processChildren(children, retrievalResults);
+      return <p {...props}>{processedChildren}</p>;
+    },
+    // Override list items
+    li: ({ children, ...props }) => {
+      const processedChildren = processChildren(children, retrievalResults);
+      return <li {...props}>{processedChildren}</li>;
+    },
+    // Override strong/bold
+    strong: ({ children, ...props }) => {
+      const processedChildren = processChildren(children, retrievalResults);
+      return <strong {...props}>{processedChildren}</strong>;
+    },
+    // Override emphasis/italic
+    em: ({ children, ...props }) => {
+      const processedChildren = processChildren(children, retrievalResults);
+      return <em {...props}>{processedChildren}</em>;
+    },
+  };
+}
+
+/**
+ * Process children nodes to replace citation markers with hover cards.
+ */
+function processChildren(
+  children: ReactNode,
+  retrievalResults: RetrievalResult[],
+): ReactNode {
+  if (typeof children === "string") {
+    return parseCitationsInText(children, retrievalResults);
+  }
+
+  if (Array.isArray(children)) {
+    return children.map((child, index) => {
+      if (typeof child === "string") {
+        const result = parseCitationsInText(child, retrievalResults);
+        // If result is the same string, return as-is; otherwise wrap with key
+        if (result === child) return child;
+        return <span key={index}>{result}</span>;
+      }
+      return child;
+    });
+  }
+
+  return children;
 }
 
 /**
  * A markdown renderer that supports inline citations.
- * Wraps Streamdown and post-processes text to replace [n] markers
+ * Uses custom Streamdown components to replace [n] markers
  * with hover cards showing the corresponding retrieval result.
  */
 export const CitationMarkdown = memo(
   ({ children, retrievalResults, className }: CitationMarkdownProps) => {
-    // If no retrieval results, just render with Streamdown
-    if (!retrievalResults.length) {
-      return (
-        <Streamdown
-          className={cn(
-            "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-            className,
-          )}
-        >
-          {children}
-        </Streamdown>
-      );
-    }
+    const components = retrievalResults.length
+      ? createCitationComponents(retrievalResults)
+      : undefined;
 
-    // Parse citations from the text and render with hover cards
-    const parsedContent = parseCitations(children, retrievalResults);
-
-    // Check if any citations were found
-    const hasCitations = parsedContent.some(
-      (part) => typeof part !== "string",
-    );
-
-    if (!hasCitations) {
-      // No citations found, render normally
-      return (
-        <Streamdown
-          className={cn(
-            "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-            className,
-          )}
-        >
-          {children}
-        </Streamdown>
-      );
-    }
-
-    // Render the content with citations
-    // We need to handle this carefully - Streamdown expects a string,
-    // but we have mixed ReactNode content. We'll render the markdown first,
-    // then overlay the citations.
     return (
-      <div
+      <Streamdown
         className={cn(
           "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
           className,
         )}
+        components={components}
       >
-        {parsedContent.map((part, index) => {
-          if (typeof part === "string") {
-            // Render string parts through Streamdown for markdown processing
-            return (
-              <Streamdown key={index} className="inline">
-                {part}
-              </Streamdown>
-            );
-          }
-          // ReactNode parts are already citation components
-          return part;
-        })}
-      </div>
+        {children}
+      </Streamdown>
     );
   },
   (prevProps, nextProps) =>
