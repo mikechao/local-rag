@@ -36,14 +36,16 @@ export async function runRetrievalPipeline(
   });
 
   const retrievalBefore = performance.now();
-  const retrievalResponse = await retrieveChunks(userQuestion);
+  const rerankerAvailabilityPromise = isRerankerModelReadyFlag()
+    ? Promise.resolve(true)
+    : hasCachedRerankerWeights();
+  const [retrievalResponse, rerankerAvailable] = await Promise.all([
+    retrieveChunks(userQuestion),
+    rerankerAvailabilityPromise,
+  ]);
   const retrievalAfter = performance.now();
 
   let results = retrievalResponse.results;
-
-  // Only rerank when the reranker is already cached/marked ready.
-  const rerankerAvailable =
-    isRerankerModelReadyFlag() || (await hasCachedRerankerWeights());
 
   if (
     rerankerAvailable &&
