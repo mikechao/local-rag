@@ -19,6 +19,7 @@ import {
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
 import { RetrievalResultsCarousel } from "@/components/RetrievalResultsCarousel";
+import { CitationMarkdown } from "@/components/chat/CitationMarkdown";
 import { CopyMessage } from "@/components/chat/CopyMessage";
 import { SpeakMessage } from "@/components/chat/SpeakMessage";
 import { Button } from "@/components/ui/button";
@@ -124,6 +125,20 @@ export function ChatMessageList({
                   message.parts.map((part, index) => {
                     if (part.type === "data-retrievalResults") return null;
                     if (part.type === "text") {
+                      // Use CitationMarkdown for assistant messages with retrieval results
+                      if (
+                        message.role === "assistant" &&
+                        retrievalResults?.length
+                      ) {
+                        return (
+                          <CitationMarkdown
+                            key={index}
+                            retrievalResults={retrievalResults}
+                          >
+                            {part.text}
+                          </CitationMarkdown>
+                        );
+                      }
                       return (
                         <MessageResponse key={index}>
                           {part.text}

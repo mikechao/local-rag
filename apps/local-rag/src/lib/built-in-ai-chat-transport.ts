@@ -87,8 +87,9 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
           retrievalResults.length > 0 &&
           Array.isArray(prompt)
         ) {
+          // Format sources with numbered citations for the model to reference
           const contextText = retrievalResults
-            .map((r) => `${r.text}\n(Source: ${r.docId})`)
+            .map((r, i) => `[${i + 1}]: ${r.text}`)
             .join("\n\n---\n\n");
 
           // Insert an assistant message with the context before the last user message
@@ -97,13 +98,13 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
             ...prompt.slice(0, lastIndex),
             {
               role: "assistant" as const,
-              content: `I found the following relevant information from the knowledge base:\n\n${contextText}\n\nI'll use this information to answer your question.`,
+              content: `I found the following relevant sources from the knowledge base:\n\n${contextText}\n\nI'll use this information to answer your question. When I reference information from these sources, I'll cite them using [1], [2], etc.`,
             },
             prompt[lastIndex], // The user's question
           ];
 
           console.log(
-            "[prepareCall] Injected RAG context as assistant message",
+            "[prepareCall] Injected RAG context with numbered citations",
           );
 
           return {

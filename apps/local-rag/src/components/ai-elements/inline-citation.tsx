@@ -80,6 +80,34 @@ export const InlineCitationCardTrigger = ({
   </HoverCardTrigger>
 );
 
+export type InlineCitationDocTriggerProps = ComponentProps<typeof Badge> & {
+  citationNumber: number;
+  docId: string;
+  docType: string;
+  pageNumber?: number;
+};
+
+export const InlineCitationDocTrigger = ({
+  citationNumber,
+  className,
+  ...props
+}: InlineCitationDocTriggerProps) => {
+  return (
+    <HoverCardTrigger asChild>
+      <Badge
+        className={cn(
+          "ml-0.5 cursor-pointer rounded-full px-1.5 py-0 text-xs font-normal",
+          className,
+        )}
+        variant="secondary"
+        {...props}
+      >
+        [{citationNumber}]
+      </Badge>
+    </HoverCardTrigger>
+  );
+};
+
 export type InlineCitationCardBodyProps = ComponentProps<"div">;
 
 export const InlineCitationCardBody = ({
@@ -285,3 +313,56 @@ export const InlineCitationQuote = ({
     {children}
   </blockquote>
 );
+
+export type InlineCitationRetrievalSourceProps = ComponentProps<"div"> & {
+  docId: string;
+  docType: string;
+  pageNumber?: number;
+  headingPath?: string | null;
+  text: string;
+  similarity?: number;
+  rerankScore?: number;
+};
+
+export const InlineCitationRetrievalSource = ({
+  docId,
+  docType,
+  pageNumber,
+  headingPath,
+  text,
+  similarity,
+  rerankScore,
+  className,
+  ...props
+}: InlineCitationRetrievalSourceProps) => {
+  // Extract filename from docId
+  const fileName = docId.split("/").pop() ?? docId;
+  const pageInfo = pageNumber !== undefined ? `Page ${pageNumber}` : null;
+  const subtitle = [pageInfo, headingPath].filter(Boolean).join(" • ");
+
+  return (
+    <div className={cn("space-y-2", className)} {...props}>
+      <div className="space-y-0.5">
+        <h4 className="truncate font-medium text-sm leading-tight">
+          {fileName}
+        </h4>
+        {subtitle && (
+          <p className="truncate text-muted-foreground text-xs">{subtitle}</p>
+        )}
+      </div>
+      <div className="max-h-[150px] overflow-y-auto rounded border bg-muted/50 p-2">
+        <p className="whitespace-pre-wrap text-xs leading-relaxed">{text}</p>
+      </div>
+      {(similarity !== undefined || rerankScore !== undefined) && (
+        <div className="flex gap-3 text-muted-foreground text-xs">
+          {similarity !== undefined && (
+            <span>Similarity: {(similarity * 100).toFixed(1)}%</span>
+          )}
+          {rerankScore !== undefined && (
+            <span>Rerank: {rerankScore.toFixed(3)}</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
