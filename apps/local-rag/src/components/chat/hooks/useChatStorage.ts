@@ -15,9 +15,6 @@ import { generateChatTitle } from "@/lib/chat-title";
 
 type UseChatStorageArgs = {
   setRetrievalStatus: (status: RetrievalStatus | null) => void;
-  setSourcesOpenByMessageId: React.Dispatch<
-    React.SetStateAction<Record<string, boolean>>
-  >;
   resetInput: () => void;
 };
 
@@ -28,7 +25,6 @@ type HandleNewChatArgs = {
 
 export function useChatStorage({
   setRetrievalStatus,
-  setSourcesOpenByMessageId,
   resetInput,
 }: UseChatStorageArgs) {
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -52,8 +48,7 @@ export function useChatStorage({
 
   const resetChatIndicators = useCallback(() => {
     setRetrievalStatus(null);
-    setSourcesOpenByMessageId({});
-  }, [setRetrievalStatus, setSourcesOpenByMessageId]);
+  }, [setRetrievalStatus]);
 
   const loadChatAndActivate = useCallback(
     async (chatId: string) => {

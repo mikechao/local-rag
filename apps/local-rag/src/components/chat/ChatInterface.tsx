@@ -48,9 +48,6 @@ export function ChatInterface() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [retrievalStatus, setRetrievalStatus] =
     useState<RetrievalStatus | null>(null);
-  const [sourcesOpenByMessageId, setSourcesOpenByMessageId] = useState<
-    Record<string, boolean>
-  >({});
   const [input, setInput] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summarizationError, setSummarizationError] = useState<string | null>(
@@ -99,7 +96,6 @@ export function ChatInterface() {
     setLoadedQuotaOverflowState,
   } = useChatStorage({
     setRetrievalStatus,
-    setSourcesOpenByMessageId,
     resetInput: () => setInput(""),
   });
 
@@ -221,7 +217,6 @@ export function ChatInterface() {
       setPendingMessages([summaryMessage]);
       setActiveChatId(newChat.id);
       setRetrievalStatus(null);
-      setSourcesOpenByMessageId({});
       setInput("");
       setLoadedQuotaOverflowState(false);
       clearQuotaOverflow();
@@ -238,7 +233,6 @@ export function ChatInterface() {
     setPendingMessages,
     setActiveChatId,
     setRetrievalStatus,
-    setSourcesOpenByMessageId,
     setInput,
     setLoadedQuotaOverflowState,
     clearQuotaOverflow,
@@ -271,7 +265,6 @@ export function ChatInterface() {
       setPendingMessages([]);
       setActiveChatId(newChat.id);
       setRetrievalStatus(null);
-      setSourcesOpenByMessageId({});
       setInput("");
       setLoadedQuotaOverflowState(false);
       clearQuotaOverflow();
@@ -285,7 +278,6 @@ export function ChatInterface() {
     setPendingMessages,
     setActiveChatId,
     setRetrievalStatus,
-    setSourcesOpenByMessageId,
     setInput,
     setLoadedQuotaOverflowState,
     clearQuotaOverflow,
@@ -437,8 +429,6 @@ export function ChatInterface() {
             messages={messages}
             status={status}
             retrievalStatus={retrievalStatus}
-            sourcesOpenByMessageId={sourcesOpenByMessageId}
-            setSourcesOpenByMessageId={setSourcesOpenByMessageId}
             copiedMessageId={copiedMessageId}
             setCopiedMessageId={setCopiedMessageId}
             error={error}

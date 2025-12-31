@@ -18,11 +18,9 @@ import {
   ReasoningContent,
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
-import { RetrievalResultsCarousel } from "@/components/RetrievalResultsCarousel";
 import { CitationMarkdown } from "@/components/chat/CitationMarkdown";
 import { CopyMessage } from "@/components/chat/CopyMessage";
 import { SpeakMessage } from "@/components/chat/SpeakMessage";
-import { Button } from "@/components/ui/button";
 import type { LocalRAGMessage, RetrievalStatus } from "@/lib/local-rag-message";
 import type { RetrievalResult } from "@/lib/retrieval";
 import {
@@ -35,10 +33,6 @@ type ChatMessageListProps = {
   messages: LocalRAGMessage[];
   status: ChatStatus;
   retrievalStatus: RetrievalStatus | null;
-  sourcesOpenByMessageId: Record<string, boolean>;
-  setSourcesOpenByMessageId: React.Dispatch<
-    React.SetStateAction<Record<string, boolean>>
-  >;
   copiedMessageId: string | null;
   setCopiedMessageId: React.Dispatch<React.SetStateAction<string | null>>;
   error?: Error;
@@ -48,8 +42,6 @@ export function ChatMessageList({
   messages,
   status,
   retrievalStatus,
-  sourcesOpenByMessageId,
-  setSourcesOpenByMessageId,
   copiedMessageId,
   setCopiedMessageId,
   error,
@@ -98,29 +90,13 @@ export function ChatMessageList({
             status !== "ready" &&
             message.role === "assistant" &&
             isLastMessage;
-          const isLastAssistantMessage =
-            isLastMessage && message.role === "assistant";
           const retrievalResultsPart = message.parts?.find?.(
             (part) => part.type === "data-retrievalResults",
           ) as { data?: RetrievalResult[] } | undefined;
           const retrievalResults = retrievalResultsPart?.data;
-          const sourcesAreOpen =
-            Boolean(retrievalResults?.length) &&
-            Boolean(sourcesOpenByMessageId[message.id]);
-          const showRetrievalResultsCarousel =
-            message.role === "assistant" &&
-            Boolean(retrievalResults?.length) &&
-            (!isLastAssistantMessage || status === "ready") &&
-            sourcesAreOpen;
           return (
             <Message key={message.id} from={message.role}>
-              <MessageContent
-                className={
-                  showRetrievalResultsCarousel
-                    ? "w-full max-w-full min-w-0"
-                    : undefined
-                }
-              >
+              <MessageContent>
                 {message.parts ? (
                   message.parts.map((part, index) => {
                     if (part.type === "data-retrievalResults") return null;
@@ -174,13 +150,6 @@ export function ChatMessageList({
                     )}
                   </MessageAttachments>
                 )}
-                {message.role === "assistant" &&
-                  showRetrievalResultsCarousel &&
-                  retrievalResults && (
-                    <div className="mt-3">
-                      <RetrievalResultsCarousel results={retrievalResults} />
-                    </div>
-                  )}
                 {showRetrievalStatusInThisMessage && retrievalStatus && (
                   <div className="mt-2">
                     {renderRetrievalStatus(retrievalStatus)}
@@ -190,24 +159,6 @@ export function ChatMessageList({
                   copyableText &&
                   status === "ready" && (
                     <div className="flex items-center gap-2 ml-auto">
-                      {retrievalResults?.length ? (
-                        <Button
-                          variant="noShadow"
-                          size="sm"
-                          className="h-8 px-2"
-                          type="button"
-                          onClick={() =>
-                            setSourcesOpenByMessageId((prev) => ({
-                              ...prev,
-                              [message.id]: !prev[message.id],
-                            }))
-                          }
-                        >
-                          {sourcesOpenByMessageId[message.id]
-                            ? "Hide Sources"
-                            : "Show sources"}
-                        </Button>
-                      ) : null}
                       <SpeakMessage text={copyableText} />
                       <CopyMessage
                         messageId={message.id}
