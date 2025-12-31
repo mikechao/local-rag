@@ -74,6 +74,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
   private chatAgent: ToolLoopAgent<CallOptions>;
   private messageIdGenerator: IdGenerator;
   private chatModel: BuiltInAIChatLanguageModel;
+  private retrievalDecisionModel: BuiltInAIChatLanguageModel;
   private warmupPromise: Promise<void> | null = null;
 
   constructor(options: BuiltInAIChatTransportOptions = {}) {
@@ -82,6 +83,9 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
       ...(options.onQuotaOverflow
         ? { onQuotaOverflow: options.onQuotaOverflow }
         : {}),
+    });
+    this.retrievalDecisionModel = builtInAI("text", {
+      expectedInputs: [{ type: "text" }],
     });
     this.messageIdGenerator = createIdGenerator({
       prefix: "msg",
@@ -137,6 +141,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
 
   destroy(): void {
     this.chatModel.destroy();
+    this.retrievalDecisionModel.destroy();
     this.warmupPromise = null;
   }
 
@@ -172,6 +177,26 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
         );
       } catch (e) {
         console.warn("[Warmup] Chat model warmup failed (non-fatal):", e);
+      }
+
+      // Also warm the retrieval decision model
+      try {
+        const retrievalStart = performance.now();
+        await generateText({
+          model: this.retrievalDecisionModel,
+          messages: [{ role: "user", content: "test" }],
+          output: Output.object({
+            schema: shouldRetrieveSchema,
+          }),
+        });
+        console.log(
+          `[Warmup] Retrieval decision model warmed up in ${(performance.now() - retrievalStart).toFixed(2)}ms`,
+        );
+      } catch (e) {
+        console.warn(
+          "[Warmup] Retrieval decision model warmup failed (non-fatal):",
+          e,
+        );
       }
     })();
 
@@ -325,7 +350,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
         lastUserMessage,
       ]);
       const result = await generateText({
-        model: builtInAI(),
+        model: this.retrievalDecisionModel,
         messages,
         output: Output.object({
           schema: shouldRetrieveSchema,
