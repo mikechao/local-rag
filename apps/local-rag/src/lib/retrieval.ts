@@ -186,14 +186,10 @@ export async function retrieveChunks(
           similarity: sql<number>`0`, // Placeholder
           trigramScore: trigramSimilarity,
         })
-        .from(chunkEmbeddings)
-        .innerJoin(
-          documentChunks,
-          eq(documentChunks.id, chunkEmbeddings.chunkId),
-        )
+        .from(documentChunks)
         .where(
           and(
-            eq(chunkEmbeddings.embeddingModel, embeddingModelId),
+            eq(documentChunks.embedded, true),
             // Use the <% operator for word similarity (word in longer text)
             sql`${searchString} <% ${documentChunks.text}`,
             docId ? eq(documentChunks.docId, docId) : undefined,
@@ -204,50 +200,61 @@ export async function retrieveChunks(
         .limit(limit) as Promise<DbChunkResult[]>;
     }
 
-    // 3. Await Embedding and perform Vector Search
-    const queryEmbedding = await embeddingPromise;
-    const vectorStr = JSON.stringify(queryEmbedding);
-    performance.mark("retrieval:embed-query-end");
-    performance.measure(
-      "retrieval:embed-query",
-      "retrieval:embed-query-start",
-      "retrieval:embed-query-end",
-    );
+    // 3. Vector Search logic (needs embedding first)
+    const vectorSearchPromise = (async () => {
+      const queryEmbedding = await embeddingPromise;
+      const vectorStr = JSON.stringify(queryEmbedding);
+      performance.mark("retrieval:embed-query-end");
+      performance.measure(
+        "retrieval:embed-query",
+        "retrieval:embed-query-start",
+        "retrieval:embed-query-end",
+      );
 
-    performance.mark("retrieval:vector-search-start");
-    const vectorSimilarity = sql<number>`1 - (${chunkEmbeddings.embedding} <=> ${vectorStr})`;
+      performance.mark("retrieval:vector-search-start");
+      const vectorSimilarity = sql<number>`1 - (${chunkEmbeddings.embedding} <=> ${vectorStr})`;
 
-    const vectorResults = (await db
-      .select({
-        id: documentChunks.id,
-        docId: documentChunks.docId,
-        docType: documentChunks.docType,
-        pageNumber: documentChunks.pageNumber,
-        chunkIndex: documentChunks.chunkIndex,
-        headingPath: documentChunks.headingPath,
-        text: documentChunks.text,
-        similarity: vectorSimilarity,
-      })
-      .from(chunkEmbeddings)
-      .innerJoin(documentChunks, eq(documentChunks.id, chunkEmbeddings.chunkId))
-      .where(
-        and(
-          eq(chunkEmbeddings.embeddingModel, embeddingModelId),
-          docId ? eq(documentChunks.docId, docId) : undefined,
-          docType ? eq(documentChunks.docType, docType) : undefined,
-        ),
-      )
-      .orderBy(desc(vectorSimilarity))
-      .limit(limit)) as DbChunkResult[];
-    performance.mark("retrieval:vector-search-end");
-    performance.measure(
-      "retrieval:vector-search",
-      "retrieval:vector-search-start",
-      "retrieval:vector-search-end",
-    );
+      const results = (await db
+        .select({
+          id: documentChunks.id,
+          docId: documentChunks.docId,
+          docType: documentChunks.docType,
+          pageNumber: documentChunks.pageNumber,
+          chunkIndex: documentChunks.chunkIndex,
+          headingPath: documentChunks.headingPath,
+          text: documentChunks.text,
+          similarity: vectorSimilarity,
+        })
+        .from(chunkEmbeddings)
+        .innerJoin(
+          documentChunks,
+          eq(documentChunks.id, chunkEmbeddings.chunkId),
+        )
+        .where(
+          and(
+            eq(chunkEmbeddings.embeddingModel, embeddingModelId),
+            docId ? eq(documentChunks.docId, docId) : undefined,
+            docType ? eq(documentChunks.docType, docType) : undefined,
+          ),
+        )
+        .orderBy(desc(vectorSimilarity))
+        .limit(limit)) as DbChunkResult[];
 
-    // 4. Await Trigram Search Results
-    const trigramResults = await trigramPromise;
+      performance.mark("retrieval:vector-search-end");
+      performance.measure(
+        "retrieval:vector-search",
+        "retrieval:vector-search-start",
+        "retrieval:vector-search-end",
+      );
+      return results;
+    })();
+
+    // 4. Await both searches in parallel
+    const [vectorResults, trigramResults] = await Promise.all([
+      vectorSearchPromise,
+      trigramPromise,
+    ]);
+
     performance.mark("retrieval:trigram-search-end");
     performance.measure(
       "retrieval:trigram-search",
