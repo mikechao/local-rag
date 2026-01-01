@@ -15,6 +15,7 @@ interface SummaryReviewDialogProps {
   onSummaryChange: (value: string) => void;
   onRegenerate: () => void;
   onProceed: () => void;
+  onDismiss: () => void;
 }
 
 export function SummaryReviewDialog({
@@ -23,11 +24,17 @@ export function SummaryReviewDialog({
   onSummaryChange,
   onRegenerate,
   onProceed,
+  onDismiss,
 }: SummaryReviewDialogProps) {
   const isProceedDisabled = !summary.trim();
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onDismiss();
+      }}
+    >
       <DialogContent
         className="max-w-2xl"
         onPointerDownOutside={(e) => e.preventDefault()}

@@ -484,6 +484,10 @@ export function ChatInterface() {
         onSummaryChange={setSummaryInputValue}
         onRegenerate={handleRegenerateSummary}
         onProceed={handleProceedWithSummary}
+        onDismiss={() => {
+          setGeneratedSummary(null);
+          setSummaryInputValue("");
+        }}
       />
 
       <SummaryErrorDialog
