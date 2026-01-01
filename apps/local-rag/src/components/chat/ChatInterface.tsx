@@ -27,8 +27,14 @@ import type {
   ModelUsage,
   RetrievalStatus,
 } from "@/lib/local-rag-message";
-import { isSpeechModelReadyFlag } from "@/lib/models/speechModel";
-import { hasCachedWhisperWeights } from "@/lib/models/whisperModel";
+import {
+  hasCachedSpeechWeights,
+  isSpeechModelReadyFlag,
+} from "@/lib/models/speechModel";
+import {
+  hasCachedWhisperWeights,
+  isWhisperModelReadyFlag,
+} from "@/lib/models/whisperModel";
 import { useAutoSpeak } from "@/components/chat/hooks/useAutoSpeak";
 import { useChatStorage } from "@/components/chat/hooks/useChatStorage";
 import { useChatTransport } from "@/components/chat/hooks/useChatTransport";
@@ -62,10 +68,21 @@ export function ChatInterface() {
 
   useEffect(() => {
     const checkModels = async () => {
-      const isWhisperCached = await hasCachedWhisperWeights();
-      setIsWhisperAvailable(isWhisperCached);
+      const isWhisperReady = isWhisperModelReadyFlag();
+      if (isWhisperReady) {
+        setIsWhisperAvailable(true);
+      } else {
+        const isWhisperCached = await hasCachedWhisperWeights();
+        setIsWhisperAvailable(isWhisperCached);
+      }
+
       const isSpeechReady = isSpeechModelReadyFlag();
-      setIsSpeechAvailable(isSpeechReady);
+      if (isSpeechReady) {
+        setIsSpeechAvailable(true);
+      } else {
+        const isSpeechCached = await hasCachedSpeechWeights();
+        setIsSpeechAvailable(isSpeechCached);
+      }
     };
     checkModels();
     // Pre-warm embedding model for faster RAG retrieval

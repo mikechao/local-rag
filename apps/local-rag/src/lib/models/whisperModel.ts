@@ -4,8 +4,14 @@ import { cleanClearCahce } from "./utils";
 export const MODEL_ID = "Xenova/whisper-base";
 export const LOCAL_READY_KEY = "whisper-base-ready";
 
+let modelSingleton: ReturnType<typeof transformersJS.transcription> | null =
+  null;
+
 export function getWhisperModel() {
-  return transformersJS.transcription(MODEL_ID);
+  if (!modelSingleton) {
+    modelSingleton = transformersJS.transcription(MODEL_ID);
+  }
+  return modelSingleton;
 }
 
 export async function hasCachedWhisperWeights(): Promise<boolean> {
