@@ -101,15 +101,12 @@ export function ChatMessageList({
                   message.parts.map((part, index) => {
                     if (part.type === "data-retrievalResults") return null;
                     if (part.type === "text") {
-                      // Use CitationMarkdown for assistant messages with retrieval results
-                      if (
-                        message.role === "assistant" &&
-                        retrievalResults?.length
-                      ) {
+                      // Use CitationMarkdown for assistant messages to handle citations
+                      if (message.role === "assistant") {
                         return (
                           <CitationMarkdown
                             key={index}
-                            retrievalResults={retrievalResults}
+                            retrievalResults={retrievalResults ?? []}
                           >
                             {part.text}
                           </CitationMarkdown>

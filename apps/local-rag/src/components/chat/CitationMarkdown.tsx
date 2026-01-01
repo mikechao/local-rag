@@ -73,8 +73,26 @@ function parseCitationsInText(
         </InlineCitation>,
       );
     } else {
-      // Invalid citation - keep the original text
-      parts.push(match[0]);
+      hasCitations = true;
+      // Citation from earlier in conversation - show grayed out badge with explanation
+      parts.push(
+        <InlineCitation key={`citation-${match.index}`}>
+          <InlineCitationCard>
+            <InlineCitationDocTrigger
+              citationNumber={citationNumber}
+              docId=""
+              docType=""
+              pageNumber={undefined}
+              className="opacity-50"
+            />
+            <InlineCitationCardBody>
+              <div className="p-3 text-sm text-muted-foreground">
+                Sourced from earlier in conversation
+              </div>
+            </InlineCitationCardBody>
+          </InlineCitationCard>
+        </InlineCitation>,
+      );
     }
 
     lastIndex = match.index + match[0].length;
@@ -101,6 +119,13 @@ function createCitationComponents(
   retrievalResults: RetrievalResult[],
 ): ComponentProps<typeof Streamdown>["components"] {
   return {
+    // Override text node directly
+    text: ({ children }) => {
+      if (typeof children === "string") {
+        return <>{parseCitationsInText(children, retrievalResults)}</>;
+      }
+      return <>{children}</>;
+    },
     // Override paragraph to handle citations in text
     p: ({ children, ...props }) => {
       const processedChildren = processChildren(children, retrievalResults);
@@ -120,6 +145,24 @@ function createCitationComponents(
     em: ({ children, ...props }) => {
       const processedChildren = processChildren(children, retrievalResults);
       return <em {...props}>{processedChildren}</em>;
+    },
+    // Override headings
+    h1: ({ children, ...props }) => {
+      const processedChildren = processChildren(children, retrievalResults);
+      return <h1 {...props}>{processedChildren}</h1>;
+    },
+    h2: ({ children, ...props }) => {
+      const processedChildren = processChildren(children, retrievalResults);
+      return <h2 {...props}>{processedChildren}</h2>;
+    },
+    h3: ({ children, ...props }) => {
+      const processedChildren = processChildren(children, retrievalResults);
+      return <h3 {...props}>{processedChildren}</h3>;
+    },
+    // Override blockquote
+    blockquote: ({ children, ...props }) => {
+      const processedChildren = processChildren(children, retrievalResults);
+      return <blockquote {...props}>{processedChildren}</blockquote>;
     },
   };
 }
@@ -157,9 +200,9 @@ function processChildren(
  */
 export const CitationMarkdown = memo(
   ({ children, retrievalResults, className }: CitationMarkdownProps) => {
-    const components = retrievalResults.length
-      ? createCitationComponents(retrievalResults)
-      : undefined;
+    // Always create citation components to handle both valid citations
+    // and citations from earlier in conversation
+    const components = createCitationComponents(retrievalResults);
 
     return (
       <Streamdown
