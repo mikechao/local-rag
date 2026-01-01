@@ -1,7 +1,7 @@
 import { documents, documentChunks, chunkEmbeddings } from "@/db/schema";
 import { ensureDbReady, getDb } from "@/lib/db";
 import { eq, sql, and } from "drizzle-orm";
-import { MODEL_ID } from "@/lib/models/embeddingModel";
+import { getEmbeddingModelId } from "@/lib/models/model-registry";
 
 export type QuotaEstimate = {
   usage?: number;
@@ -270,13 +270,14 @@ export async function saveChunkEmbeddings(
 ) {
   await ensureDbReady();
   const db = await getDb();
+  const embeddingModelId = getEmbeddingModelId();
 
   await db.transaction(async (tx) => {
     for (const { chunkId, embedding } of embeddings) {
       await tx.insert(chunkEmbeddings).values({
         chunkId,
         embedding,
-        embeddingModel: MODEL_ID,
+        embeddingModel: embeddingModelId,
       });
       await tx
         .update(documentChunks)

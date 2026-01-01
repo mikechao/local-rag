@@ -16,7 +16,7 @@ import { z } from "zod";
 import { builtInAI, type BuiltInAIChatLanguageModel } from "@built-in-ai/core";
 import type { RetrievalResult } from "./retrieval";
 import type { LocalRAGMessage } from "./local-rag-message";
-import { warmupReranker } from "./models/rerankerModel";
+import { getModelDescriptor } from "./models/model-registry";
 import { runRetrievalPipeline } from "./retrieval-pipeline";
 import { getRerankMinScoreCached, prefetchRerankMinScore } from "./settings";
 import { upsertMessage } from "@/lib/chat-storage";
@@ -162,7 +162,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
 
       try {
         const rerankerStart = performance.now();
-        await warmupReranker();
+        await getModelDescriptor("reranker").warmup();
         console.log(
           `[Warmup] Reranker warmed up in ${(performance.now() - rerankerStart).toFixed(2)}ms`,
         );

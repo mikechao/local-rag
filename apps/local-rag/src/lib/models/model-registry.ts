@@ -265,3 +265,10 @@ export async function isModelAvailable(key: ModelKey): Promise<boolean> {
   if (model.isReady()) return true;
   return model.hasCached();
 }
+
+/**
+ * Read the embedding model ID used for chunk storage and retrieval.
+ */
+export function getEmbeddingModelId(): string {
+  return getModelDescriptor("embedding").modelId;
+}

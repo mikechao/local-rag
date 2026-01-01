@@ -70,9 +70,7 @@ export async function warmupReranker(progressCallback?: ProgressCallback) {
   const output = await (model as any)(inputs);
   const logits = output.logits;
   void logits.data; // e.g. touch the data / force a real read:
-  const scores = logits.sigmoid().tolist();
-  console.log("Reranker warmup complete, scores:", scores);
-  console.log("logits.data:", logits.data);
+  logits.sigmoid().tolist();
 }
 
 /**

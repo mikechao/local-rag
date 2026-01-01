@@ -2,7 +2,7 @@ import { sql, eq, and, desc } from "drizzle-orm";
 import { getDb } from "./db";
 import { embedQuery } from "./embedding-worker";
 import { chunkEmbeddings, documentChunks } from "../db/schema";
-import { MODEL_ID } from "./models/embeddingModel";
+import { getEmbeddingModelId } from "./models/model-registry";
 
 export type RetrievalResult = {
   chunkIds: string[];
@@ -160,6 +160,7 @@ export async function retrieveChunks(
     performance.mark("retrieval:vector-search-start");
     const vectorSimilarity = sql<number>`1 - (${chunkEmbeddings.embedding} <=> ${vectorStr})`;
 
+    const embeddingModelId = getEmbeddingModelId();
     const vectorResults = await db
       .select({
         id: documentChunks.id,
@@ -175,7 +176,7 @@ export async function retrieveChunks(
       .innerJoin(documentChunks, eq(documentChunks.id, chunkEmbeddings.chunkId))
       .where(
         and(
-          eq(chunkEmbeddings.embeddingModel, MODEL_ID),
+          eq(chunkEmbeddings.embeddingModel, embeddingModelId),
           docId ? eq(documentChunks.docId, docId) : undefined,
           docType ? eq(documentChunks.docType, docType) : undefined,
         ),
@@ -219,7 +220,7 @@ export async function retrieveChunks(
         )
         .where(
           and(
-            eq(chunkEmbeddings.embeddingModel, MODEL_ID),
+            eq(chunkEmbeddings.embeddingModel, embeddingModelId),
             // Use the <% operator for word similarity (word in longer text)
             sql`${searchString} <% ${documentChunks.text}`,
             docId ? eq(documentChunks.docId, docId) : undefined,

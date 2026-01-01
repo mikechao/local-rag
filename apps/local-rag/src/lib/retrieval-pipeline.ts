@@ -1,11 +1,8 @@
 import type { RetrievalStatus } from "./local-rag-message";
 import type { RetrievalResult } from "./retrieval";
 import { retrieveChunks } from "./retrieval";
-import {
-  hasCachedRerankerWeights,
-  isRerankerModelReadyFlag,
-  rerank,
-} from "./models/rerankerModel";
+import { rerank } from "./models/rerankerModel";
+import { isModelAvailable } from "./models/model-registry";
 
 type WriteStatus = (status: RetrievalStatus) => void;
 
@@ -36,9 +33,7 @@ export async function runRetrievalPipeline(
   });
 
   const retrievalBefore = performance.now();
-  const rerankerAvailabilityPromise = isRerankerModelReadyFlag()
-    ? Promise.resolve(true)
-    : hasCachedRerankerWeights();
+  const rerankerAvailabilityPromise = isModelAvailable("reranker");
   const [retrievalResponse, rerankerAvailable] = await Promise.all([
     retrieveChunks(userQuestion),
     rerankerAvailabilityPromise,
