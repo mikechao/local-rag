@@ -295,10 +295,11 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
     }
 
     // Extract text content from the user message parts
-    const userQuestion = lastUserMessage.parts
-      ?.filter((p) => p.type === "text")
-      .map((p) => p.text)
-      .join(" ") || "";
+    const userQuestion =
+      lastUserMessage.parts
+        ?.filter((p) => p.type === "text")
+        .map((p) => p.text)
+        .join(" ") || "";
 
     if (!userQuestion.trim()) {
       return undefined;

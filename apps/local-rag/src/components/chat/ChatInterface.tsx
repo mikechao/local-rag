@@ -1,23 +1,17 @@
 import { useChat } from "@ai-sdk/react";
 import { Link } from "@tanstack/react-router";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { ChatHistoryPanel } from "@/components/chat/ChatHistoryPanel";
 import { ChatMessageList } from "@/components/chat/ChatMessageList";
 import { DeleteChatDialog } from "@/components/chat/DeleteChatDialog";
+import { SummaryErrorDialog } from "@/components/chat/SummaryErrorDialog";
+import { SummaryLoaddingDialog } from "@/components/chat/SummaryLoaddingDialog";
+import { SummaryReviewDialog } from "@/components/chat/SummaryReviewDialog";
 import { Button } from "@/components/ui/button";
 import { Collapsible } from "@/components/ui/collapsible";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { generateChatTitle } from "@/lib/chat-title";
 import {
   createChat,
@@ -482,99 +476,25 @@ export function ChatInterface() {
         onConfirm={confirmDeleteChat}
       />
 
-      {/* Summarization Loading Dialog */}
-      <Dialog open={isSummarizing} onOpenChange={() => {}}>
-        <DialogContent
-          className="sm:max-w-md"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
-          <DialogHeader>
-            <DialogTitle>Summarizing...</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center justify-center py-6">
-            <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SummaryLoaddingDialog open={isSummarizing} />
 
-      {/* Summary Review Dialog */}
-      <Dialog open={generatedSummary !== null} onOpenChange={() => {}}>
-        <DialogContent
-          className="max-w-2xl"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
-          <DialogHeader>
-            <DialogTitle>Review Summary</DialogTitle>
-            <DialogDescription>
-              Review and edit the summary before starting a new chat.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={summaryInputValue}
-            onChange={(e) => setSummaryInputValue(e.target.value)}
-            placeholder="Edit summary before proceeding..."
-            className="min-h-[200px] resize-none"
-          />
-          <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={handleRegenerateSummary}
-              className="w-full sm:w-auto"
-            >
-              Regenerate Summary
-            </Button>
-            <Button
-              onClick={handleProceedWithSummary}
-              disabled={!summaryInputValue.trim()}
-              className="w-full sm:w-auto"
-            >
-              Proceed with Summary
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SummaryReviewDialog
+        open={generatedSummary !== null}
+        summary={summaryInputValue}
+        onSummaryChange={setSummaryInputValue}
+        onRegenerate={handleRegenerateSummary}
+        onProceed={handleProceedWithSummary}
+      />
 
-      {/* Summarization Error Dialog */}
-      <Dialog
-        open={!!summarizationError}
-        onOpenChange={(open) => {
-          if (!open) setSummarizationError(null);
+      <SummaryErrorDialog
+        error={summarizationError}
+        onProceedWithoutSummary={handleNewChatWithoutSummary}
+        onRetry={() => {
+          setSummarizationError(null);
+          handleNewChatWithSummary();
         }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Summarization Failed</DialogTitle>
-            <DialogDescription>
-              {summarizationError ||
-                "An error occurred while summarizing the chat."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={handleNewChatWithoutSummary}
-              className="w-full sm:w-auto"
-            >
-              New Chat Without Summary
-            </Button>
-            <Button
-              onClick={() => {
-                setSummarizationError(null);
-                handleNewChatWithSummary();
-              }}
-              className="w-full sm:w-auto"
-            >
-              Retry
-            </Button>
-          </DialogFooter>
-          <p className="text-xs text-muted-foreground">
-            Starting a new chat without summary will lose the conversation
-            context.
-          </p>
-        </DialogContent>
-      </Dialog>
+        onDismiss={() => setSummarizationError(null)}
+      />
     </div>
   );
 }

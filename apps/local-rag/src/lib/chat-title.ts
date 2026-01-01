@@ -45,7 +45,7 @@ export async function generateChatTitle(
 ): Promise<string | null> {
   // Limit to first 2 messages (typically user + assistant) for focused titles
   const relevantMessages = messages.slice(0, 2);
-  
+
   const conversationText = relevantMessages
     .map((message) => getMessageText(message))
     .filter(Boolean)
