@@ -5,71 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1763766067694,
-      "tag": "0000_shallow_vulcan",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1764284015060,
-      "tag": "0001_dashing_serpent_society",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1764612930185,
-      "tag": "0002_minor_synch",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1764630180284,
-      "tag": "0003_add_vector_indexes",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1764704742465,
-      "tag": "0004_outgoing_korath",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1766009684087,
-      "tag": "0005_perpetual_patriot",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1766091037056,
-      "tag": "0006_cynical_shadow_king",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1766518804372,
-      "tag": "0007_simple_martin_li",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1767036993659,
-      "tag": "0008_spooky_sharon_carter",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1767301330358,
-      "tag": "0009_good_frank_castle",
+      "when": 1767310825657,
+      "tag": "0000_greedy_strong_guy",
       "breakpoints": true
     }
   ]

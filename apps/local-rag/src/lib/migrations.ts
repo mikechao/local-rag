@@ -30,22 +30,6 @@ async function ensureMigrationsTable(pg: PGlite) {
 	`);
 }
 
-/**
- * Setup PostgreSQL extensions that can't be managed through Drizzle schema.
- * These are idempotent (safe to run multiple times).
- */
-async function setupExtensions(pg: PGlite) {
-  // Enable pg_trgm for trigram-based text search (hybrid search)
-  await pg.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm;`);
-
-  // Create GIN index for fast trigram searches on document_chunks.text
-  // This index is used by the hybrid search to find keyword matches efficiently
-  await pg.query(`
-		CREATE INDEX IF NOT EXISTS document_chunks_text_trgm_idx 
-		ON document_chunks USING GIN (text gin_trgm_ops);
-	`);
-}
-
 async function isApplied(pg: PGlite, id: string) {
   const result = await pg.query<{ id: string }>(
     `select id from "__drizzle_migrations__" where id = $1 limit 1`,
@@ -98,7 +82,4 @@ export async function applyMigrations(pg: PGlite) {
       throw error;
     }
   }
-
-  // Setup extensions after migrations (idempotent, safe to run every time)
-  await setupExtensions(pg);
 }

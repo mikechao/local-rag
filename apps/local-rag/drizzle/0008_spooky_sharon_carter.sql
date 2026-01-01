@@ -1,1 +1,0 @@
-ALTER TABLE "chats" ADD COLUMN "quota_overflow_state" boolean DEFAULT false NOT NULL;

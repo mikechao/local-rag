@@ -1,1 +1,0 @@
-ALTER TABLE "chat_message_parts" ADD COLUMN "data_model_usage" jsonb;
