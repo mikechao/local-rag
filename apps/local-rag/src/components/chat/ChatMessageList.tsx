@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { ChatStatus, FileUIPart } from "ai";
 import { Loader2Icon } from "lucide-react";
 import {
@@ -38,7 +39,7 @@ type ChatMessageListProps = {
   error?: Error;
 };
 
-export function ChatMessageList({
+export const ChatMessageList = memo(function ChatMessageList({
   messages,
   status,
   retrievalStatus,
@@ -196,4 +197,4 @@ export function ChatMessageList({
       <ConversationScrollButton />
     </Conversation>
   );
-}
+});

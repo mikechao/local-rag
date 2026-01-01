@@ -2,7 +2,7 @@ import { useChat } from "@ai-sdk/react";
 import { Link } from "@tanstack/react-router";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { AlertCircle } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { ChatHistoryPanel } from "@/components/chat/ChatHistoryPanel";
 import { ChatMessageList } from "@/components/chat/ChatMessageList";
@@ -31,6 +31,7 @@ import { isModelAvailable } from "@/lib/models/model-registry";
 import { useAutoSpeak } from "@/components/chat/hooks/useAutoSpeak";
 import { useChatStorage } from "@/components/chat/hooks/useChatStorage";
 import { useChatTransport } from "@/components/chat/hooks/useChatTransport";
+import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 
 export function ChatInterface() {
   const [isChatModelAvailable] = useState<boolean | null>(true);
@@ -278,7 +279,7 @@ export function ChatInterface() {
     clearQuotaOverflow,
   ]);
 
-  const latestModelUsage = (() => {
+  const latestModelUsage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       const parts = messages[i]?.parts;
       if (!parts) continue;
@@ -299,7 +300,7 @@ export function ChatInterface() {
       }
     }
     return null;
-  })();
+  }, [messages]);
 
   const { autoSpeak, setAutoSpeak } = useAutoSpeak({ messages, status });
 
@@ -354,6 +355,37 @@ export function ChatInterface() {
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value);
   };
+
+  const handleToggleHistory = useCallback(() => {
+    setIsHistoryOpen((prev) => !prev);
+  }, []);
+
+  const handleNewChatClick = useCallback(() => {
+    handleNewChat({ messages, status });
+  }, [handleNewChat, messages, status]);
+
+  const handleSubmit = useCallback(
+    (message: PromptInputMessage) => {
+      if (!activeChatId || isChatLoading) return;
+      setRetrievalStatus(null);
+      const trimmedText = message.text.trim();
+      const hasFiles = message.files.length > 0;
+
+      if (!trimmedText && !hasFiles) return;
+
+      void sendMessage(
+        hasFiles
+          ? trimmedText
+            ? { text: trimmedText, files: message.files }
+            : { files: message.files }
+          : { text: trimmedText },
+        { body: { modelId: selectedModel } },
+      );
+
+      setInput("");
+    },
+    [activeChatId, isChatLoading, sendMessage, selectedModel],
+  );
 
   if (isChatModelAvailable === false) {
     return (
@@ -433,27 +465,9 @@ export function ChatInterface() {
             input={input}
             setInput={setInput}
             onInputChange={handleInputChange}
-            onSubmit={(message) => {
-              if (!activeChatId || isChatLoading) return;
-              setRetrievalStatus(null);
-              const trimmedText = message.text.trim();
-              const hasFiles = message.files.length > 0;
-
-              if (!trimmedText && !hasFiles) return;
-
-              void sendMessage(
-                hasFiles
-                  ? trimmedText
-                    ? { text: trimmedText, files: message.files }
-                    : { files: message.files }
-                  : { text: trimmedText },
-                { body: { modelId: selectedModel } },
-              );
-
-              setInput("");
-            }}
-            onNewChat={() => handleNewChat({ messages, status })}
-            onToggleHistory={() => setIsHistoryOpen((prev) => !prev)}
+            onSubmit={handleSubmit}
+            onNewChat={handleNewChatClick}
+            onToggleHistory={handleToggleHistory}
             status={status}
             isChatLoading={isChatLoading}
             activeChatId={activeChatId}

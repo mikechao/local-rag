@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Loader2Icon, Lock, Trash2Icon } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ type ChatHistoryPanelProps = {
   onRequestDeleteChat: (chat: ChatSummary) => void;
 };
 
-export function ChatHistoryPanel({
+export const ChatHistoryPanel = memo(function ChatHistoryPanel({
   chats,
   activeChatId,
   isChatLoading,
@@ -89,4 +90,4 @@ export function ChatHistoryPanel({
       </div>
     </CollapsibleContent>
   );
-}
+});

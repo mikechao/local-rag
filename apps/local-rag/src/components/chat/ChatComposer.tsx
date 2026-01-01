@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { ChatStatus } from "ai";
 import {
   MicIcon,
@@ -61,7 +62,7 @@ type ChatComposerProps = {
   quotaOverflow?: boolean;
 };
 
-export function ChatComposer({
+export const ChatComposer = memo(function ChatComposer({
   input,
   setInput,
   onInputChange,
@@ -256,4 +257,4 @@ export function ChatComposer({
       </div>
     </div>
   );
-}
+});
