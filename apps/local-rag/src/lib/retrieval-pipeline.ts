@@ -67,13 +67,12 @@ export async function runRetrievalPipeline(
       );
 
       const reordered: RetrievalResult[] = [];
-      const used = new Set<number>();
       let filteredCount = 0;
 
       for (const { corpus_id, score } of reranked) {
         const item = candidates[corpus_id];
         if (!item) continue;
-        used.add(corpus_id);
+        
         if (score < rerankMinScore) {
           filteredCount += 1;
           continue;
@@ -81,12 +80,13 @@ export async function runRetrievalPipeline(
         reordered.push({ ...item, rerankScore: score });
       }
 
-      for (let i = 0; i < candidates.length; i += 1) {
-        if (used.has(i)) continue;
-        reordered.push(candidates[i]);
-      }
-
-      results = [...reordered, ...results.slice(candidates.length)];
+      // Optimization: When reranker is active, ONLY return the reranked and filtered results.
+      // We discard the 'tail' (results.slice(candidates.length)) because:
+      // 1. They weren't good enough to be in the top candidates.
+      // 2. They haven't been verified by the reranker.
+      // 3. Including them bloats the prompt context, slowing down the LLM's TTFT (Time To First Token).
+      results = reordered;
+      
       const rerankAfter = performance.now();
 
       console.log(
