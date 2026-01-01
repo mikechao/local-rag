@@ -28,6 +28,18 @@ export type RetrievalResponse = {
   reason?: "model_mismatch" | "error";
 };
 
+type DbChunkResult = {
+  id: string;
+  docId: string;
+  docType: string;
+  pageNumber: number;
+  chunkIndex: number;
+  headingPath: string | null;
+  text: string;
+  similarity: number;
+  trigramScore?: number;
+};
+
 // Common English stop words to filter out from keyword extraction
 const STOP_WORDS = new Set([
   "a",
@@ -141,13 +153,59 @@ export async function retrieveChunks(
   try {
     const { limit = 10, docId, docType, similarityThreshold = 0.3 } = options;
     const db = await getDb();
+    const embeddingModelId = getEmbeddingModelId();
 
     // Extract keywords for trigram search
     const keywords = extractKeywords(query);
 
-    // 1. Embed query for vector search
+    // 1. Start Embedding (Worker) - CPU heavy
     performance.mark("retrieval:embed-query-start");
-    const queryEmbedding = await embedQuery(query);
+    const embeddingPromise = embedQuery(query);
+
+    // 2. Start Trigram Search (DB) - I/O heavy (or memory scan)
+    // We launch this concurrently with the embedding generation
+    performance.mark("retrieval:trigram-search-start");
+    let trigramPromise: Promise<DbChunkResult[]> = Promise.resolve([]);
+
+    if (keywords.length > 0) {
+      // Join keywords into a search string for trigram matching
+      const searchString = keywords.join(" ");
+
+      // Use pg_trgm word_similarity - better for finding words within longer text
+      const trigramSimilarity = sql<number>`word_similarity(${searchString}, ${documentChunks.text})`;
+
+      trigramPromise = db
+        .select({
+          id: documentChunks.id,
+          docId: documentChunks.docId,
+          docType: documentChunks.docType,
+          pageNumber: documentChunks.pageNumber,
+          chunkIndex: documentChunks.chunkIndex,
+          headingPath: documentChunks.headingPath,
+          text: documentChunks.text,
+          similarity: sql<number>`0`, // Placeholder
+          trigramScore: trigramSimilarity,
+        })
+        .from(chunkEmbeddings)
+        .innerJoin(
+          documentChunks,
+          eq(documentChunks.id, chunkEmbeddings.chunkId),
+        )
+        .where(
+          and(
+            eq(chunkEmbeddings.embeddingModel, embeddingModelId),
+            // Use the <% operator for word similarity (word in longer text)
+            sql`${searchString} <% ${documentChunks.text}`,
+            docId ? eq(documentChunks.docId, docId) : undefined,
+            docType ? eq(documentChunks.docType, docType) : undefined,
+          ),
+        )
+        .orderBy(desc(trigramSimilarity))
+        .limit(limit) as Promise<DbChunkResult[]>;
+    }
+
+    // 3. Await Embedding and perform Vector Search
+    const queryEmbedding = await embeddingPromise;
     const vectorStr = JSON.stringify(queryEmbedding);
     performance.mark("retrieval:embed-query-end");
     performance.measure(
@@ -156,12 +214,10 @@ export async function retrieveChunks(
       "retrieval:embed-query-end",
     );
 
-    // 2. Vector similarity search (semantic)
     performance.mark("retrieval:vector-search-start");
     const vectorSimilarity = sql<number>`1 - (${chunkEmbeddings.embedding} <=> ${vectorStr})`;
 
-    const embeddingModelId = getEmbeddingModelId();
-    const vectorResults = await db
+    const vectorResults = (await db
       .select({
         id: documentChunks.id,
         docId: documentChunks.docId,
@@ -182,7 +238,7 @@ export async function retrieveChunks(
         ),
       )
       .orderBy(desc(vectorSimilarity))
-      .limit(limit);
+      .limit(limit)) as DbChunkResult[];
     performance.mark("retrieval:vector-search-end");
     performance.measure(
       "retrieval:vector-search",
@@ -190,46 +246,8 @@ export async function retrieveChunks(
       "retrieval:vector-search-end",
     );
 
-    // 3. Trigram search using pg_trgm (if we have keywords)
-    // This finds chunks that are textually similar to the query keywords
-    performance.mark("retrieval:trigram-search-start");
-    let trigramResults: typeof vectorResults = [];
-    if (keywords.length > 0) {
-      // Join keywords into a search string for trigram matching
-      const searchString = keywords.join(" ");
-
-      // Use pg_trgm word_similarity - better for finding words within longer text
-      const trigramSimilarity = sql<number>`word_similarity(${searchString}, ${documentChunks.text})`;
-
-      trigramResults = await db
-        .select({
-          id: documentChunks.id,
-          docId: documentChunks.docId,
-          docType: documentChunks.docType,
-          pageNumber: documentChunks.pageNumber,
-          chunkIndex: documentChunks.chunkIndex,
-          headingPath: documentChunks.headingPath,
-          text: documentChunks.text,
-          similarity: vectorSimilarity,
-          trigramScore: trigramSimilarity,
-        })
-        .from(chunkEmbeddings)
-        .innerJoin(
-          documentChunks,
-          eq(documentChunks.id, chunkEmbeddings.chunkId),
-        )
-        .where(
-          and(
-            eq(chunkEmbeddings.embeddingModel, embeddingModelId),
-            // Use the <% operator for word similarity (word in longer text)
-            sql`${searchString} <% ${documentChunks.text}`,
-            docId ? eq(documentChunks.docId, docId) : undefined,
-            docType ? eq(documentChunks.docType, docType) : undefined,
-          ),
-        )
-        .orderBy(desc(trigramSimilarity))
-        .limit(limit);
-    }
+    // 4. Await Trigram Search Results
+    const trigramResults = await trigramPromise;
     performance.mark("retrieval:trigram-search-end");
     performance.measure(
       "retrieval:trigram-search",
@@ -243,7 +261,7 @@ export async function retrieveChunks(
     const resultMap = new Map<
       string,
       {
-        result: (typeof vectorResults)[0];
+        result: DbChunkResult;
         vectorRank: number | null;
         trigramRank: number | null;
         trigramScore: number;
@@ -262,8 +280,7 @@ export async function retrieveChunks(
 
     // Add trigram results with their rank
     trigramResults.forEach((r, index) => {
-      const trigramScore =
-        (r as typeof r & { trigramScore: number }).trigramScore || 0;
+      const trigramScore = r.trigramScore || 0;
       if (resultMap.has(r.id)) {
         const existing = resultMap.get(r.id)!;
         existing.trigramRank = index + 1;
@@ -410,18 +427,7 @@ export async function retrieveChunks(
   }
 }
 
-function mergeGroup(
-  chunks: {
-    id: string;
-    docId: string;
-    docType: string;
-    pageNumber: number;
-    chunkIndex: number;
-    headingPath: string | null;
-    text: string;
-    similarity: number;
-  }[],
-): RetrievalResult {
+function mergeGroup(chunks: DbChunkResult[]): RetrievalResult {
   const first = chunks[0];
   // Find first non-empty heading path
   const headingPath = chunks.find((c) => c.headingPath)?.headingPath || null;

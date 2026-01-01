@@ -1,0 +1,1 @@
+CREATE INDEX "chunk_text_trgm_idx" ON "document_chunks" USING gin ("text" gin_trgm_ops);

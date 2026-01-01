@@ -11,6 +11,7 @@ import {
   doublePrecision,
   jsonb,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 const oid = customType<{ data: number; driverData: number }>({
   dataType() {
@@ -59,6 +60,8 @@ export const documentChunks = pgTable(
     index("doc_id_idx").on(table.docId),
     index("doc_id_page_idx").on(table.docId, table.pageNumber),
     index("embedded_idx").on(table.embedded),
+    // GIN index for efficient trigram search (requires pg_trgm extension)
+    index("chunk_text_trgm_idx").using("gin", sql`${table.text} gin_trgm_ops`),
   ],
 );
 

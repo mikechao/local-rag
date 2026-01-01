@@ -143,32 +143,42 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
     });
 
     this.warmupPromise = (async () => {
-      console.log("[Warmup] Starting chat model warmup...");
+      console.log("[Warmup] Starting models warmup...");
       const start = performance.now();
-      try {
-        // Make a minimal call to establish the session with the correct system message
-        await generateText({
-          model: this.chatModel,
-          system:
-            "You are a helpful assistant. Answer user questions the best you can.",
-          messages: [{ role: "user", content: "hi" }],
-        });
-        console.log(
-          `[Warmup] Chat model warmed up in ${(performance.now() - start).toFixed(2)}ms`,
-        );
-      } catch (e) {
-        console.warn("[Warmup] Chat model warmup failed (non-fatal):", e);
-      }
 
-      try {
-        const rerankerStart = performance.now();
-        await getModelDescriptor("reranker").warmup();
-        console.log(
-          `[Warmup] Reranker warmed up in ${(performance.now() - rerankerStart).toFixed(2)}ms`,
-        );
-      } catch (e) {
-        console.warn("[Warmup] Reranker warmup failed (non-fatal):", e);
-      }
+      const chatModelWarmup = async () => {
+        try {
+          // Make a minimal call to establish the session with the correct system message
+          await generateText({
+            model: this.chatModel,
+            system:
+              "You are a helpful assistant. Answer user questions the best you can.",
+            messages: [{ role: "user", content: "hi" }],
+          });
+          console.log(
+            `[Warmup] Chat model warmed up in ${(performance.now() - start).toFixed(2)}ms`,
+          );
+        } catch (e) {
+          console.warn("[Warmup] Chat model warmup failed (non-fatal):", e);
+        }
+      };
+
+      const rerankerWarmup = async () => {
+        try {
+          const rerankerStart = performance.now();
+          await getModelDescriptor("reranker").warmup();
+          console.log(
+            `[Warmup] Reranker warmed up in ${(performance.now() - rerankerStart).toFixed(2)}ms`,
+          );
+        } catch (e) {
+          console.warn("[Warmup] Reranker warmup failed (non-fatal):", e);
+        }
+      };
+
+      await Promise.all([chatModelWarmup(), rerankerWarmup()]);
+      console.log(
+        `[Warmup] All models warmed up in ${(performance.now() - start).toFixed(2)}ms`,
+      );
     })();
 
     return this.warmupPromise;
