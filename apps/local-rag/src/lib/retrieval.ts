@@ -212,7 +212,9 @@ export async function retrieveChunks(
       );
 
       performance.mark("retrieval:vector-search-start");
-      const vectorSimilarity = sql<number>`1 - (${chunkEmbeddings.embedding} <=> ${vectorStr})`;
+      // Use explicit distance operator for ordering to ensure HNSW index usage
+      const vectorDistance = sql<number>`${chunkEmbeddings.embedding} <=> ${vectorStr}`;
+      const vectorSimilarity = sql<number>`1 - (${vectorDistance})`;
 
       const results = (await db
         .select({
@@ -237,7 +239,7 @@ export async function retrieveChunks(
             docType ? eq(documentChunks.docType, docType) : undefined,
           ),
         )
-        .orderBy(desc(vectorSimilarity))
+        .orderBy(vectorDistance) // ASC distance guarantees index usage
         .limit(limit)) as DbChunkResult[];
 
       performance.mark("retrieval:vector-search-end");
