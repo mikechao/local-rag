@@ -256,3 +256,12 @@ export function listModelDescriptors(): ModelDescriptor[] {
     MODEL_REGISTRY.whisper,
   ];
 }
+
+/**
+ * Check whether a model is ready or has cached weights available for use.
+ */
+export async function isModelAvailable(key: ModelKey): Promise<boolean> {
+  const model = getModelDescriptor(key);
+  if (model.isReady()) return true;
+  return model.hasCached();
+}

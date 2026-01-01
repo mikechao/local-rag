@@ -4,11 +4,8 @@ import {
   MessageAction,
 } from "@/components/ai-elements/message";
 import { MegaphoneIcon, Loader2Icon } from "lucide-react";
-import {
-  generateSpeech,
-  isSpeechModelReadyFlag,
-  hasCachedSpeechWeights,
-} from "@/lib/models/speechModel";
+import { generateSpeech } from "@/lib/models/speechModel";
+import { isModelAvailable } from "@/lib/models/model-registry";
 import {
   Tooltip,
   TooltipContent,
@@ -28,13 +25,7 @@ export function SpeakMessage({ text, className = "" }: SpeakMessageProps) {
 
   useEffect(() => {
     const checkAvailability = async () => {
-      const ready = isSpeechModelReadyFlag();
-      if (ready) {
-        setIsAvailable(true);
-      } else {
-        const cached = await hasCachedSpeechWeights();
-        setIsAvailable(cached);
-      }
+      setIsAvailable(await isModelAvailable("speech"));
     };
     checkAvailability();
   }, []);

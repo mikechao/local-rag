@@ -27,20 +27,13 @@ import type {
   ModelUsage,
   RetrievalStatus,
 } from "@/lib/local-rag-message";
-import {
-  hasCachedSpeechWeights,
-  isSpeechModelReadyFlag,
-} from "@/lib/models/speechModel";
-import {
-  hasCachedWhisperWeights,
-  isWhisperModelReadyFlag,
-} from "@/lib/models/whisperModel";
+import { isModelAvailable } from "@/lib/models/model-registry";
 import { useAutoSpeak } from "@/components/chat/hooks/useAutoSpeak";
 import { useChatStorage } from "@/components/chat/hooks/useChatStorage";
 import { useChatTransport } from "@/components/chat/hooks/useChatTransport";
 
 export function ChatInterface() {
-  const [isModelAvailable] = useState<boolean | null>(true);
+  const [isChatModelAvailable] = useState<boolean | null>(true);
   const [selectedModel, setSelectedModel] = useState<string>("gemini-nano");
   const [isWhisperAvailable, setIsWhisperAvailable] = useState(false);
   const [isSpeechAvailable, setIsSpeechAvailable] = useState(false);
@@ -68,21 +61,12 @@ export function ChatInterface() {
 
   useEffect(() => {
     const checkModels = async () => {
-      const isWhisperReady = isWhisperModelReadyFlag();
-      if (isWhisperReady) {
-        setIsWhisperAvailable(true);
-      } else {
-        const isWhisperCached = await hasCachedWhisperWeights();
-        setIsWhisperAvailable(isWhisperCached);
-      }
-
-      const isSpeechReady = isSpeechModelReadyFlag();
-      if (isSpeechReady) {
-        setIsSpeechAvailable(true);
-      } else {
-        const isSpeechCached = await hasCachedSpeechWeights();
-        setIsSpeechAvailable(isSpeechCached);
-      }
+      const [whisperAvailable, speechAvailable] = await Promise.all([
+        isModelAvailable("whisper"),
+        isModelAvailable("speech"),
+      ]);
+      setIsWhisperAvailable(whisperAvailable);
+      setIsSpeechAvailable(speechAvailable);
     };
     checkModels();
     // Pre-warm embedding model for faster RAG retrieval
@@ -371,7 +355,7 @@ export function ChatInterface() {
     setInput(event.target.value);
   };
 
-  if (isModelAvailable === false) {
+  if (isChatModelAvailable === false) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 p-4 text-center">
         <div className="rounded-full bg-destructive/10 p-4 text-destructive">
