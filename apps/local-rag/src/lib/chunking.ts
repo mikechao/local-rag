@@ -36,6 +36,76 @@ function stripMarkdownLinks(text: string): string {
   return cleaned;
 }
 
+/**
+ * Simple helper to split markdown by headers and preserve hierarchy.
+ * Returns segments with their full heading path.
+ */
+function splitByHeaders(text: string): { content: string; path: string }[] {
+  const lines = text.split(/\r?\n/);
+  const segments: { content: string; path: string }[] = [];
+
+  let currentPath: string[] = [];
+  let currentContent: string[] = [];
+
+  // Regex to match headers: # Header
+  const headerRegex = /^(#{1,6})\s+(.+)$/;
+
+  for (const line of lines) {
+    const match = line.match(headerRegex);
+    if (match) {
+      // If we have accumulated content, push it with the PREVIOUS path
+      if (currentContent.length > 0) {
+        segments.push({
+          content: currentContent.join("\n"),
+          path: currentPath.join(" > "),
+        });
+        currentContent = [];
+      }
+
+      const level = match[1].length;
+      const title = match[2].trim();
+
+      // Adjust path based on header level
+      // If level is deeper or same, we might just append?
+      // Actually simpler logic:
+      // If level 1 (#), reset everything.
+      // If level 2 (##), keep level 1.
+      // We need to maintain a stack of headers.
+
+      // Filter out headers that are deeper or equal to current level to "pop" the stack
+      // This is a naive heuristic: strictly maintain stack size = level - 1
+      // But markdown can skip levels.
+      // Better approach: resize stack to level-1
+
+      if (level === 1) {
+        currentPath = [title];
+      } else {
+        // e.g. level 3. Stack should be at most 2 items deep before pushing.
+        // If stack is [H1, H2, H3], and we get H2, we want [H1, NewH2]
+        // If stack is [H1], and we get H3, we just do [H1, H3] (skipping H2 is valid md)
+
+        // We trim the stack to be at most level-1
+        // But we need to handle the case where we skip levels (H1 -> H3).
+        // Let's just slice the array.
+        currentPath = currentPath.slice(0, level - 1);
+        currentPath.push(title);
+      }
+    } else {
+      currentContent.push(line);
+    }
+  }
+
+  // Push remaining content
+  if (currentContent.length > 0) {
+    segments.push({
+      content: currentContent.join("\n"),
+      path: currentPath.join(" > "),
+    });
+  }
+
+  return segments;
+}
+
 export async function processMarkdown(
   docId: string,
   filename: string,
@@ -44,38 +114,53 @@ export async function processMarkdown(
 ): Promise<ChunkResult> {
   const rawText = await blob.text();
 
-  // Strip markdown links to improve semantic embedding quality
-  // This converts [text](url) to plain text so embeddings focus on content, not URLs
-  const text = stripMarkdownLinks(rawText);
+  // 1. Split by headers first to get semantic sections
+  const sections = splitByHeaders(rawText);
 
-  const splitter = RecursiveCharacterTextSplitter.fromLanguage("markdown", {
-    chunkSize: 512, // Larger chunks for better context preservation
-    chunkOverlap: 50,
+  // 2. Configure splitter for larger chunks
+  const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 1000, // Larger chunks for better context preservation
+    chunkOverlap: 200,
   });
 
-  const docs = await splitter.createDocuments([text]);
+  const allChunks: ChunkResult["chunks"] = [];
+  let chunkGlobalIndex = 0;
 
-  const chunks = docs.map((doc, index) => ({
-    pageNumber: 1,
-    chunkIndex: index,
-    text: doc.pageContent,
-    headingPath: undefined, // We can improve this later with MarkdownHeaderTextSplitter
-  }));
+  for (const section of sections) {
+    // Clean the content (strip links)
+    const cleanContent = stripMarkdownLinks(section.content);
+    if (!cleanContent.trim()) continue;
+
+    const docs = await splitter.createDocuments([cleanContent]);
+
+    for (const doc of docs) {
+      // 3. Prepend context to the text for the AI
+      const contextPrefix = section.path ? `Context: ${section.path}\n\n` : "";
+      const finalText = contextPrefix + doc.pageContent;
+
+      allChunks.push({
+        pageNumber: 1, // Markdown is treated as single page for now
+        chunkIndex: chunkGlobalIndex++,
+        text: finalText,
+        headingPath: section.path || undefined,
+      });
+    }
+  }
 
   if (onProgress) {
     onProgress({
       docId,
       filename,
       stage: "split",
-      chunksDone: chunks.length,
-      chunksTotal: chunks.length,
+      chunksDone: allChunks.length,
+      chunksTotal: allChunks.length,
     });
   }
 
   return {
     docId,
     docType: "markdown",
-    chunks,
+    chunks: allChunks,
   };
 }
 

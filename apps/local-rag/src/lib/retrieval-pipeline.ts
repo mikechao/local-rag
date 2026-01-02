@@ -72,7 +72,7 @@ export async function runRetrievalPipeline(
       for (const { corpus_id, score } of reranked) {
         const item = candidates[corpus_id];
         if (!item) continue;
-        
+
         if (score < rerankMinScore) {
           filteredCount += 1;
           continue;
@@ -86,7 +86,7 @@ export async function runRetrievalPipeline(
       // 2. They haven't been verified by the reranker.
       // 3. Including them bloats the prompt context, slowing down the LLM's TTFT (Time To First Token).
       results = reordered;
-      
+
       const rerankAfter = performance.now();
 
       console.log(
