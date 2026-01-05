@@ -61,6 +61,7 @@ function parseCitationsInText(
                 <InlineCitationRetrievalSource
                   docId={result.docId}
                   docType={result.docType}
+                  filename={result.filename}
                   pageNumber={result.pageNumber}
                   headingPath={result.headingPath}
                   text={result.text}

@@ -317,6 +317,7 @@ export const InlineCitationQuote = ({
 export type InlineCitationRetrievalSourceProps = ComponentProps<"div"> & {
   docId: string;
   docType: string;
+  filename?: string;
   pageNumber?: number;
   headingPath?: string | null;
   text: string;
@@ -327,6 +328,7 @@ export type InlineCitationRetrievalSourceProps = ComponentProps<"div"> & {
 export const InlineCitationRetrievalSource = ({
   docId,
   docType,
+  filename,
   pageNumber,
   headingPath,
   text,
@@ -335,8 +337,7 @@ export const InlineCitationRetrievalSource = ({
   className,
   ...props
 }: InlineCitationRetrievalSourceProps) => {
-  // Extract filename from docId
-  const fileName = docId.split("/").pop() ?? docId;
+  const displayTitle = filename || docId.split("/").pop() || docId;
   const pageInfo = pageNumber !== undefined ? `Page ${pageNumber}` : null;
   const subtitle = [pageInfo, headingPath].filter(Boolean).join(" • ");
 
@@ -344,7 +345,7 @@ export const InlineCitationRetrievalSource = ({
     <div className={cn("space-y-2", className)} {...props}>
       <div className="space-y-0.5">
         <h4 className="truncate font-medium text-sm leading-tight">
-          {fileName}
+          {displayTitle}
         </h4>
         {subtitle && (
           <p className="truncate text-muted-foreground text-xs">{subtitle}</p>

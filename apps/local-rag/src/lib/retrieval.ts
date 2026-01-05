@@ -1,13 +1,14 @@
 import { sql, eq, and, desc } from "drizzle-orm";
 import { getDb } from "./db";
 import { embedQuery } from "./embedding-worker";
-import { chunkEmbeddings, documentChunks } from "../db/schema";
+import { chunkEmbeddings, documentChunks, documents } from "../db/schema";
 import { getEmbeddingModelId } from "./models/model-registry";
 
 export type RetrievalResult = {
   chunkIds: string[];
   docId: string;
   docType: string;
+  filename: string;
   pageNumber: number;
   headingPath?: string | null;
   text: string;
@@ -32,6 +33,7 @@ type DbChunkResult = {
   id: string;
   docId: string;
   docType: string;
+  filename: string;
   pageNumber: number;
   chunkIndex: number;
   headingPath: string | null;
@@ -179,6 +181,7 @@ export async function retrieveChunks(
           id: documentChunks.id,
           docId: documentChunks.docId,
           docType: documentChunks.docType,
+          filename: documents.filename,
           pageNumber: documentChunks.pageNumber,
           chunkIndex: documentChunks.chunkIndex,
           headingPath: documentChunks.headingPath,
@@ -187,6 +190,7 @@ export async function retrieveChunks(
           trigramScore: trigramSimilarity,
         })
         .from(documentChunks)
+        .innerJoin(documents, eq(documentChunks.docId, documents.id))
         .where(
           and(
             eq(documentChunks.embedded, true),
@@ -221,6 +225,7 @@ export async function retrieveChunks(
           id: documentChunks.id,
           docId: documentChunks.docId,
           docType: documentChunks.docType,
+          filename: documents.filename,
           pageNumber: documentChunks.pageNumber,
           chunkIndex: documentChunks.chunkIndex,
           headingPath: documentChunks.headingPath,
@@ -232,6 +237,7 @@ export async function retrieveChunks(
           documentChunks,
           eq(documentChunks.id, chunkEmbeddings.chunkId),
         )
+        .innerJoin(documents, eq(documentChunks.docId, documents.id))
         .where(
           and(
             eq(chunkEmbeddings.embeddingModel, embeddingModelId),
@@ -445,6 +451,7 @@ function mergeGroup(chunks: DbChunkResult[]): RetrievalResult {
     chunkIds: chunks.map((c) => c.id),
     docId: first.docId,
     docType: first.docType,
+    filename: first.filename,
     pageNumber: first.pageNumber,
     headingPath,
     text: chunks.map((c) => c.text).join("\n"),

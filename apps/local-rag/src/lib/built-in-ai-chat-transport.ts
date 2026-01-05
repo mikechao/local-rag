@@ -25,6 +25,7 @@ const retrievalResultSchema = z.object({
   chunkIds: z.array(z.string()),
   docId: z.string(),
   docType: z.string(),
+  filename: z.string(),
   pageNumber: z.number(),
   headingPath: z.string().nullable().optional(),
   text: z.string(),
@@ -37,6 +38,9 @@ const callOptionsSchema = z.object({
 });
 
 type CallOptions = z.infer<typeof callOptionsSchema>;
+
+const SYSTEM_PROMPT =
+  "Helpful assistant. Prioritize provided context.\n- If using context, cite as [1] (filename, page).\n- If using general knowledge, do NOT use [n] citations.\n- Keep it concise.";
 
 // Returns the most recent message sent by the user, or undefined if none exist.
 function getLatestUserMessage(
@@ -75,8 +79,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
     });
     this.chatAgent = new ToolLoopAgent<CallOptions>({
       model: this.chatModel,
-      instructions:
-        "You are a helpful assistant. Answer user questions the best you can.",
+      instructions: SYSTEM_PROMPT,
       callOptionsSchema,
       prepareCall: ({ options, prompt, ...settings }) => {
         const retrievalResults = options?.retrievalResults;
@@ -89,7 +92,10 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
         ) {
           // Format sources with numbered citations for the model to reference
           const contextText = retrievalResults
-            .map((r, i) => `[${i + 1}]: ${r.text}`)
+            .map(
+              (r, i) =>
+                `[${i + 1}] (Source: ${r.filename}, Page: ${r.pageNumber}): ${r.text}`,
+            )
             .join("\n\n---\n\n");
 
           // Insert an assistant message with the context before the last user message
@@ -98,7 +104,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
             ...prompt.slice(0, lastIndex),
             {
               role: "assistant" as const,
-              content: `I found the following relevant sources from the knowledge base:\n\n${contextText}\n\nI'll use this information to answer your question. When I reference information from these sources, I'll cite them using [1], [2], etc.`,
+              content: `I found the following relevant sources from the knowledge base:\n\n${contextText}\n\nI'll use this information to answer your question.`,
             },
             prompt[lastIndex], // The user's question
           ];
@@ -151,8 +157,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
           // Make a minimal call to establish the session with the correct system message
           await generateText({
             model: this.chatModel,
-            system:
-              "You are a helpful assistant. Answer user questions the best you can.",
+            system: SYSTEM_PROMPT,
             messages: [{ role: "user", content: "hi" }],
           });
           console.log(
