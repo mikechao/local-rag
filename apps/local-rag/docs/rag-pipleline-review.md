@@ -19,14 +19,18 @@ This document outlines the current state of the Retrieval-Augmented Generation (
 ## 2. Retrieval Logic (`retrieval.ts`)
 
 ### Current State
-- **Hybrid Search:** Combines Vector Similarity (384-dim) and Keyword Trigram Similarity.
-- **Re-ranking:** Uses Reciprocal Rank Fusion (RRF) with a 1.5x weight for keyword matches.
+- **Two-Stage Retrieval:**
+    1.  **Candidate Generation:** Hybrid Search (Vector Similarity + Keyword Trigram) fetches top 20 candidates from each method.
+    2.  **Reranking:** A Cross-Encoder model (`mixedbread-ai/mxbai-rerank-xsmall-v1`) scores all candidates based on query-document relevance.
+- **Interleaved Merging:** Candidates from Vector and Keyword search are interleaved to ensure a balanced pool for the reranker.
+- **Performance:** Reranking is batched (size 8) and capped at 20 documents to ensure responsiveness on consumer hardware.
 
 ### Areas for Improvement
-- **Keyword Extraction:** The current `extractKeywords` utility is very basic (space-split + stopword removal). It breaks multi-word entities like "John Sheppard" into separate tokens.
-    - **Fix:** Use a small entity-extraction model or preserve n-grams to allow exact phrase matching in the trigram index.
 - **Metadata Filtering:** The system lacks the ability to filter by date, file type, or user-defined tags at the query level.
-- **Dynamic Weighting:** RRF weights are static. If a query is clearly keyword-heavy ("Who is Joe Flanigan?"), the system should potentially prioritize the keyword index more than for a thematic query ("Tell me about the themes of isolation").
+- **Advanced Keyword Extraction:** While the Reranker mitigates the impact of poor keyword splitting (e.g. "John Sheppard" -> "john", "sheppard"), the initial candidate generation could still be improved with a proper Named Entity Recognition (NER) model to preserve multi-word entities as single tokens.
+
+### Completed Improvements
+- **Dynamic Weighting:** Replaced static RRF weights with semantic Reranking. The model now automatically determines if a keyword match or a vector match is more relevant for the specific query.
 
 ## 3. Re-ranking (`retrieval-pipeline.ts`) *done*
 

@@ -1,8 +1,6 @@
 import type { RetrievalStatus } from "./local-rag-message";
 import type { RetrievalResult } from "./retrieval";
 import { retrieveChunks } from "./retrieval";
-import { rerank } from "./models/rerankerModel";
-import { isModelAvailable } from "./models/model-registry";
 
 type WriteStatus = (status: RetrievalStatus) => void;
 
@@ -14,7 +12,7 @@ export type RetrievalPipelineOptions = {
 export async function runRetrievalPipeline(
   userQuestion: string,
   {
-    abortSignal,
+    abortSignal: _abortSignal,
     writeStatus,
     options,
   }: {
@@ -23,7 +21,6 @@ export async function runRetrievalPipeline(
     options?: RetrievalPipelineOptions;
   },
 ): Promise<RetrievalResult[]> {
-  const rerankCandidates = options?.rerankCandidates ?? 30;
   const rerankMinScore = options?.rerankMinScore ?? 0.75;
 
   writeStatus({
@@ -33,74 +30,16 @@ export async function runRetrievalPipeline(
   });
 
   const retrievalBefore = performance.now();
-  const rerankerAvailabilityPromise = isModelAvailable("reranker");
-  const [retrievalResponse, rerankerAvailable] = await Promise.all([
-    retrieveChunks(userQuestion),
-    rerankerAvailabilityPromise,
-  ]);
+
+  // Note: Reranking is now handled internally by retrieveChunks if the model is available.
+  // We pass rerankMinScore as the similarityThreshold so it filters correctly.
+  const retrievalResponse = await retrieveChunks(userQuestion, {
+    similarityThreshold: rerankMinScore,
+    // limits, etc. are handled by defaults or could be exposed here
+  });
+
   const retrievalAfter = performance.now();
-
-  let results = retrievalResponse.results;
-
-  if (
-    rerankerAvailable &&
-    results.length > 1 &&
-    !abortSignal?.aborted &&
-    results.some((r) => r.text?.trim())
-  ) {
-    const rerankBefore = performance.now();
-    writeStatus({
-      phase: "reranking",
-      query: userQuestion,
-      message: "Reranking results…",
-    });
-
-    const candidates = results.slice(0, rerankCandidates);
-    const candidateTexts = candidates.map((r) => r.text);
-
-    try {
-      const reranked = await rerank(
-        userQuestion,
-        candidateTexts,
-        { top_k: candidates.length },
-        undefined,
-      );
-
-      const reordered: RetrievalResult[] = [];
-      let filteredCount = 0;
-
-      for (const { corpus_id, score } of reranked) {
-        const item = candidates[corpus_id];
-        if (!item) continue;
-
-        if (score < rerankMinScore) {
-          filteredCount += 1;
-          continue;
-        }
-        reordered.push({ ...item, rerankScore: score });
-      }
-
-      // Optimization: When reranker is active, ONLY return the reranked and filtered results.
-      // We discard the 'tail' (results.slice(candidates.length)) because:
-      // 1. They weren't good enough to be in the top candidates.
-      // 2. They haven't been verified by the reranker.
-      // 3. Including them bloats the prompt context, slowing down the LLM's TTFT (Time To First Token).
-      results = reordered;
-
-      const rerankAfter = performance.now();
-
-      console.log(
-        `reranking took ${rerankAfter - rerankBefore} ms for ${candidates.length} candidates`,
-      );
-      if (filteredCount > 0) {
-        console.log(
-          `[retrieval] filtered ${filteredCount} reranked candidates below rerankMinScore=${rerankMinScore}`,
-        );
-      }
-    } catch (e) {
-      console.warn("[retrieval] reranking failed (continuing):", e);
-    }
-  }
+  const results = retrievalResponse.results;
 
   writeStatus({
     phase: "done",

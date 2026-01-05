@@ -87,17 +87,32 @@ export async function rerank(
     loadRerankerTokenizer(progressCallback),
   ]);
 
-  const inputs = (tokenizer as any)(new Array(documents.length).fill(query), {
-    text_pair: documents,
-    padding: true,
-    truncation: true,
-  });
+  // Process in batches to avoid WebGPU timeouts/slowdowns and keep UI responsive
+  const BATCH_SIZE = 8;
+  const allScores: number[] = [];
 
-  const { logits } = await (model as any)(inputs);
-  return (logits as any)
-    .sigmoid()
-    .tolist()
-    .map(([score]: [number], i: number) => ({
+  for (let i = 0; i < documents.length; i += BATCH_SIZE) {
+    const batchDocs = documents.slice(i, i + BATCH_SIZE);
+
+    const inputs = (tokenizer as any)(new Array(batchDocs.length).fill(query), {
+      text_pair: batchDocs,
+      padding: true,
+      truncation: true,
+    });
+
+    const { logits } = await (model as any)(inputs);
+
+    // Convert tensor to array and get scores
+    const batchScores: number[] = (logits as any)
+      .sigmoid()
+      .tolist()
+      .map(([score]: [number]) => score);
+
+    allScores.push(...batchScores);
+  }
+
+  return allScores
+    .map((score, i) => ({
       corpus_id: i,
       score,
       ...(return_documents ? { text: documents[i] } : {}),

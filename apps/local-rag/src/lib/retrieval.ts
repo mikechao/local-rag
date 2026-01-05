@@ -3,6 +3,7 @@ import { getDb } from "./db";
 import { embedQuery } from "./embedding-worker";
 import { chunkEmbeddings, documentChunks, documents } from "../db/schema";
 import { getEmbeddingModelId } from "./models/model-registry";
+import { rerank } from "./models/rerankerModel";
 
 export type RetrievalResult = {
   chunkIds: string[];
@@ -176,6 +177,7 @@ export async function retrieveChunks(
       // Use pg_trgm word_similarity - better for finding words within longer text
       const trigramSimilarity = sql<number>`word_similarity(${searchString}, ${documentChunks.text})`;
 
+      // Fetch candidates (2x limit)
       trigramPromise = db
         .select({
           id: documentChunks.id,
@@ -201,7 +203,7 @@ export async function retrieveChunks(
           ),
         )
         .orderBy(desc(trigramSimilarity))
-        .limit(limit) as Promise<DbChunkResult[]>;
+        .limit(limit * 2) as Promise<DbChunkResult[]>;
     }
 
     // 3. Vector Search logic (needs embedding first)
@@ -220,6 +222,7 @@ export async function retrieveChunks(
       const vectorDistance = sql<number>`${chunkEmbeddings.embedding} <=> ${vectorStr}`;
       const vectorSimilarity = sql<number>`1 - (${vectorDistance})`;
 
+      // Fetch candidates (2x limit)
       const results = (await db
         .select({
           id: documentChunks.id,
@@ -246,7 +249,7 @@ export async function retrieveChunks(
           ),
         )
         .orderBy(vectorDistance) // ASC distance guarantees index usage
-        .limit(limit)) as DbChunkResult[];
+        .limit(limit * 2)) as DbChunkResult[];
 
       performance.mark("retrieval:vector-search-end");
       performance.measure(
@@ -269,76 +272,64 @@ export async function retrieveChunks(
       "retrieval:trigram-search-start",
       "retrieval:trigram-search-end",
     );
-    // 4. Merge and re-rank results using Reciprocal Rank Fusion (RRF)
-    // RRF is a proven method for combining rankings from multiple sources
-    performance.mark("retrieval:rrf-start");
-    const RRF_K = 60; // Standard RRF constant
-    const resultMap = new Map<
-      string,
-      {
-        result: DbChunkResult;
-        vectorRank: number | null;
-        trigramRank: number | null;
-        trigramScore: number;
-      }
-    >();
 
-    // Add vector results with their rank
-    vectorResults.forEach((r, index) => {
-      resultMap.set(r.id, {
-        result: r,
-        vectorRank: index + 1,
-        trigramRank: null,
-        trigramScore: 0,
-      });
-    });
+    // 5. Merge and Interleave Candidates
+    performance.mark("retrieval:merge-candidates-start");
 
-    // Add trigram results with their rank
-    trigramResults.forEach((r, index) => {
-      const trigramScore = r.trigramScore || 0;
-      if (resultMap.has(r.id)) {
-        const existing = resultMap.get(r.id)!;
-        existing.trigramRank = index + 1;
-        existing.trigramScore = trigramScore;
-      } else {
-        resultMap.set(r.id, {
-          result: r,
-          vectorRank: null,
-          trigramRank: index + 1,
-          trigramScore: trigramScore,
-        });
-      }
-    });
+    // Interleave results to ensure we have a mix for the reranker
+    const MAX_RERANK_CANDIDATES = 20; // Reduced further for performance
+    const candidateMap = new Map<string, DbChunkResult>();
 
-    // Calculate RRF score for each result
-    const combinedResults = Array.from(resultMap.values())
-      .map((item) => {
-        // RRF formula: score = sum(1 / (k + rank)) for each ranking
-        let rrfScore = 0;
-        if (item.vectorRank !== null) {
-          rrfScore += 1 / (RRF_K + item.vectorRank);
-        }
-        if (item.trigramRank !== null) {
-          // Give trigram results extra weight since they indicate keyword matches
-          rrfScore += 1.5 / (RRF_K + item.trigramRank);
-        }
+    for (let i = 0; i < limit * 2; i++) {
+      if (vectorResults[i])
+        candidateMap.set(vectorResults[i].id, vectorResults[i]);
+      if (candidateMap.size >= MAX_RERANK_CANDIDATES) break;
 
-        return {
-          ...item.result,
-          hybridScore: rrfScore,
-          // For display, normalize to 0-1 range (approximate)
-          similarity: Math.min(1.0, rrfScore * 50),
-        };
-      })
-      .sort((a, b) => b.hybridScore - a.hybridScore);
-    performance.mark("retrieval:rrf-end");
+      if (trigramResults[i])
+        candidateMap.set(trigramResults[i].id, trigramResults[i]);
+      if (candidateMap.size >= MAX_RERANK_CANDIDATES) break;
+    }
+
+    let combinedResults = Array.from(candidateMap.values());
+
+    performance.mark("retrieval:merge-candidates-end");
     performance.measure(
-      "retrieval:rrf",
-      "retrieval:rrf-start",
-      "retrieval:rrf-end",
+      "retrieval:merge-candidates",
+      "retrieval:merge-candidates-start",
+      "retrieval:merge-candidates-end",
     );
 
-    // 5. Filter by threshold
+    // 6. Rerank Candidates
+    performance.mark("retrieval:rerank-start");
+
+    // Extract texts for reranking
+    const documentsToRank = combinedResults.map((r) => r.text);
+    // Call the reranker model
+    const reranked = await rerank(query, documentsToRank, {
+      top_k: limit * 2,
+      return_documents: false,
+    });
+
+    // Map scores back to results
+    const scoredResults = reranked.map((r) => {
+      const original = combinedResults[r.corpus_id];
+      return {
+        ...original,
+        similarity: r.score,
+        rerankScore: r.score,
+      };
+    });
+
+    combinedResults = scoredResults;
+
+    performance.mark("retrieval:rerank-end");
+    performance.measure(
+      "retrieval:rerank",
+      "retrieval:rerank-start",
+      "retrieval:rerank-end",
+    );
+
+    // 7. Filter by threshold
     performance.mark("retrieval:filter-start");
     const filtered = combinedResults.filter(
       (r) => r.similarity >= similarityThreshold,
@@ -366,14 +357,12 @@ export async function retrieveChunks(
       "retrieval:group-end",
     );
 
-    // 6. Merge consecutive chunks from the same document page
+    // 8. Merge consecutive chunks from the same document page
     performance.mark("retrieval:merge-start");
     const allMerged: RetrievalResult[] = [];
 
     for (const [_, docChunks] of groupedByDoc) {
-      // Sort by chunkIndex to find consecutive chunks
       docChunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
-
       let currentGroup: typeof docChunks = [];
 
       for (const chunk of docChunks) {
@@ -381,7 +370,6 @@ export async function retrieveChunks(
           currentGroup.push(chunk);
         } else {
           const last = currentGroup[currentGroup.length - 1];
-          // Merge if consecutive chunk index and same page
           if (
             chunk.chunkIndex === last.chunkIndex + 1 &&
             chunk.pageNumber === last.pageNumber
@@ -398,30 +386,14 @@ export async function retrieveChunks(
       }
     }
 
-    // Sort by similarity descending
     allMerged.sort((a, b) => b.similarity - a.similarity);
+    const finalResults = allMerged.slice(0, limit);
+
     performance.mark("retrieval:merge-end");
     performance.measure(
       "retrieval:merge",
       "retrieval:merge-start",
       "retrieval:merge-end",
-    );
-    // Deduplicate by text content
-    performance.mark("retrieval:deduplicate-start");
-    const uniqueResults: RetrievalResult[] = [];
-    const seenText = new Set<string>();
-
-    for (const r of allMerged) {
-      if (!seenText.has(r.text)) {
-        seenText.add(r.text);
-        uniqueResults.push(r);
-      }
-    }
-    performance.mark("retrieval:deduplicate-end");
-    performance.measure(
-      "retrieval:deduplicate",
-      "retrieval:deduplicate-start",
-      "retrieval:deduplicate-end",
     );
 
     if (options?.logPerf) {
@@ -435,7 +407,7 @@ export async function retrieveChunks(
       }
     }
 
-    return { results: uniqueResults };
+    return { results: finalResults };
   } catch (error) {
     console.error("Retrieval error:", error);
     return { results: [], reason: "error" };
@@ -444,7 +416,6 @@ export async function retrieveChunks(
 
 function mergeGroup(chunks: DbChunkResult[]): RetrievalResult {
   const first = chunks[0];
-  // Find first non-empty heading path
   const headingPath = chunks.find((c) => c.headingPath)?.headingPath || null;
 
   return {
