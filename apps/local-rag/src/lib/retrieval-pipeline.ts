@@ -23,7 +23,7 @@ export async function runRetrievalPipeline(
     options?: RetrievalPipelineOptions;
   },
 ): Promise<RetrievalResult[]> {
-  const rerankCandidates = options?.rerankCandidates ?? 10;
+  const rerankCandidates = options?.rerankCandidates ?? 30;
   const rerankMinScore = options?.rerankMinScore ?? 0.75;
 
   writeStatus({

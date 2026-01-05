@@ -332,7 +332,7 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
           });
         },
         options: {
-          rerankCandidates: 10,
+          rerankCandidates: 30,
           rerankMinScore: getRerankMinScoreCached(),
         },
       });

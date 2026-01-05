@@ -28,7 +28,7 @@ This document outlines the current state of the Retrieval-Augmented Generation (
 - **Metadata Filtering:** The system lacks the ability to filter by date, file type, or user-defined tags at the query level.
 - **Dynamic Weighting:** RRF weights are static. If a query is clearly keyword-heavy ("Who is Joe Flanigan?"), the system should potentially prioritize the keyword index more than for a thematic query ("Tell me about the themes of isolation").
 
-## 3. Re-ranking (`retrieval-pipeline.ts`)
+## 3. Re-ranking (`retrieval-pipeline.ts`) *done*
 
 ### Current State
 - **Model:** `mxbai-rerank-xsmall-v1` (Cross-Encoder).
