@@ -1,18 +1,18 @@
-import { useState, useEffect } from "react";
+import { Link } from "@tanstack/react-router";
+import { Loader2Icon, MegaphoneIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
-  MessageActions,
   MessageAction,
+  MessageActions,
 } from "@/components/ai-elements/message";
-import { MegaphoneIcon, Loader2Icon } from "lucide-react";
-import { generateSpeech } from "@/lib/models/speechModel";
-import { isModelAvailable } from "@/lib/models/model-registry";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Link } from "@tanstack/react-router";
+import { isModelAvailable } from "@/lib/models/model-registry";
+import { generateSpeech } from "@/lib/models/speechModel";
 
 type SpeakMessageProps = {
   text: string;

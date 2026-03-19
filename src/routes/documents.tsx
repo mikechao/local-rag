@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
-import { useRef, useEffect } from "react";
-import { useDocumentUpload } from "@/hooks/use-document-upload";
+import { useEffect, useRef } from "react";
 import { DocumentsTable } from "@/components/DocumentsTable";
-import { useDocuments } from "@/hooks/use-documents";
 import { PageContainer } from "@/components/PageContainer";
+import { Button } from "@/components/ui/button";
+import { useDocumentUpload } from "@/hooks/use-document-upload";
+import { useDocuments } from "@/hooks/use-documents";
 
 export const Route = createFileRoute("/documents")({
   component: DocumentsPage,

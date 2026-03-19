@@ -1,8 +1,8 @@
 import type { ChatStatus } from "ai";
 import { useEffect, useRef, useState } from "react";
 import { useSpeechPlayer } from "@/hooks/use-speech-player";
-import { generateSpeechStream, TextStream } from "@/lib/models/speechModel";
 import type { LocalRAGMessage } from "@/lib/local-rag-message";
+import { generateSpeechStream, TextStream } from "@/lib/models/speechModel";
 import { getMessageText } from "../chat-message-utils";
 
 type UseAutoSpeakArgs = {

@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
 import { browserAI, doesBrowserSupportBrowserAI } from "@browser-ai/core";
 import { ExternalLink } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { useCallback, useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -10,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "../ui/button";
 
 type Status =

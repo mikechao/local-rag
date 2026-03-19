@@ -1,13 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  Bot,
   BookText,
+  Bot,
   Database,
   MessageSquareQuote,
   Moon,
   PanelLeftIcon,
-  Sun,
   Settings2Icon,
+  Sun,
 } from "lucide-react";
 import type React from "react";
 
@@ -16,17 +16,17 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarGroupAction,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "./ui/button";
 import { useTheme } from "@/providers/theme";
+import { Button } from "./ui/button";
 
 type NavItem = {
   label: string;

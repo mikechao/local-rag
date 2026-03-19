@@ -1,9 +1,9 @@
-import { memo } from "react";
 import { Loader2Icon, Lock, Trash2Icon } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { CollapsibleContent } from "@/components/ui/collapsible";
-import { getDefaultChatTitle, type ChatSummary } from "@/lib/chat-storage";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { type ChatSummary, getDefaultChatTitle } from "@/lib/chat-storage";
 
 type ChatHistoryPanelProps = {
   chats: ChatSummary[];
@@ -51,24 +51,19 @@ export const ChatHistoryPanel = memo(function ChatHistoryPanel({
                       ? "bg-muted text-foreground"
                       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   }`}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onSelectChat(chat.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onSelectChat(chat.id);
-                    }
-                  }}
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <button
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    onClick={() => onSelectChat(chat.id)}
+                    type="button"
+                  >
                     {chat.quotaOverflowState && (
                       <Lock className="size-3 shrink-0 text-muted-foreground" />
                     )}
                     <span className="min-w-0 flex-1 truncate">
                       {chat.title || getDefaultChatTitle()}
                     </span>
-                  </div>
+                  </button>
                   <Button
                     variant="ghost"
                     size="icon"

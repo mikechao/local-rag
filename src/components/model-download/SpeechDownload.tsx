@@ -1,6 +1,6 @@
-import { TransformersJSDownloadCard } from "./TransformersJSDownloadCard";
 import { env } from "@huggingface/transformers";
 import { getModelDescriptor } from "@/lib/models/model-registry";
+import { TransformersJSDownloadCard } from "./TransformersJSDownloadCard";
 
 // Configure local environment for transformers.js
 env.allowLocalModels = false;

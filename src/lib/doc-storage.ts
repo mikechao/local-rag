@@ -1,6 +1,6 @@
-import { documents, documentChunks, chunkEmbeddings } from "@/db/schema";
+import { and, eq, sql } from "drizzle-orm";
+import { chunkEmbeddings, documentChunks, documents } from "@/db/schema";
 import { ensureDbReady, getDb } from "@/lib/db";
-import { eq, sql, and } from "drizzle-orm";
 import { getEmbeddingModelId } from "@/lib/models/model-registry";
 
 export type QuotaEstimate = {

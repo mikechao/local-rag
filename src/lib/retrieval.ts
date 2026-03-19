@@ -1,7 +1,7 @@
-import { sql, eq, and, desc } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { chunkEmbeddings, documentChunks, documents } from "../db/schema";
 import { getDb } from "./db";
 import { embedQuery } from "./embedding-worker";
-import { chunkEmbeddings, documentChunks, documents } from "../db/schema";
 import { getEmbeddingModelId } from "./models/model-registry";
 import { rerank } from "./models/rerankerModel";
 
@@ -345,10 +345,12 @@ export async function retrieveChunks(
     performance.mark("retrieval:group-start");
     const groupedByDoc = new Map<string, typeof filtered>();
     for (const r of filtered) {
-      if (!groupedByDoc.has(r.docId)) {
-        groupedByDoc.set(r.docId, []);
+      let docResults = groupedByDoc.get(r.docId);
+      if (!docResults) {
+        docResults = [];
+        groupedByDoc.set(r.docId, docResults);
       }
-      groupedByDoc.get(r.docId)!.push(r);
+      docResults.push(r);
     }
     performance.mark("retrieval:group-end");
     performance.measure(

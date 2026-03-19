@@ -1,9 +1,9 @@
 import {
-  pipeline,
   env,
-  type TextToAudioPipeline,
+  pipeline,
   RawAudio,
   type RawAudio as RawAudioType,
+  type TextToAudioPipeline,
 } from "@huggingface/transformers";
 import { split, TextSplitterStream } from "../splitter";
 import { cleanClearCahce } from "./utils";
@@ -19,12 +19,17 @@ env.useBrowserCache = true;
 let pipelinePromise: Promise<TextToAudioPipeline> | null = null;
 let embeddingsPromise: Promise<Record<string, Float32Array>> | null = null;
 
+type ModelWarmupProgress = {
+  status?: string;
+  progress?: number;
+};
+
 export async function loadSpeechPipeline(
-  progressCallback?: (info: any) => void,
+  progressCallback?: (info: ModelWarmupProgress) => void,
 ) {
   if (!pipelinePromise) {
     pipelinePromise = (async () => {
-      // @ts-ignore
+      // @ts-expect-error
       const tts = (await pipeline("text-to-speech", MODEL_ID, {
         device: "webgpu",
         progress_callback: progressCallback,
@@ -189,8 +194,10 @@ export class TextStream implements AsyncIterable<string> {
   push(text: string) {
     if (this.finished) return;
     if (this.resolvers.length > 0) {
-      const resolve = this.resolvers.shift()!;
-      resolve({ value: text, done: false });
+      const resolve = this.resolvers.shift();
+      if (resolve) {
+        resolve({ value: text, done: false });
+      }
     } else {
       this.queue.push(text);
     }
@@ -199,8 +206,10 @@ export class TextStream implements AsyncIterable<string> {
   close() {
     this.finished = true;
     while (this.resolvers.length > 0) {
-      const resolve = this.resolvers.shift()!;
-      resolve({ value: undefined, done: true });
+      const resolve = this.resolvers.shift();
+      if (resolve) {
+        resolve({ value: undefined, done: true });
+      }
     }
   }
 
@@ -208,7 +217,10 @@ export class TextStream implements AsyncIterable<string> {
     return {
       next: () => {
         if (this.queue.length > 0) {
-          return Promise.resolve({ value: this.queue.shift()!, done: false });
+          const value = this.queue.shift();
+          if (value !== undefined) {
+            return Promise.resolve({ value, done: false });
+          }
         }
         if (this.finished) {
           return Promise.resolve({ value: undefined, done: true });

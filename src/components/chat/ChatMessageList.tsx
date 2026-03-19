@@ -1,6 +1,6 @@
-import { memo } from "react";
 import type { ChatStatus, FileUIPart } from "ai";
 import { Loader2Icon } from "lucide-react";
+import { memo } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -100,13 +100,14 @@ export const ChatMessageList = memo(function ChatMessageList({
               <MessageContent>
                 {message.parts ? (
                   message.parts.map((part, index) => {
+                    const partKey = `${message.id}-${part.type}-${index}`;
                     if (part.type === "data-retrievalResults") return null;
                     if (part.type === "text") {
                       // Use CitationMarkdown for assistant messages to handle citations
                       if (message.role === "assistant") {
                         return (
                           <CitationMarkdown
-                            key={index}
+                            key={partKey}
                             retrievalResults={retrievalResults ?? []}
                           >
                             {part.text}
@@ -114,7 +115,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                         );
                       }
                       return (
-                        <MessageResponse key={index}>
+                        <MessageResponse key={partKey}>
                           {part.text}
                         </MessageResponse>
                       );
@@ -122,7 +123,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                     if (part.type === "reasoning") {
                       return (
                         <Reasoning
-                          key={index}
+                          key={partKey}
                           isStreaming={
                             status === "streaming" &&
                             index === message.parts.length - 1 &&
@@ -141,11 +142,16 @@ export const ChatMessageList = memo(function ChatMessageList({
                 )}
                 {attachments.length > 0 && (
                   <MessageAttachments className="mt-2">
-                    {attachments.map(
-                      (attachment: FileUIPart, index: number) => (
-                        <MessageAttachment data={attachment} key={index} />
-                      ),
-                    )}
+                    {attachments.map((attachment: FileUIPart) => (
+                      <MessageAttachment
+                        data={attachment}
+                        key={
+                          attachment.url ??
+                          attachment.filename ??
+                          attachment.mediaType
+                        }
+                      />
+                    ))}
                   </MessageAttachments>
                 )}
                 {showRetrievalStatusInThisMessage && retrievalStatus && (

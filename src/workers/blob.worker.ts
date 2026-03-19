@@ -1,9 +1,9 @@
 import { PGlite } from "@electric-sql/pglite";
-import { vector } from "@electric-sql/pglite/vector";
 import { lo } from "@electric-sql/pglite/contrib/lo";
 import { OpfsAhpFS } from "@electric-sql/pglite/opfs-ahp";
-import { drizzle } from "drizzle-orm/pglite";
+import { vector } from "@electric-sql/pglite/vector";
 import { eq, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/pglite";
 import { documents } from "../db/schema";
 
 let db: ReturnType<typeof drizzle> | null = null;

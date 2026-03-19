@@ -1,9 +1,9 @@
+import { CheckIcon, CopyIcon } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import {
-  MessageActions,
   MessageAction,
+  MessageActions,
 } from "@/components/ai-elements/message";
-import { CheckIcon, CopyIcon } from "lucide-react";
 
 type CopyMessageProps = {
   messageId: string;

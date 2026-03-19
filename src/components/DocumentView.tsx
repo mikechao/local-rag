@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { pdfjs } from "react-pdf";
+import { Spinner } from "@/components/ui/shadcn-io/spinner";
 import {
   fetchPdfRange,
   getDocumentObjectUrl,
@@ -7,7 +8,6 @@ import {
 } from "@/lib/doc-storage";
 import { MarkdownView } from "./MarkdownView";
 import { PdfView } from "./PdfView";
-import { Spinner } from "@/components/ui/shadcn-io/spinner";
 
 interface DocumentViewProps {
   docId: string;

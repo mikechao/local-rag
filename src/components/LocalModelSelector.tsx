@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { CheckIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import {
   ModelSelector,
   ModelSelectorContent,
@@ -13,6 +12,7 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
+import { Button } from "@/components/ui/button";
 
 interface LocalModelSelectorProps {
   value: string;

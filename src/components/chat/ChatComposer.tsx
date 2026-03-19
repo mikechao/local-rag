@@ -1,29 +1,20 @@
-import { memo } from "react";
 import type { ChatStatus } from "ai";
 import {
   MicIcon,
-  Paperclip,
   PanelLeftIcon,
+  Paperclip,
   PlusIcon,
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { LocalModelSelector } from "@/components/LocalModelSelector";
+import { memo } from "react";
 import {
   Context,
   ContextContent,
-  ContextContentHeader,
   ContextContentBody,
+  ContextContentHeader,
   ContextTrigger,
 } from "@/components/ai-elements/context";
-import { VoiceInput } from "@/components/chat/VoiceInput";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   PromptInput,
   PromptInputActionAddAttachments,
@@ -34,11 +25,20 @@ import {
   PromptInputAttachments,
   PromptInputFooter,
   PromptInputHeader,
+  type PromptInputProps,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
-  type PromptInputProps,
 } from "@/components/ai-elements/prompt-input";
+import { VoiceInput } from "@/components/chat/VoiceInput";
+import { LocalModelSelector } from "@/components/LocalModelSelector";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type ChatComposerProps = {
   input: string;

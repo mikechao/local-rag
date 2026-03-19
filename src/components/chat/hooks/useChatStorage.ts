@@ -1,7 +1,7 @@
 import type { ChatStatus } from "ai";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { LocalRAGMessage, RetrievalStatus } from "@/lib/local-rag-message";
 import {
+  type ChatSummary,
   createChat,
   deleteChat,
   getChats,
@@ -9,9 +9,9 @@ import {
   hasUserMessages,
   loadChat,
   updateChatTitle,
-  type ChatSummary,
 } from "@/lib/chat-storage";
 import { generateChatTitle } from "@/lib/chat-title";
+import type { LocalRAGMessage, RetrievalStatus } from "@/lib/local-rag-message";
 
 type UseChatStorageArgs = {
   setRetrievalStatus: (status: RetrievalStatus | null) => void;

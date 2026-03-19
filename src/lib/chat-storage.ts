@@ -1,15 +1,14 @@
-import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
-import { sql } from "drizzle-orm";
+import type { UIMessage } from "ai";
+import { and, asc, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import {
+  type Chat,
+  type ChatMessagePart,
   chatMessageParts,
   chatMessages,
   chats,
-  type Chat,
-  type ChatMessagePart,
   type InsertChatMessagePart,
 } from "@/db/schema";
 import { ensureDbReady, getDb } from "@/lib/db";
-import type { UIMessage } from "ai";
 import type { LocalRAGMessage, ModelUsage } from "@/lib/local-rag-message";
 import type { RetrievalResult } from "@/lib/retrieval";
 
@@ -162,7 +161,6 @@ async function mapUIMessagePartsToDBParts(
         type: part.type,
         dataModelUsage: part.data as ModelUsage,
       });
-      continue;
     }
   }
 

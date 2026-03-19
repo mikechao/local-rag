@@ -1,25 +1,33 @@
-import { useRef, useCallback } from "react";
+import { useCallback, useRef } from "react";
 
 export function useSpeechPlayer() {
   const audioContext = useRef<AudioContext | null>(null);
   const nextStartTime = useRef<number>(0);
   const isPlaying = useRef(false);
 
-  const initAudioContext = () => {
+  const initAudioContext = useCallback(() => {
     if (!audioContext.current) {
-      audioContext.current = new (
-        window.AudioContext || (window as any).webkitAudioContext
-      )();
+      const AudioContextCtor =
+        window.AudioContext ??
+        (window as Window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (!AudioContextCtor) {
+        throw new Error("AudioContext is not supported in this browser.");
+      }
+      audioContext.current = new AudioContextCtor();
     }
     if (audioContext.current.state === "suspended") {
       audioContext.current.resume();
     }
-  };
+  }, []);
 
   const playChunk = useCallback(
     (audioData: Float32Array, sampleRate: number) => {
       initAudioContext();
-      const ctx = audioContext.current!;
+      const ctx = audioContext.current;
+      if (!ctx) {
+        return;
+      }
 
       const buffer = ctx.createBuffer(1, audioData.length, sampleRate);
       buffer.getChannelData(0).set(audioData);
@@ -34,7 +42,7 @@ export function useSpeechPlayer() {
       source.start(startTime);
       nextStartTime.current = startTime + buffer.duration;
     },
-    [],
+    [initAudioContext],
   );
 
   const playStream = useCallback(

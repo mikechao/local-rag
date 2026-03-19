@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { doesBrowserSupportTransformersJS } from "@browser-ai/transformers-js";
 import { ExternalLink } from "lucide-react";
-
-import { Progress } from "@/components/ui/progress";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -11,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "../ui/button";
 import {
   Drawer,

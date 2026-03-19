@@ -1,16 +1,16 @@
 "use client";
 
-import { memo, type ReactNode, type ComponentProps } from "react";
+import { type ComponentProps, memo, type ReactNode } from "react";
 import { Streamdown } from "streamdown";
-import { cn } from "@/lib/utils";
-import type { RetrievalResult } from "@/lib/retrieval";
 import {
   InlineCitation,
   InlineCitationCard,
-  InlineCitationDocTrigger,
   InlineCitationCardBody,
+  InlineCitationDocTrigger,
   InlineCitationRetrievalSource,
 } from "@/components/ai-elements/inline-citation";
+import type { RetrievalResult } from "@/lib/retrieval";
+import { cn } from "@/lib/utils";
 
 export type CitationMarkdownProps = {
   children: string;
@@ -30,10 +30,10 @@ function parseCitationsInText(
   const citationRegex = /\[(\d+)\]/g;
   const parts: ReactNode[] = [];
   let lastIndex = 0;
-  let match: RegExpExecArray | null;
   let hasCitations = false;
+  let match = citationRegex.exec(text);
 
-  while ((match = citationRegex.exec(text)) !== null) {
+  while (match !== null) {
     // Add text before the citation
     if (match.index > lastIndex) {
       parts.push(text.slice(lastIndex, match.index));
@@ -97,6 +97,7 @@ function parseCitationsInText(
     }
 
     lastIndex = match.index + match[0].length;
+    match = citationRegex.exec(text);
   }
 
   // Add remaining text after the last citation
@@ -180,12 +181,15 @@ function processChildren(
   }
 
   if (Array.isArray(children)) {
-    return children.map((child, index) => {
+    let textOffset = 0;
+    return children.map((child) => {
       if (typeof child === "string") {
+        const childKey = `citation-child-${textOffset}-${child.length}`;
+        textOffset += child.length;
         const result = parseCitationsInText(child, retrievalResults);
         // If result is the same string, return as-is; otherwise wrap with key
         if (result === child) return child;
-        return <span key={index}>{result}</span>;
+        return <span key={childKey}>{result}</span>;
       }
       return child;
     });

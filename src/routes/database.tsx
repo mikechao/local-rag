@@ -1,11 +1,11 @@
+import { Repl } from "@electric-sql/pglite-repl";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Repl } from "@electric-sql/pglite-repl";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDbReady } from "@/hooks/use-db-ready";
 import { getClient } from "@/lib/db";
 import { useTheme } from "@/providers/theme";
-import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/database")({
   component: DatabasePage,

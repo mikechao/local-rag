@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { EmbeddingModelDownload } from "@/components/model-download/EmbeddingModelDownload";
 import { GeminiNanoDownload } from "@/components/model-download/GeminiNanoDownload";
-import { WhisperDownload } from "@/components/model-download/WhisperDownload";
-import { SpeechDownload } from "@/components/model-download/SpeechDownload";
 import { RerankerDownload } from "@/components/model-download/RerankerDownload";
+import { SpeechDownload } from "@/components/model-download/SpeechDownload";
+import { WhisperDownload } from "@/components/model-download/WhisperDownload";
 import { PageContainer } from "@/components/PageContainer";
 import {
   Card,

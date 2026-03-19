@@ -4,35 +4,35 @@ import {
   warmupEmbeddingModel,
 } from "../embedding-worker";
 import {
-  LOCAL_READY_KEY as EMBEDDING_READY_KEY,
   MODEL_ID as EMBEDDING_MODEL_ID,
+  LOCAL_READY_KEY as EMBEDDING_READY_KEY,
   getModel as getEmbeddingModel,
   hasCachedWeights as hasCachedEmbeddingWeights,
   isModelReadyFlag as isEmbeddingModelReadyFlag,
 } from "./embeddingModel";
 import {
-  LOCAL_READY_KEY as RERANKER_READY_KEY,
-  MODEL_ID as RERANKER_MODEL_ID,
   clearRerankerCache,
   hasCachedRerankerWeights,
   isRerankerModelReadyFlag,
+  MODEL_ID as RERANKER_MODEL_ID,
+  LOCAL_READY_KEY as RERANKER_READY_KEY,
   warmupReranker,
 } from "./rerankerModel";
 import {
-  LOCAL_READY_KEY as SPEECH_READY_KEY,
-  MODEL_ID as SPEECH_MODEL_ID,
   clearSpeechCache,
   hasCachedSpeechWeights,
   isSpeechModelReadyFlag,
   loadSpeechPipeline,
+  MODEL_ID as SPEECH_MODEL_ID,
+  LOCAL_READY_KEY as SPEECH_READY_KEY,
 } from "./speechModel";
 import {
-  LOCAL_READY_KEY as WHISPER_READY_KEY,
-  MODEL_ID as WHISPER_MODEL_ID,
   clearWhisperCache,
   getWhisperModel,
   hasCachedWhisperWeights,
   isWhisperModelReadyFlag,
+  MODEL_ID as WHISPER_MODEL_ID,
+  LOCAL_READY_KEY as WHISPER_READY_KEY,
 } from "./whisperModel";
 
 /**
@@ -66,6 +66,11 @@ export type ModelDescriptor = {
   isReady: () => boolean;
   getAvailability: () => Promise<"unavailable" | "downloadable" | "available">;
   markReady: () => void;
+};
+
+type ModelWarmupProgress = {
+  status?: string;
+  progress?: number;
 };
 
 /**
@@ -154,9 +159,10 @@ const MODEL_REGISTRY: Record<ModelKey, ModelDescriptor> = {
       },
     ],
     warmup: async ({ onProgress } = {}) => {
-      await warmupReranker((info: any) => {
-        if (info?.status === "progress") {
-          onProgress?.(normalizeProgress(info.progress));
+      await warmupReranker((info: unknown) => {
+        const progressInfo = info as ModelWarmupProgress;
+        if (progressInfo?.status === "progress") {
+          onProgress?.(normalizeProgress(progressInfo.progress ?? 0));
         }
       });
     },
@@ -187,9 +193,9 @@ const MODEL_REGISTRY: Record<ModelKey, ModelDescriptor> = {
       },
     ],
     warmup: async ({ onProgress } = {}) => {
-      await loadSpeechPipeline((info: any) => {
+      await loadSpeechPipeline((info: ModelWarmupProgress) => {
         if (info?.status === "progress") {
-          onProgress?.(normalizeProgress(info.progress));
+          onProgress?.(normalizeProgress(info.progress ?? 0));
         }
       });
     },

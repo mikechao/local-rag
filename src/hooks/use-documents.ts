@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
-import { getDb } from "@/lib/db";
-import { documents, type Document } from "@/db/schema";
 import { desc } from "drizzle-orm";
+import { useCallback, useEffect, useState } from "react";
+import { type Document, documents } from "@/db/schema";
+import { getDb } from "@/lib/db";
 
 export function useDocuments() {
   const [data, setData] = useState<Document[]>([]);

@@ -3,16 +3,19 @@ import { Link } from "@tanstack/react-router";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { AlertCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { ChatHistoryPanel } from "@/components/chat/ChatHistoryPanel";
 import { ChatMessageList } from "@/components/chat/ChatMessageList";
 import { DeleteChatDialog } from "@/components/chat/DeleteChatDialog";
+import { useAutoSpeak } from "@/components/chat/hooks/useAutoSpeak";
+import { useChatStorage } from "@/components/chat/hooks/useChatStorage";
+import { useChatTransport } from "@/components/chat/hooks/useChatTransport";
 import { SummaryErrorDialog } from "@/components/chat/SummaryErrorDialog";
 import { SummaryLoaddingDialog } from "@/components/chat/SummaryLoaddingDialog";
 import { SummaryReviewDialog } from "@/components/chat/SummaryReviewDialog";
 import { Button } from "@/components/ui/button";
 import { Collapsible } from "@/components/ui/collapsible";
-import { generateChatTitle } from "@/lib/chat-title";
 import {
   createChat,
   getDefaultChatTitle,
@@ -21,6 +24,7 @@ import {
   updateChatTitle,
 } from "@/lib/chat-storage";
 import { summarizeChat } from "@/lib/chat-summarize";
+import { generateChatTitle } from "@/lib/chat-title";
 import { warmupEmbeddingModel } from "@/lib/embedding-worker";
 import type {
   LocalRAGMessage,
@@ -28,10 +32,6 @@ import type {
   RetrievalStatus,
 } from "@/lib/local-rag-message";
 import { isModelAvailable } from "@/lib/models/model-registry";
-import { useAutoSpeak } from "@/components/chat/hooks/useAutoSpeak";
-import { useChatStorage } from "@/components/chat/hooks/useChatStorage";
-import { useChatTransport } from "@/components/chat/hooks/useChatTransport";
-import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 
 export function ChatInterface() {
   const [isChatModelAvailable] = useState<boolean | null>(true);
@@ -228,8 +228,6 @@ export function ChatInterface() {
     setChats,
     setPendingMessages,
     setActiveChatId,
-    setRetrievalStatus,
-    setInput,
     setLoadedQuotaOverflowState,
     clearQuotaOverflow,
   ]);
@@ -273,8 +271,6 @@ export function ChatInterface() {
     setChats,
     setPendingMessages,
     setActiveChatId,
-    setRetrievalStatus,
-    setInput,
     setLoadedQuotaOverflowState,
     clearQuotaOverflow,
   ]);

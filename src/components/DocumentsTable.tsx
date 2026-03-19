@@ -1,3 +1,14 @@
+import type { ColumnDef } from "@tanstack/react-table";
+import { Eye } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   TableBody,
   TableCell,
@@ -8,19 +19,8 @@ import {
   TableProvider,
   TableRow,
 } from "@/components/ui/shadcn-io/table";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Eye } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type { Document } from "@/db/schema";
 import { formatBytes } from "@/lib/utils";
-import { useState, useMemo } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { DocumentView } from "./DocumentView";
 
 interface DocumentsTableProps {

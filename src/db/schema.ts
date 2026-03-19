@@ -1,17 +1,17 @@
+import { sql } from "drizzle-orm";
 import {
+  boolean,
+  customType,
+  doublePrecision,
+  index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
   timestamp,
   vector,
-  customType,
-  boolean,
-  index,
-  doublePrecision,
-  jsonb,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
 
 const oid = customType<{ data: number; driverData: number }>({
   dataType() {

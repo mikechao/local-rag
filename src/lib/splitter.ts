@@ -259,7 +259,7 @@ export class TextSplitterStream
     const buffer = this._buffer;
     const len = buffer.length;
     let i = 0;
-    let stack: string[] = [];
+    const stack: string[] = [];
 
     // Helper to scan from the current index over trailing terminators and punctuation.
     const scanBoundary = (
@@ -325,8 +325,8 @@ export class TextSplitterStream
         // and does not already end with a terminator, skip splitting.
         if (
           (/https?[,:]\/\//.test(token) || token.includes("@")) &&
-          token.at(-1) &&
-          !isSentenceTerminator(token.at(-1)!)
+          token.at(-1) !== undefined &&
+          !isSentenceTerminator(token.at(-1) ?? "")
         ) {
           i = tokenStart + token.length;
           continue;
@@ -400,8 +400,10 @@ export class TextSplitterStream
     }
     while (true) {
       if (this._sentences.length > 0) {
-        // We use shift()! because we checked length > 0, so it cannot be undefined
-        yield this._sentences.shift()!;
+        const sentence = this._sentences.shift();
+        if (sentence !== undefined) {
+          yield sentence;
+        }
       } else if (this._closed) {
         // No more text will be pushed.
         break;

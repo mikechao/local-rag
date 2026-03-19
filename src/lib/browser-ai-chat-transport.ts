@@ -1,25 +1,25 @@
+import { type BrowserAIChatLanguageModel, browserAI } from "@browser-ai/core";
 import {
-  type ChatTransport,
-  type UIMessageChunk,
   type ChatRequestOptions,
-  ToolLoopAgent,
+  type ChatTransport,
   createAgentUIStream,
-  generateText,
-  smoothStream,
-  createUIMessageStream,
   createIdGenerator,
+  createUIMessageStream,
+  generateText,
+  type IdGenerator,
   type InferUIMessageChunk,
+  smoothStream,
+  ToolLoopAgent,
+  type UIMessageChunk,
   type UIMessageStreamWriter,
-  IdGenerator,
 } from "ai";
 import { z } from "zod";
-import { browserAI, type BrowserAIChatLanguageModel } from "@browser-ai/core";
-import type { RetrievalResult } from "./retrieval";
+import { upsertMessage } from "@/lib/chat-storage";
 import type { LocalRAGMessage } from "./local-rag-message";
 import { getModelDescriptor } from "./models/model-registry";
+import type { RetrievalResult } from "./retrieval";
 import { runRetrievalPipeline } from "./retrieval-pipeline";
 import { getRerankMinScoreCached, prefetchRerankMinScore } from "./settings";
-import { upsertMessage } from "@/lib/chat-storage";
 
 const retrievalResultSchema = z.object({
   chunkIds: z.array(z.string()),

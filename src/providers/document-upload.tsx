@@ -8,10 +8,10 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { saveDocument, saveChunks } from "@/lib/doc-storage";
-import { processMarkdown, processPdf } from "@/lib/chunking";
+import { Progress } from "@/components/ui/progress";
+import { type ChunkResult, processMarkdown, processPdf } from "@/lib/chunking";
+import { saveChunks, saveDocument } from "@/lib/doc-storage";
 import { embedDocument } from "@/lib/embedding-controller";
 
 type UploadStatus =
@@ -136,7 +136,7 @@ export function DocumentUploadProvider({
 
       setStatus("chunking");
 
-      let chunkResult;
+      let chunkResult: ChunkResult | undefined;
       if (file.type === "application/pdf") {
         chunkResult = await processPdf(docId, file.name, file, (p) => {
           if (p.pagesTotal) {

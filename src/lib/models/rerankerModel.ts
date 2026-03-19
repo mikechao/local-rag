@@ -16,6 +16,30 @@ env.useBrowserCache = true;
 
 type ProgressCallback = (info: unknown) => void;
 
+type SequenceClassifierLogits = {
+  data: unknown;
+  sigmoid: () => {
+    tolist: () => number[][];
+  };
+};
+
+type SequenceClassifierOutput = {
+  logits: SequenceClassifierLogits;
+};
+
+type CallableSequenceClassifier = (
+  inputs: unknown,
+) => Promise<SequenceClassifierOutput>;
+
+type CallableTokenizer = (
+  texts: string[],
+  options: {
+    text_pair: string[];
+    padding: boolean;
+    truncation: boolean;
+  },
+) => unknown;
+
 type RerankResult = {
   corpus_id: number;
   score: number;
@@ -59,15 +83,17 @@ export async function warmupReranker(progressCallback?: ProgressCallback) {
     loadRerankerModel(progressCallback),
     loadRerankerTokenizer(progressCallback),
   ]);
+  const tokenize = tokenizer as unknown as CallableTokenizer;
+  const runModel = model as unknown as CallableSequenceClassifier;
 
   // Warm up to compile shaders / initialize kernels.
-  const inputs = tokenizer(["Hello"], {
+  const inputs = tokenize(["Hello"], {
     text_pair: ["Hello"],
     padding: true,
     truncation: true,
   });
   // output is https://huggingface.co/docs/transformers.js/en/api/models#module_models.SequenceClassifierOutput
-  const output = await (model as any)(inputs);
+  const output = await runModel(inputs);
   const logits = output.logits;
   void logits.data; // e.g. touch the data / force a real read:
   logits.sigmoid().tolist();
@@ -86,6 +112,8 @@ export async function rerank(
     loadRerankerModel(progressCallback),
     loadRerankerTokenizer(progressCallback),
   ]);
+  const tokenize = tokenizer as unknown as CallableTokenizer;
+  const runModel = model as unknown as CallableSequenceClassifier;
 
   // Process in batches to avoid WebGPU timeouts/slowdowns and keep UI responsive
   const BATCH_SIZE = 8;
@@ -94,19 +122,19 @@ export async function rerank(
   for (let i = 0; i < documents.length; i += BATCH_SIZE) {
     const batchDocs = documents.slice(i, i + BATCH_SIZE);
 
-    const inputs = (tokenizer as any)(new Array(batchDocs.length).fill(query), {
+    const inputs = tokenize(new Array(batchDocs.length).fill(query), {
       text_pair: batchDocs,
       padding: true,
       truncation: true,
     });
 
-    const { logits } = await (model as any)(inputs);
+    const { logits } = await runModel(inputs);
 
     // Convert tensor to array and get scores
-    const batchScores: number[] = (logits as any)
+    const batchScores: number[] = logits
       .sigmoid()
       .tolist()
-      .map(([score]: [number]) => score);
+      .map(([score]) => score);
 
     allScores.push(...batchScores);
   }

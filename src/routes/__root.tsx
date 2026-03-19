@@ -1,12 +1,11 @@
+import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import React from "react";
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
-
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/SidebarNav";
-import { useDbReady } from "@/hooks/use-db-ready";
-import { ThemeProvider } from "@/providers/theme";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { useDbReady } from "@/hooks/use-db-ready";
 import { DocumentUploadProvider } from "@/providers/document-upload";
+import { ThemeProvider } from "@/providers/theme";
 
 import appCss from "../styles.css?url";
 

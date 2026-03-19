@@ -1,5 +1,5 @@
-import { PGliteWorker } from "@electric-sql/pglite/worker";
 import type { PGlite } from "@electric-sql/pglite";
+import { PGliteWorker } from "@electric-sql/pglite/worker";
 import { drizzle } from "drizzle-orm/pglite";
 import { applyMigrations } from "@/lib/migrations";
 

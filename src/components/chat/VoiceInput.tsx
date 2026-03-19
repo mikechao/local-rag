@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { experimental_transcribe as transcribe } from "ai";
+import { Loader2Icon, SquareIcon } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 import { Button } from "@/components/ui/button";
-import { Loader2Icon, SquareIcon } from "lucide-react";
-import { experimental_transcribe as transcribe } from "ai";
 import { getWhisperModel } from "@/lib/models/whisperModel";
 
 interface VoiceInputProps {
@@ -20,32 +20,35 @@ export function VoiceInput({ onTranscription, children }: VoiceInputProps) {
   } = controls;
   const [isTranscribing, setIsTranscribing] = useState(false);
 
+  const handleTranscription = useCallback(
+    async (blob: Blob) => {
+      setIsTranscribing(true);
+      try {
+        const arrayBuffer = await blob.arrayBuffer();
+
+        const transcript = await transcribe({
+          model: getWhisperModel(),
+          audio: arrayBuffer,
+        });
+
+        if (transcript.text) {
+          onTranscription(transcript.text);
+        }
+      } catch (error) {
+        console.error("Transcription error:", error);
+      } finally {
+        setIsTranscribing(false);
+        controls.clearCanvas();
+      }
+    },
+    [controls, onTranscription],
+  );
+
   useEffect(() => {
     if (recordedBlob) {
       handleTranscription(recordedBlob);
     }
-  }, [recordedBlob]);
-
-  const handleTranscription = async (blob: Blob) => {
-    setIsTranscribing(true);
-    try {
-      const arrayBuffer = await blob.arrayBuffer();
-
-      const transcript = await transcribe({
-        model: getWhisperModel(),
-        audio: arrayBuffer,
-      });
-
-      if (transcript.text) {
-        onTranscription(transcript.text);
-      }
-    } catch (error) {
-      console.error("Transcription error:", error);
-    } finally {
-      setIsTranscribing(false);
-      controls.clearCanvas();
-    }
-  };
+  }, [recordedBlob, handleTranscription]);
 
   const handleStartRecording = () => {
     controls.startRecording();

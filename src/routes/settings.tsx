@@ -1,3 +1,5 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,8 +10,6 @@ import {
   getRerankMinScore,
   setRerankMinScore,
 } from "@/lib/settings";
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
