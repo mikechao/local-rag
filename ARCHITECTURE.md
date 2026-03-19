@@ -17,7 +17,7 @@
   - Enterprise auth, RBAC, or remote observability pipelines.
 - Assumptions:
   - This repo is intentionally single-user and local-only.
-  - Cloudflare/TanStack Start is used for app delivery, not business logic.
+  - The app is delivered as a static Vite build; hosting does not provide business logic.
 
 ## 2. Architectural Style
 - Chosen style: layered client application with worker-backed infrastructure boundaries.
@@ -142,16 +142,16 @@
 
 ## 8. Deployment and Environments
 - Runtime:
-  - Vite + TanStack React Start application with Cloudflare-compatible SSR entrypoints.
-  - The server layer is a delivery shell; core product behavior remains client-side.
+  - Vite + TanStack Router application with a browser-only runtime.
+  - Core product behavior remains client-side after the static assets load.
 - Hosting:
   - Local development via Vite dev server.
-  - Production deployment via Wrangler/Cloudflare.
+  - Production deployment via any static host that rewrites unknown app routes to the entry document.
 - Environments:
   - Development:
     - Hot reload, local browser storage, local worker execution.
   - Production:
-    - Same local-first execution model, optimized static assets, Cloudflare-hosted app shell.
+    - Same local-first execution model, optimized static assets, static app shell.
 - Configuration differences:
   - Environment differences should affect delivery and asset settings only.
   - Retrieval, storage, and chat behavior should remain consistent across environments.
@@ -185,7 +185,6 @@ flowchart LR
   App --> BrowserAI["Browser AI Runtime"]
   App --> LocalDB["PGlite in OPFS"]
   App --> ModelAssets["Cached Model Weights / Static Assets"]
-  Cloudflare["Cloudflare-hosted App Shell"] --> App
 ```
 
 - C4 level 2: containers

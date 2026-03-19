@@ -12,7 +12,7 @@ Local-first RAG web app that runs entirely in the browser, including embeddings,
 
 ## Tech Stack
 
-- App runtime: Vite + TanStack React Start
+- App runtime: Vite + TanStack Router
 - UI: React 19, Radix UI, Tailwind CSS
 - Local database: PGlite + Drizzle ORM
 - Embedding model: `Xenova/all-MiniLM-L6-v2` via `@browser-ai/transformers-js`
@@ -39,7 +39,7 @@ Default URL: `http://localhost:3000`
 ## Common Commands
 
 - `pnpm dev` — start the local dev server on port 3000
-- `pnpm build` — create the production client and SSR build
+- `pnpm build` — create the production client build
 - `pnpm serve` — preview the production build locally
 - `pnpm test` — run Vitest suites
 - `pnpm typecheck` — run `tsc --noEmit`
@@ -47,11 +47,14 @@ Default URL: `http://localhost:3000`
 - `pnpm format` — run Biome formatting
 - `pnpm check` — run Biome checks
 - `pnpm db:generate` — generate Drizzle migration output
-- `pnpm deploy` — deploy with Wrangler
 
 ## Local-First and Offline
 
 All document processing, embedding, storage, and retrieval run in the browser. After model weights are downloaded, the app is designed to continue working offline.
+
+## Deployment Notes
+
+The production output is a static Vite build under `dist/`. Serve that directory from any static host that rewrites unknown application routes such as `/chat` and `/documents` to the app entry document so TanStack Router can handle navigation in the browser.
 
 ## Retrieval Pipeline Overview
 

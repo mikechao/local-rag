@@ -60,7 +60,7 @@ export async function ensureEmbeddingModelReady(options: EnsureOptions = {}) {
 
 /**
  * Best-effort check: has the model been marked ready previously?
- * Returns false server-side or if the flag is missing.
+ * Returns false outside the browser or if the flag is missing.
  */
 export function isModelReadyFlag(): boolean {
   if (typeof window === "undefined" || typeof localStorage === "undefined")
@@ -79,7 +79,7 @@ export async function clearEmbeddingCache() {
 }
 
 /**
- * Lightweight cache check for UX gating; returns false on SSR.
+ * Lightweight cache check for UX gating; returns false outside the browser.
  */
 export async function hasCachedWeights(): Promise<boolean> {
   if (typeof window === "undefined" || typeof caches === "undefined")

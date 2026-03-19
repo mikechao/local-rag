@@ -7,8 +7,6 @@ import { useDbReady } from "@/hooks/use-db-ready";
 import { DocumentUploadProvider } from "@/providers/document-upload";
 import { ThemeProvider } from "@/providers/theme";
 
-import appCss from "../styles.css?url";
-
 export const Route = createRootRoute({
   head: () => ({
     meta: [
@@ -21,12 +19,6 @@ export const Route = createRootRoute({
       },
       {
         title: "Local RAG",
-      },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
       },
     ],
   }),
@@ -56,7 +48,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-theme={clientTheme} suppressHydrationWarning>
       <head>
-        <script src="/theme-init.js" />
         <HeadContent />
       </head>
       <body className="bg-background text-foreground">

@@ -19,7 +19,7 @@ The user-facing interface for chatting with documents lives at the repository ro
     *   **Retrieval**: Hybrid search combines vector similarity and trigram keyword search.
     *   **Re-ranking**: Optional local reranking refines candidates after retrieval.
 *   **Workers**: Heavy lifting (database queries, blob loading, embedding generation) is offloaded to Web Workers under `src/workers/`.
-*   **Deployment**: Configured for Cloudflare Workers/Pages via `wrangler.jsonc`.
+*   **Deployment**: Built as static assets with Vite and can be hosted on any static platform with history fallback for app routes.
 
 ## Key Directories & Files
 
@@ -40,7 +40,7 @@ The user-facing interface for chatting with documents lives at the repository ro
 *   **Frontend**: React, Vite
 *   **Database**: PGlite (Postgres WASM), Drizzle ORM
 *   **AI/ML**: `@browser-ai/*`, Transformers.js, Vercel AI SDK, WebGPU
-*   **Platform**: Cloudflare Pages (Static serving + Workers for headers/config)
+*   **Platform**: Static hosting with route rewrites to the entry document
 
 ## Development
 *   **Scripts**:

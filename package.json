@@ -10,7 +10,6 @@
     "format": "biome format --write .",
     "lint": "biome lint",
     "check": "biome check",
-    "deploy": "wrangler deploy",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit"
   },
@@ -18,7 +17,6 @@
     "@ai-sdk/react": "^3.0.0",
     "@browser-ai/core": "2.1.8",
     "@browser-ai/transformers-js": "2.1.8",
-    "@cloudflare/vite-plugin": "^1.13.8",
     "@electric-sql/pglite": "^0.3.14",
     "@electric-sql/pglite-repl": "^0.2.32",
     "@huggingface/transformers": "^3.8.0",
@@ -40,9 +38,7 @@
     "@tanstack/react-devtools": "^0.7.0",
     "@tanstack/react-router": "^1.132.0",
     "@tanstack/react-router-devtools": "^1.132.0",
-    "@tanstack/react-start": "^1.132.0",
     "@tanstack/react-table": "^8.21.3",
-    "@tanstack/router-plugin": "^1.132.0",
     "@xyflow/react": "^12.9.3",
     "ai": "6.0.0",
     "class-variance-authority": "^0.7.1",
@@ -76,6 +72,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.2.4",
     "@tanstack/devtools-vite": "^0.3.11",
+    "@tanstack/router-plugin": "^1.139.3",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
     "@types/node": "^22.10.2",
@@ -88,8 +85,7 @@
     "vite": "^7.1.7",
     "vite-plugin-static-copy": "^3.1.4",
     "vitest": "^3.0.5",
-    "web-vitals": "^5.1.0",
-    "wrangler": "^4.40.3"
+    "web-vitals": "^5.1.0"
   },
   "packageManager": "pnpm@10.26.2+sha512.0e308ff2005fc7410366f154f625f6631ab2b16b1d2e70238444dd6ae9d630a8482d92a451144debc492416896ed16f7b114a86ec68b8404b2443869e68ffda6"
 }
