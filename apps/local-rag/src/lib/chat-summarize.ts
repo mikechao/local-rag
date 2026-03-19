@@ -1,4 +1,4 @@
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 import { generateText } from "ai";
 import type { LocalRAGMessage } from "@/lib/local-rag-message";
 
@@ -24,7 +24,7 @@ function splitMessagesInHalf(
 }
 
 async function summarizeChunk(
-  model: ReturnType<typeof builtInAI>,
+  model: ReturnType<typeof browserAI>,
   messages: LocalRAGMessage[],
   chunkIndex: number,
   totalChunks: number,
@@ -106,7 +106,7 @@ export async function summarizeChat(
   const chunks = [firstHalf, secondHalf].filter((chunk) => chunk.length > 0);
 
   // Create single model instance to reuse across all chunk summarizations (session caching)
-  const chunkModel = builtInAI("text", {
+  const chunkModel = browserAI("text", {
     expectedInputs: [{ type: "text" }],
   });
 

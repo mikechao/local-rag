@@ -1,11 +1,11 @@
 # local-rag monorepo
 
-This repository contains a Turbo + pnpm monorepo with a web app and a set of shared AI provider packages.
+This repository contains a Turbo + pnpm monorepo with a web app and a vendored reference copy of browser AI provider packages.
 
 ## Repo structure
 
-- `apps/local-rag`: Web app for local Retrieval-Augmented Generation (RAG). It’s a Vite + TanStack React Start app that runs a local RAG workflow in the browser and uses the `@built-in-ai/*` providers for model access.
-- `packages/built-in-ai`: Library workspace that houses the `@built-in-ai/*` packages (core, web-llm, transformers-js) that provide in-browser model providers with fallback to server-side models via the Vercel AI SDK. It also contains examples and its own Turborepo config.
+- `apps/local-rag`: Web app for local Retrieval-Augmented Generation (RAG). It’s a Vite + TanStack React Start app that runs a local RAG workflow in the browser and uses the published `@browser-ai/*` providers for model access.
+- `packages/built-in-ai`: Vendored reference copy of the older `@built-in-ai/*` packages and examples. The app no longer consumes these packages through workspace links.
 
 ## Getting started
 
@@ -39,5 +39,5 @@ From the repo root:
 
 ## Notes
 
-- `apps/local-rag` depends on the local `@built-in-ai/*` packages via workspace links.
-- `packages/built-in-ai` is also usable on its own; see `packages/built-in-ai/README.md` for detailed package docs.
+- `apps/local-rag` depends on published `@browser-ai/*` packages from the npm registry.
+- `packages/built-in-ai` remains in the repo as a reference copy; see `packages/built-in-ai/README.md` for its own package docs.

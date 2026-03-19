@@ -1,4 +1,4 @@
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 import { generateText } from "ai";
 import type { LocalRAGMessage } from "@/lib/local-rag-message";
 
@@ -57,7 +57,7 @@ export async function generateChatTitle(
 
   try {
     const result = await generateText({
-      model: builtInAI("text"),
+      model: browserAI("text"),
       messages: [
         {
           role: "system",

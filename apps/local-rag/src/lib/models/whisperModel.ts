@@ -1,4 +1,4 @@
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 import { cleanClearCahce } from "./utils";
 
 export const MODEL_ID = "Xenova/whisper-base";

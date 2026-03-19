@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { builtInAI, doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
+import { browserAI, doesBrowserSupportBrowserAI } from "@browser-ai/core";
 import { ExternalLink } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -32,16 +32,15 @@ export function GeminiNanoDownload() {
   }, []);
 
   const refreshStatus = useCallback(async () => {
-    if (!doesBrowserSupportBuiltInAI()) {
+    if (!doesBrowserSupportBrowserAI()) {
       setStatus("unsupported");
       return;
     }
     try {
-      const model = builtInAI();
+      const model = browserAI();
       const avail = await model.availability();
       if (avail === "available") setStatus("ready");
-      else if (avail === "downloadable") setStatus("idle");
-      else if (avail === "downloading") setStatus("downloading");
+      else if (avail === "available-after-download") setStatus("idle");
       else setStatus("unavailable");
     } catch (err) {
       setErrorMessage(String(err));
@@ -66,7 +65,7 @@ export function GeminiNanoDownload() {
     setErrorMessage(null);
 
     try {
-      const model = builtInAI();
+      const model = browserAI();
       await model.createSessionWithProgress((p) => {
         setProgress(p);
       });

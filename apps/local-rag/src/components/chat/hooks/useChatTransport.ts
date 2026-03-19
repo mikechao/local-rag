@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BuiltInAIChatTransport } from "@/lib/built-in-ai-chat-transport";
+import { BrowserAIChatTransport } from "@/lib/browser-ai-chat-transport";
 import { updateChatQuotaOverflowState } from "@/lib/chat-storage";
 
 type UseChatTransportOptions = {
@@ -33,7 +33,7 @@ export function useChatTransport(
 
   const [chatTransport, setChatTransport] = useState(
     () =>
-      new BuiltInAIChatTransport({
+      new BrowserAIChatTransport({
         onQuotaOverflow: handleQuotaOverflow,
       }),
   );
@@ -45,7 +45,7 @@ export function useChatTransport(
     lastSessionKeyRef.current = sessionKey;
     setIsWarming(true);
     setChatTransport(
-      new BuiltInAIChatTransport({
+      new BrowserAIChatTransport({
         onQuotaOverflow: handleQuotaOverflow,
       }),
     );

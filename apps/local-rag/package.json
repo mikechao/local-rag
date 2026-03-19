@@ -3,7 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "pnpm --filter @built-in-ai/transformers-js --filter @built-in-ai/core build",
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "serve": "vite preview",
@@ -17,8 +16,8 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.0",
-    "@built-in-ai/core": "workspace:*",
-    "@built-in-ai/transformers-js": "workspace:*",
+    "@browser-ai/core": "2.1.8",
+    "@browser-ai/transformers-js": "2.1.8",
     "@cloudflare/vite-plugin": "^1.13.8",
     "@electric-sql/pglite": "^0.3.14",
     "@electric-sql/pglite-repl": "^0.2.32",

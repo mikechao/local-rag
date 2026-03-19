@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This repo is a `pnpm` workspace managed with Turborepo. The main app lives in `apps/local-rag`, a Vite + TanStack React Start frontend for in-browser RAG. App code is organized under `src/` by concern: `routes/` for pages, `components/` for UI, `lib/` for retrieval and model logic, `hooks/`, `providers/`, and `workers/` for browser workers. Tests for the app live in `apps/local-rag/test`. Shared libraries live in `packages/built-in-ai/packages/*`, with an example app in `packages/built-in-ai/examples/next-hybrid`.
+This repo is a `pnpm` workspace managed with Turborepo. The main app lives in `apps/local-rag`, a Vite + TanStack React Start frontend for in-browser RAG. App code is organized under `src/` by concern: `routes/` for pages, `components/` for UI, `lib/` for retrieval and model logic, `hooks/`, `providers/`, and `workers/` for browser workers. Tests for the app live in `apps/local-rag/test`. The app now consumes published `@browser-ai/*` packages, while the vendored `packages/built-in-ai` tree remains in the repo as reference material with an example app in `packages/built-in-ai/examples/next-hybrid`.
 
 ## Build, Test, and Development Commands
 Install once with `pnpm install`.

@@ -1,7 +1,7 @@
 import {
+  clearEmbeddingCache,
   ensureEmbeddingModelReady,
   getModel,
-  clearEmbeddingCache,
 } from "../lib/models/embeddingModel";
 
 // Define message types
@@ -20,11 +20,11 @@ export type EmbeddingWorkerResponse =
       chunkIds?: string[]; // Optional, if we want to pass back chunk IDs
       buffer: ArrayBuffer; // Float32Array buffer
     }
-  | { type: "error"; error: string; meta?: any }
+  | { type: "error"; error: string; meta?: unknown }
   | { type: "warmup-complete" }
   | { type: "cache-cleared" };
 
-const ctx: Worker = self as any;
+const ctx = self as unknown as Worker;
 
 ctx.onmessage = async (event: MessageEvent<EmbeddingWorkerMessage>) => {
   const { type } = event.data;
@@ -35,17 +35,16 @@ ctx.onmessage = async (event: MessageEvent<EmbeddingWorkerMessage>) => {
         await handleWarmup();
         break;
       case "embed-batch":
-        // @ts-ignore
         await handleEmbedBatch(event.data);
         break;
       case "clear-cache":
         await handleClearCache();
         break;
     }
-  } catch (err: any) {
+  } catch (err) {
     ctx.postMessage({
       type: "error",
-      error: err.message || "Unknown worker error",
+      error: err instanceof Error ? err.message : "Unknown worker error",
       meta: err,
     });
   }
@@ -54,7 +53,7 @@ ctx.onmessage = async (event: MessageEvent<EmbeddingWorkerMessage>) => {
 async function handleWarmup() {
   try {
     await ensureEmbeddingModelReady({
-      onProgress: ({ progress }) => {
+      onProgress: (progress) => {
         ctx.postMessage({ type: "progress", progress });
       },
     });
@@ -71,6 +70,7 @@ import { embedMany } from "ai";
 let isModelReady = false;
 
 async function handleEmbedBatch(data: {
+  type: "embed-batch";
   docId: string;
   chunks: string[];
   batchId: string;
@@ -112,10 +112,10 @@ async function handleEmbedBatch(data: {
       },
       [buffer.buffer],
     );
-  } catch (error: any) {
+  } catch (error) {
     ctx.postMessage({
       type: "error",
-      error: error.message || "Embedding failed",
+      error: error instanceof Error ? error.message : "Embedding failed",
       meta: { batchId, docId, error },
     });
   }

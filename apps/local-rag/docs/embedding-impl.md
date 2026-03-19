@@ -4,7 +4,7 @@ This document details the implementation of the in-browser embedding generation 
 
 ## Overview
 
-The embedding system generates vector embeddings for document chunks using the `Xenova/all-MiniLM-L6-v2` model via `@built-in-ai/transformers-js`. To ensure the UI remains responsive, the heavy lifting of model inference is offloaded to a dedicated Web Worker.
+The embedding system generates vector embeddings for document chunks using the `Xenova/all-MiniLM-L6-v2` model via `@browser-ai/transformers-js`. To ensure the UI remains responsive, the heavy lifting of model inference is offloaded to a dedicated Web Worker.
 
 ### Model Selection Rationale
 

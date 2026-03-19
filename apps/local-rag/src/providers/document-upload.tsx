@@ -147,7 +147,7 @@ export function DocumentUploadProvider({
           }
         });
       } else if (file.type === "text/markdown" || file.name.endsWith(".md")) {
-        chunkResult = await processMarkdown(docId, file.name, file, (p) => {
+        chunkResult = await processMarkdown(docId, file.name, file, () => {
           setProgress(60);
         });
       }

@@ -1,4 +1,4 @@
-import type { TransformersJSTranscriptionModel } from "@built-in-ai/transformers-js";
+import type { TransformersJSTranscriptionModel } from "@browser-ai/transformers-js";
 import {
   clearEmbeddingCacheWorker,
   warmupEmbeddingModel,
@@ -222,8 +222,8 @@ const MODEL_REGISTRY: Record<ModelKey, ModelDescriptor> = {
     warmup: async ({ onProgress } = {}) => {
       const model =
         getWhisperModel() as unknown as TransformersJSTranscriptionModel;
-      await model.createSessionWithProgress((info) => {
-        onProgress?.(normalizeProgress(info.progress));
+      await model.createSessionWithProgress((progress) => {
+        onProgress?.(normalizeProgress(progress));
       });
     },
     clearCache: clearWhisperCache,

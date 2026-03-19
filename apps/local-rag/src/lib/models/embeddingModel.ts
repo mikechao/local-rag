@@ -1,4 +1,4 @@
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 import { cleanClearCahce } from "./utils";
 
 // Centralized model config so UI and routes stay in sync.
@@ -7,11 +7,11 @@ export const MODEL_DEVICE: "auto" | "cpu" | "webgpu" = "auto";
 export const LOCAL_READY_KEY = "all-minilm-l6-v2-ready";
 
 type DownloadableEmbeddingModel = ReturnType<
-  typeof transformersJS.textEmbedding
+  typeof transformersJS.embedding
 > & {
   availability: () => Promise<"unavailable" | "downloadable" | "available">;
   createSessionWithProgress: (
-    onProgress?: (progress: { progress: number }) => void,
+    onProgress?: (progress: number) => void,
   ) => Promise<unknown>;
 };
 
@@ -20,7 +20,7 @@ let initPromise: Promise<DownloadableEmbeddingModel> | null = null;
 
 export function getModel(): DownloadableEmbeddingModel {
   if (!modelSingleton) {
-    modelSingleton = transformersJS.textEmbedding(MODEL_ID, {
+    modelSingleton = transformersJS.embedding(MODEL_ID, {
       device: "webgpu",
     }) as DownloadableEmbeddingModel;
   }
@@ -28,7 +28,7 @@ export function getModel(): DownloadableEmbeddingModel {
 }
 
 type EnsureOptions = {
-  onProgress?: (p: { progress: number }) => void;
+  onProgress?: (progress: number) => void;
 };
 
 /**

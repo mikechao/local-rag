@@ -44,7 +44,7 @@ This document outlines the current state of the Retrieval-Augmented Generation (
     - **Action:** Increase `rerankCandidates` to **30-50**. Since this runs on WebGPU, the performance cost is negligible for a significant accuracy gain.
 - **Context Injection for Reranker:** The reranker only sees the chunk text. If we haven't baked the context into the text (which we just fixed for Markdown), the reranker struggles to score short, ambiguous chunks.
 
-## 4. Prompt Engineering (`built-in-ai-chat-transport.ts`) *done*
+## 4. Prompt Engineering (`browser-ai-chat-transport.ts`) *done*
 
 ### Current State
 - **System Prompt:** Generic ("You are a helpful assistant").
@@ -58,5 +58,5 @@ This document outlines the current state of the Retrieval-Augmented Generation (
 ## 5. Summary of Recommended Quick Wins
 
 1.  **Increase Rerank Candidates:** Update `retrieval-pipeline.ts` to send 30 results to the reranker instead of 10.
-2.  **Strict System Prompt:** Update `built-in-ai-chat-transport.ts` to include "Grounding" instructions.
+2.  **Strict System Prompt:** Update `browser-ai-chat-transport.ts` to include "Grounding" instructions.
 3.  **Entity Search:** Improve keyword extraction to preserve names and proper nouns.

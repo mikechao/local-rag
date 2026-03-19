@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { doesBrowserSupportTransformersJS } from "@built-in-ai/transformers-js";
+import { doesBrowserSupportTransformersJS } from "@browser-ai/transformers-js";
 import { ExternalLink } from "lucide-react";
 
 import { Progress } from "@/components/ui/progress";
@@ -22,11 +22,7 @@ import {
   DrawerTitle,
 } from "../ui/drawer";
 
-type Availability =
-  | "available"
-  | "downloadable"
-  | "downloading"
-  | "unavailable";
+type Availability = "available" | "downloadable" | "unavailable";
 
 type Status =
   | "checking"

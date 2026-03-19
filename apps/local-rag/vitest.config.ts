@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
     environment: 'node',
-    include: ['test/**/*.test.ts'],
+    include: ['test/**/*.test.ts', 'test/**/*.test.tsx'],
     alias: {
       // Mock out the problematic PDF loader entirely for these tests
       '@langchain/community/document_loaders/web/pdf': path.resolve(__dirname, './test/mocks/pdf-loader.ts'),

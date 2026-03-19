@@ -87,6 +87,13 @@ export function embedBatchWorker(
   return new Promise((resolve, reject) => {
     const handler = (event: MessageEvent<EmbeddingWorkerResponse>) => {
       const { type } = event.data;
+      const errorBatchId =
+        type === "error" &&
+        typeof event.data.meta === "object" &&
+        event.data.meta !== null &&
+        "batchId" in event.data.meta
+          ? event.data.meta.batchId
+          : undefined;
       if (type === "result" && event.data.batchId === batchId) {
         w.removeEventListener("message", handler);
         resolve({
@@ -95,7 +102,7 @@ export function embedBatchWorker(
           dims: event.data.dims,
           buffer: event.data.buffer,
         });
-      } else if (type === "error" && event.data.meta?.batchId === batchId) {
+      } else if (type === "error" && errorBatchId === batchId) {
         w.removeEventListener("message", handler);
         reject(event.data.error);
       }

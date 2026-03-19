@@ -13,7 +13,7 @@ import {
   IdGenerator,
 } from "ai";
 import { z } from "zod";
-import { builtInAI, type BuiltInAIChatLanguageModel } from "@built-in-ai/core";
+import { browserAI, type BrowserAIChatLanguageModel } from "@browser-ai/core";
 import type { RetrievalResult } from "./retrieval";
 import type { LocalRAGMessage } from "./local-rag-message";
 import { getModelDescriptor } from "./models/model-registry";
@@ -49,7 +49,7 @@ function getLatestUserMessage(
   return messages.findLast((msg) => msg.role === "user");
 }
 
-export interface BuiltInAIChatTransportOptions {
+export interface BrowserAIChatTransportOptions {
   onQuotaOverflow?: (event: Event) => void;
 }
 
@@ -59,14 +59,14 @@ export interface BuiltInAIChatTransportOptions {
  *
  * @implements {ChatTransport<LocalRAGMessage>}
  */
-export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
+export class BrowserAIChatTransport implements ChatTransport<LocalRAGMessage> {
   private chatAgent: ToolLoopAgent<CallOptions>;
   private messageIdGenerator: IdGenerator;
-  private chatModel: BuiltInAIChatLanguageModel;
+  private chatModel: BrowserAIChatLanguageModel;
   private warmupPromise: Promise<void> | null = null;
 
-  constructor(options: BuiltInAIChatTransportOptions = {}) {
-    this.chatModel = builtInAI("text", {
+  constructor(options: BrowserAIChatTransportOptions = {}) {
+    this.chatModel = browserAI("text", {
       expectedInputs: [{ type: "text" }, { type: "image" }],
       ...(options.onQuotaOverflow
         ? { onQuotaOverflow: options.onQuotaOverflow }
@@ -128,7 +128,12 @@ export class BuiltInAIChatTransport implements ChatTransport<LocalRAGMessage> {
   }
 
   destroy(): void {
-    this.chatModel.destroy();
+    const destroy = (
+      this.chatModel as BrowserAIChatLanguageModel & {
+        destroy?: () => void;
+      }
+    ).destroy;
+    destroy?.call(this.chatModel);
     this.warmupPromise = null;
   }
 

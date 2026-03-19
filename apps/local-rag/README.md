@@ -14,7 +14,7 @@ Local-first RAG web app that runs entirely in the browser (including embeddings 
 - **App runtime**: Vite + TanStack React Start
 - **UI**: React, Radix UI, Tailwind
 - **Local database**: PGlite (Postgres in the browser) + Drizzle ORM
-- **Embedding model**: `Xenova/all-MiniLM-L6-v2` via `@built-in-ai/transformers-js`
+- **Embedding model**: `Xenova/all-MiniLM-L6-v2` via `@browser-ai/transformers-js`
 - **RAG SDK**: Vercel AI SDK (`ai`, `@ai-sdk/react`)
 - **Retrieval**: pgvector cosine similarity + pg_trgm trigram search, fused with RRF
 - **Reranking**: `mixedbread-ai/mxbai-rerank-xsmall-v1` (optional, on-device)
