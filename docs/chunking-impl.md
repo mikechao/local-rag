@@ -27,7 +27,7 @@ Replaces the old `doc_text` table.
 Replaces the old `embeddings` table.
 - **chunkId**: Foreign key to `document_chunks`.
 - **embeddingModel**: Identifier for the model used (e.g., "xenova/all-MiniLM-L6-v2").
-- **embedding**: The vector data (768 dimensions).
+- **embedding**: The vector data (384 dimensions).
 
 ## 2. Chunking Logic
 

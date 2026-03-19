@@ -1,43 +1,110 @@
-# local-rag monorepo
+# local-rag
 
-This repository contains a Turbo + pnpm monorepo with a web app and a vendored reference copy of browser AI provider packages.
+Local-first RAG web app that runs entirely in the browser, including embeddings, retrieval, local storage, and on-device model access once weights are cached.
 
-## Repo structure
+## What It Does
 
-- `apps/local-rag`: Web app for local Retrieval-Augmented Generation (RAG). It’s a Vite + TanStack React Start app that runs a local RAG workflow in the browser and uses the published `@browser-ai/*` providers for model access.
-- `packages/built-in-ai`: Vendored reference copy of the older `@built-in-ai/*` packages and examples. The app no longer consumes these packages through workspace links.
+- Upload PDFs or Markdown files
+- Chunk content and generate embeddings in a Web Worker
+- Store documents and vectors in browser-local Postgres via PGlite
+- Retrieve context with hybrid search that combines vector and keyword matching
+- Use published `@browser-ai/*` packages for browser-native text, embedding, transcription, and model warmup flows
 
-## Getting started
+## Tech Stack
+
+- App runtime: Vite + TanStack React Start
+- UI: React 19, Radix UI, Tailwind CSS
+- Local database: PGlite + Drizzle ORM
+- Embedding model: `Xenova/all-MiniLM-L6-v2` via `@browser-ai/transformers-js`
+- RAG SDK: Vercel AI SDK (`ai`, `@ai-sdk/react`)
+- Retrieval: pgvector cosine similarity + `pg_trgm` trigram search
+- Workers: dedicated browser workers for DB access, blob loading, and embeddings
+
+## Getting Started
+
+Install dependencies once from the repo root:
 
 ```bash
 pnpm install
 ```
 
-### Dev (all workspaces)
+Start the app:
 
 ```bash
 pnpm dev
 ```
 
-### Dev (local-rag app only)
+Default URL: `http://localhost:3000`
 
-```bash
-pnpm --filter local-rag dev
+## Common Commands
+
+- `pnpm dev` — start the local dev server on port 3000
+- `pnpm build` — create the production client and SSR build
+- `pnpm serve` — preview the production build locally
+- `pnpm test` — run Vitest suites
+- `pnpm typecheck` — run `tsc --noEmit`
+- `pnpm lint` — run Biome linting
+- `pnpm format` — run Biome formatting
+- `pnpm check` — run Biome checks
+- `pnpm db:generate` — generate Drizzle migration output
+- `pnpm deploy` — deploy with Wrangler
+
+## Local-First and Offline
+
+All document processing, embedding, storage, and retrieval run in the browser. After model weights are downloaded, the app is designed to continue working offline.
+
+## Retrieval Pipeline Overview
+
+### 1. Chunking
+
+- PDF: `WebPDFLoader` + `RecursiveCharacterTextSplitter`
+- Markdown: `MarkdownTextSplitter`
+- Default settings: `chunkSize: 1000`, `chunkOverlap: 150`
+
+### 2. Embedding
+
+- Runs in a dedicated worker to keep the UI responsive
+- Uses `Xenova/all-MiniLM-L6-v2` with 384 dimensions
+- Processes chunks in batches and stores vectors in `chunk_embeddings`
+
+### 3. Retrieval
+
+- Vector search: cosine similarity over pgvector embeddings
+- Keyword search: trigram matching via `pg_trgm`
+- Fusion: reciprocal rank fusion merges both rankings
+
+### 4. Reranking
+
+- Optional on-device reranking with `mixedbread-ai/mxbai-rerank-xsmall-v1`
+- Results below the configured score threshold are filtered out
+
+More implementation detail lives in:
+
+- `docs/chunking-impl.md`
+- `docs/embedding-impl.md`
+- `docs/retrieval-impl.md`
+
+## Maintenance
+
+### Clear the local OPFS database
+
+Useful snippet to run in the browser DevTools console to delete the OPFS data used by PGlite:
+
+```js
+(async () => {
+  const root = await navigator.storage.getDirectory();
+  try {
+    await root.removeEntry("local-rag", { recursive: true });
+    console.log("Database deleted successfully.");
+  } catch (e) {
+    console.log("Could not delete 'local-rag' directly. Deleting all OPFS entries...");
+    for await (const [name] of root.entries()) {
+      await root.removeEntry(name, { recursive: true });
+      console.log(`Deleted: ${name}`);
+    }
+    console.log("All OPFS data cleared.");
+  }
+})();
 ```
 
-The app runs on `http://localhost:3000` by default.
-
-## Common scripts
-
-From the repo root:
-
-- `pnpm dev` — run all dev tasks via Turbo
-- `pnpm build` — build all workspaces
-- `pnpm test` — run tests across the repo
-- `pnpm lint` — lint all workspaces
-- `pnpm format` — format via Turbo
-
-## Notes
-
-- `apps/local-rag` depends on published `@browser-ai/*` packages from the npm registry.
-- `packages/built-in-ai` remains in the repo as a reference copy; see `packages/built-in-ai/README.md` for its own package docs.
+If the OPFS directory name ever changes in `src/workers/db.worker.ts` or `src/workers/blob.worker.ts`, update the snippet to match.

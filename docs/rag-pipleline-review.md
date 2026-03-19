@@ -32,16 +32,17 @@ This document outlines the current state of the Retrieval-Augmented Generation (
 ### Completed Improvements
 - **Dynamic Weighting:** Replaced static RRF weights with semantic Reranking. The model now automatically determines if a keyword match or a vector match is more relevant for the specific query.
 
-## 3. Re-ranking (`retrieval-pipeline.ts`) *done*
+## 3. Re-ranking (`retrieval.ts` / `retrieval-pipeline.ts`) *done*
 
 ### Current State
 - **Model:** `mxbai-rerank-xsmall-v1` (Cross-Encoder).
-- **Candidates:** Only the top 10 results from the initial search are re-ranked.
+- **Candidates:** Up to 20 interleaved vector + trigram candidates are re-ranked inside `retrieveChunks`.
 - **Threshold:** 0.75 min score.
+- **Pipeline wiring:** `runRetrievalPipeline` currently forwards the threshold to `retrieveChunks`; candidate sizing is still controlled inside `retrieval.ts`.
 
 ### Areas for Improvement
-- **Candidate Pool Size:** 10 candidates is quite narrow. If the vector search ranks the "perfect" answer at position 11, the re-ranker never sees it.
-    - **Action:** Increase `rerankCandidates` to **30-50**. Since this runs on WebGPU, the performance cost is negligible for a significant accuracy gain.
+- **Candidate Pool Size:** 20 candidates is better than the previous 10, but the `rerankCandidates` option in `retrieval-pipeline.ts` is not currently threaded through to `retrieveChunks`.
+    - **Action:** Either wire `rerankCandidates` through to retrieval or remove the unused option so the API matches the implementation.
 - **Context Injection for Reranker:** The reranker only sees the chunk text. If we haven't baked the context into the text (which we just fixed for Markdown), the reranker struggles to score short, ambiguous chunks.
 
 ## 4. Prompt Engineering (`browser-ai-chat-transport.ts`) *done*
@@ -57,6 +58,6 @@ This document outlines the current state of the Retrieval-Augmented Generation (
 
 ## 5. Summary of Recommended Quick Wins
 
-1.  **Increase Rerank Candidates:** Update `retrieval-pipeline.ts` to send 30 results to the reranker instead of 10.
+1.  **Align Rerank Configuration:** Thread `rerankCandidates` through to `retrieveChunks`, or delete the unused option.
 2.  **Strict System Prompt:** Update `browser-ai-chat-transport.ts` to include "Grounding" instructions.
 3.  **Entity Search:** Improve keyword extraction to preserve names and proper nouns.

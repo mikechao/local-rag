@@ -166,6 +166,6 @@ Query: "When was Stargate Atlantis cancelled?"
 ## Future Improvements
 
 - **Query expansion**: Reformulate queries to include answer patterns
-- **Cross-encoder re-ranking**: Use a more accurate model to re-rank top results
+- **Expose rerank controls**: Thread candidate-count and threshold tuning through `src/lib/retrieval-pipeline.ts` instead of hard-coding them in `src/lib/retrieval.ts`
 - **Adjustable RRF weights**: Allow tuning vector vs trigram importance per query type
 - **Full-text search**: Add PostgreSQL full-text search (`tsvector`) for additional signal
